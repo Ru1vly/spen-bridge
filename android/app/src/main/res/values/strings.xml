@@ -1,0 +1,13 @@
+<resources>
+    <string name="app_name">S Pen on Linux</string>
+    <string name="status_connecting">Connecting to server…</string>
+    <string name="status_connected">Connected to %1$s:%2$d</string>
+    <string name="status_disconnected">Disconnected (Tap to configure)</string>
+    <string name="settings_title">Connection Settings</string>
+    <string name="server_ip">Server IP / Host</string>
+    <string name="server_port">Server Port</string>
+    <string name="reject_touch">Reject Finger Touches (Stylus Only)</string>
+    <string name="show_preview">Show Local Pen Trail</string>
+    <string name="usb_mode_hint">For USB Cable Mode (Zero Wi-Fi Latency):\nRun on your PC:\nadb forward tcp:40118 tcp:40118\nThen set Server IP to 127.0.0.1</string>
+    <string name="save_settings">Save &amp; Reconnect</string>
+</resources>

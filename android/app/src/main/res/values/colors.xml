@@ -1,0 +1,12 @@
+<resources>
+    <color name="canvas_bg">#121214</color>
+    <color name="status_bar_bg">#80000000</color>
+    <color name="status_connected">#4CAF50</color>
+    <color name="status_disconnected">#F44336</color>
+    <color name="status_connecting">#FF9800</color>
+    <color name="text_light">#FFFFFF</color>
+    <color name="text_muted">#AAAAAA</color>
+    <color name="pen_trail">#00E5FF</color>
+    <color name="primary">#2979FF</color>
+    <color name="primary_dark">#1565C0</color>
+</resources>
