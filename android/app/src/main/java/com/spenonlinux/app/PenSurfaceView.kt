@@ -272,16 +272,14 @@ class PenSurfaceView @JvmOverloads constructor(
     }
 
     private fun getTiltDegrees(event: MotionEvent): Pair<Float, Float> {
-        var tx = event.getAxisValue(MotionEvent.AXIS_TILT_X)
-        var ty = event.getAxisValue(MotionEvent.AXIS_TILT_Y)
-        if (tx == 0f && ty == 0f) {
-            val tiltRad = event.getAxisValue(MotionEvent.AXIS_TILT)
-            val orientRad = event.getAxisValue(MotionEvent.AXIS_ORIENTATION)
-            if (tiltRad > 0f) {
-                val tiltDeg = Math.toDegrees(tiltRad.toDouble()).toFloat()
-                tx = (tiltDeg * Math.sin(orientRad.toDouble())).toFloat()
-                ty = (-tiltDeg * Math.cos(orientRad.toDouble())).toFloat()
-            }
+        val tiltRad = event.getAxisValue(MotionEvent.AXIS_TILT)
+        val orientRad = event.getAxisValue(MotionEvent.AXIS_ORIENTATION)
+        var tx = 0f
+        var ty = 0f
+        if (tiltRad > 0f) {
+            val tiltDeg = Math.toDegrees(tiltRad.toDouble()).toFloat()
+            tx = (tiltDeg * Math.sin(orientRad.toDouble())).toFloat()
+            ty = (-tiltDeg * Math.cos(orientRad.toDouble())).toFloat()
         }
         return Pair(tx.coerceIn(-90f, 90f), ty.coerceIn(-90f, 90f))
     }
