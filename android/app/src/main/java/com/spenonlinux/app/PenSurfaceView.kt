@@ -5,6 +5,7 @@ import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.RectF
+import android.graphics.Typeface
 import android.util.AttributeSet
 import android.view.MotionEvent
 import android.view.View
@@ -15,12 +16,65 @@ class PenSurfaceView @JvmOverloads constructor(
     defStyleAttr: Int = 0
 ) : View(context, attrs, defStyleAttr) {
 
+    enum class AreaMode {
+        FULL,
+        ASPECT_16_9,
+        ASPECT_16_10,
+        ASPECT_21_9,
+        CUSTOM
+    }
+
     var sender: PenEventSender? = null
     var rejectFingerTouches: Boolean = true
     var showLocalPreview: Boolean = true
-    var matchAspectRatio: Boolean = false
+
+    var areaMode: AreaMode = AreaMode.ASPECT_16_9
         set(value) {
             field = value
+            invalidate()
+        }
+
+    var customWidthPercent: Int = 100
+        set(value) {
+            field = value.coerceIn(10, 100)
+            invalidate()
+        }
+
+    var customHeightPercent: Int = 100
+        set(value) {
+            field = value.coerceIn(10, 100)
+            invalidate()
+        }
+
+    var customOffsetXPercent: Int = 50
+        set(value) {
+            field = value.coerceIn(0, 100)
+            invalidate()
+        }
+
+    var customOffsetYPercent: Int = 50
+        set(value) {
+            field = value.coerceIn(0, 100)
+            invalidate()
+        }
+
+    var showAreaBorder: Boolean = true
+        set(value) {
+            field = value
+            invalidate()
+        }
+
+    var showAreaShading: Boolean = true
+        set(value) {
+            field = value
+            invalidate()
+        }
+
+    // Backward compatibility for matchAspectRatio
+    var matchAspectRatio: Boolean
+        get() = (areaMode == AreaMode.ASPECT_16_9)
+        set(value) {
+            areaMode = if (value) AreaMode.ASPECT_16_9 else AreaMode.FULL
             invalidate()
         }
 
@@ -39,14 +93,27 @@ class PenSurfaceView @JvmOverloads constructor(
     }
 
     private val aspectFramePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = 0x55FFFFFF.toInt()
+        color = 0x4400E5FF.toInt()
         style = Paint.Style.STROKE
-        strokeWidth = 3f
+        strokeWidth = 2f
+    }
+
+    private val cornerBracketPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = 0xFF00E5FF.toInt()
+        style = Paint.Style.STROKE
+        strokeWidth = 4f
+        strokeCap = Paint.Cap.SQUARE
     }
 
     private val aspectShadePaint = Paint().apply {
-        color = 0x66000000.toInt()
+        color = 0x880C0D12.toInt()
         style = Paint.Style.FILL
+    }
+
+    private val labelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = 0x80FFFFFF.toInt()
+        textSize = 26f
+        typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.NORMAL)
     }
 
     private val trailPath = Path()
@@ -57,26 +124,55 @@ class PenSurfaceView @JvmOverloads constructor(
     fun getActiveRect(): RectF {
         val w = width.toFloat().coerceAtLeast(1f)
         val h = height.toFloat().coerceAtLeast(1f)
-        if (!matchAspectRatio) {
-            return RectF(0f, 0f, w, h)
+
+        val (baseW, baseH) = when (areaMode) {
+            AreaMode.FULL -> Pair(w, h)
+            AreaMode.ASPECT_16_9 -> computeAspectFit(w, h, 16f / 9f)
+            AreaMode.ASPECT_16_10 -> computeAspectFit(w, h, 16f / 10f)
+            AreaMode.ASPECT_21_9 -> computeAspectFit(w, h, 21f / 9f)
+            AreaMode.CUSTOM -> {
+                val cw = w * (customWidthPercent.coerceIn(10, 100) / 100f)
+                val ch = h * (customHeightPercent.coerceIn(10, 100) / 100f)
+                Pair(cw, ch)
+            }
         }
-        val targetAspect = 16f / 9f
+
+        val activeW = if (areaMode != AreaMode.CUSTOM && customWidthPercent < 100) {
+            baseW * (customWidthPercent.coerceIn(10, 100) / 100f)
+        } else {
+            baseW
+        }
+
+        val activeH = if (areaMode != AreaMode.CUSTOM && customHeightPercent < 100) {
+            baseH * (customHeightPercent.coerceIn(10, 100) / 100f)
+        } else {
+            baseH
+        }
+
+        val maxOffsetX = (w - activeW).coerceAtLeast(0f)
+        val maxOffsetY = (h - activeH).coerceAtLeast(0f)
+
+        val left = maxOffsetX * (customOffsetXPercent.coerceIn(0, 100) / 100f)
+        val top = maxOffsetY * (customOffsetYPercent.coerceIn(0, 100) / 100f)
+
+        return RectF(left, top, left + activeW, top + activeH)
+    }
+
+    private fun computeAspectFit(w: Float, h: Float, targetAspect: Float): Pair<Float, Float> {
         val currentAspect = w / h
         return if (currentAspect > targetAspect) {
-            val activeW = h * targetAspect
-            val padX = (w - activeW) / 2f
-            RectF(padX, 0f, w - padX, h)
+            Pair(h * targetAspect, h)
         } else {
-            val activeH = w / targetAspect
-            val padY = (h - activeH) / 2f
-            RectF(0f, padY, w, h - padY)
+            Pair(w, w / targetAspect)
         }
     }
 
-    private fun normalizeCoords(rawX: Float, rawY: Float): Pair<Float, Float> {
+    fun normalizeCoords(rawX: Float, rawY: Float): Pair<Float, Float> {
         val rect = getActiveRect()
-        val nx = ((rawX - rect.left) / rect.width()).coerceIn(0f, 1f)
-        val ny = ((rawY - rect.top) / rect.height()).coerceIn(0f, 1f)
+        val rw = rect.width().coerceAtLeast(1f)
+        val rh = rect.height().coerceAtLeast(1f)
+        val nx = ((rawX - rect.left) / rw).coerceIn(0f, 1f)
+        val ny = ((rawY - rect.top) / rh).coerceIn(0f, 1f)
         return Pair(nx, ny)
     }
 
@@ -88,9 +184,6 @@ class PenSurfaceView @JvmOverloads constructor(
 
         val buttons = getProtocolButtons(event.buttonState)
         val (tiltX, tiltY) = getTiltDegrees(event)
-
-        val w = width.toFloat().coerceAtLeast(1f)
-        val h = height.toFloat().coerceAtLeast(1f)
 
         when (event.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
@@ -279,23 +372,61 @@ class PenSurfaceView @JvmOverloads constructor(
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
 
-        if (matchAspectRatio) {
-            val rect = getActiveRect()
-            val w = width.toFloat()
-            val h = height.toFloat()
+        val rect = getActiveRect()
+        val w = width.toFloat()
+        val h = height.toFloat()
 
-            // Shade letterbox areas outside 16:9 box
-            if (rect.left > 0f) {
-                canvas.drawRect(0f, 0f, rect.left, h, aspectShadePaint)
-                canvas.drawRect(rect.right, 0f, w, h, aspectShadePaint)
-            }
-            if (rect.top > 0f) {
-                canvas.drawRect(0f, 0f, w, rect.top, aspectShadePaint)
-                canvas.drawRect(0f, rect.bottom, w, h, aspectShadePaint)
+        val isRestricted = (rect.width() < w - 4f || rect.height() < h - 4f || rect.left > 2f || rect.top > 2f)
+
+        if (isRestricted) {
+            if (showAreaShading) {
+                // Shade left margin
+                if (rect.left > 0f) {
+                    canvas.drawRect(0f, 0f, rect.left, h, aspectShadePaint)
+                }
+                // Shade right margin
+                if (rect.right < w) {
+                    canvas.drawRect(rect.right, 0f, w, h, aspectShadePaint)
+                }
+                // Shade top margin
+                if (rect.top > 0f) {
+                    canvas.drawRect(rect.left, 0f, rect.right, rect.top, aspectShadePaint)
+                }
+                // Shade bottom margin
+                if (rect.bottom < h) {
+                    canvas.drawRect(rect.left, rect.bottom, rect.right, h, aspectShadePaint)
+                }
             }
 
-            // Draw clean 16:9 boundary
-            canvas.drawRect(rect, aspectFramePaint)
+            if (showAreaBorder) {
+                // Draw active frame boundary
+                canvas.drawRect(rect, aspectFramePaint)
+
+                // Draw corner brackets
+                val bLen = 28f
+                // Top-Left
+                canvas.drawLine(rect.left, rect.top, rect.left + bLen, rect.top, cornerBracketPaint)
+                canvas.drawLine(rect.left, rect.top, rect.left, rect.top + bLen, cornerBracketPaint)
+                // Top-Right
+                canvas.drawLine(rect.right, rect.top, rect.right - bLen, rect.top, cornerBracketPaint)
+                canvas.drawLine(rect.right, rect.top, rect.right, rect.top + bLen, cornerBracketPaint)
+                // Bottom-Left
+                canvas.drawLine(rect.left, rect.bottom, rect.left + bLen, rect.bottom, cornerBracketPaint)
+                canvas.drawLine(rect.left, rect.bottom, rect.left, rect.bottom - bLen, cornerBracketPaint)
+                // Bottom-Right
+                canvas.drawLine(rect.right, rect.bottom, rect.right - bLen, rect.bottom, cornerBracketPaint)
+                canvas.drawLine(rect.right, rect.bottom, rect.right, rect.bottom - bLen, cornerBracketPaint)
+
+                // Label
+                val modeLabel = when (areaMode) {
+                    AreaMode.FULL -> "Full Surface"
+                    AreaMode.ASPECT_16_9 -> "16:9 Active Area"
+                    AreaMode.ASPECT_16_10 -> "16:10 Active Area"
+                    AreaMode.ASPECT_21_9 -> "21:9 Active Area"
+                    AreaMode.CUSTOM -> "Custom Area (${customWidthPercent}% × ${customHeightPercent}%)"
+                }
+                canvas.drawText(modeLabel, rect.left + 16f, rect.top + 34f, labelPaint)
+            }
         }
 
         if (showLocalPreview && !trailPath.isEmpty) {

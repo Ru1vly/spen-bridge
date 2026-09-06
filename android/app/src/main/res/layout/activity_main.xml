@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/mainRoot"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/canvas_bg">
@@ -10,55 +11,107 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
 
-    <!-- Top floating status & toolbar overlay -->
+    <!-- Dynamic Status & Toolbar Overlay (Side in landscape, Top in portrait) -->
     <LinearLayout
         android:id="@+id/topBar"
-        android:layout_width="match_parent"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="top"
-        android:background="@color/status_bar_bg"
-        android:gravity="center_vertical"
+        android:layout_margin="8dp"
+        android:background="@drawable/bar_background"
+        android:gravity="center"
         android:orientation="horizontal"
-        android:paddingStart="16dp"
-        android:paddingTop="8dp"
-        android:paddingEnd="16dp"
-        android:paddingBottom="8dp">
+        android:paddingStart="12dp"
+        android:paddingTop="6dp"
+        android:paddingEnd="12dp"
+        android:paddingBottom="6dp">
 
-        <View
-            android:id="@+id/statusIndicator"
-            android:layout_width="10dp"
-            android:layout_height="10dp"
-            android:layout_marginEnd="8dp"
-            android:background="@color/status_disconnected" />
-
-        <TextView
-            android:id="@+id/statusText"
-            android:layout_width="0dp"
+        <LinearLayout
+            android:id="@+id/statusContainer"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:ellipsize="end"
-            android:maxLines="1"
-            android:text="@string/status_disconnected"
-            android:textColor="@color/text_light"
-            android:textSize="13sp" />
+            android:gravity="center"
+            android:orientation="horizontal">
+
+            <View
+                android:id="@+id/statusIndicator"
+                android:layout_width="10dp"
+                android:layout_height="10dp"
+                android:layout_margin="6dp"
+                android:background="@drawable/status_dot" />
+
+            <TextView
+                android:id="@+id/statusText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:text="@string/status_disconnected"
+                android:textColor="@color/text_light"
+                android:textSize="12sp" />
+        </LinearLayout>
+
+        <!-- Spacer used in horizontal / portrait mode -->
+        <View
+            android:id="@+id/barSpacer"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_weight="1" />
 
         <Button
             android:id="@+id/btnRotate"
             style="@style/Widget.MaterialComponents.Button.TextButton"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/btn_rotate"
+            android:minWidth="40dp"
+            android:paddingStart="6dp"
+            android:paddingEnd="6dp"
+            android:text="⟳ Rotate"
             android:textColor="@color/text_light"
-            android:textSize="13sp" />
+            android:textSize="12sp" />
 
         <Button
             android:id="@+id/btnSettings"
             style="@style/Widget.MaterialComponents.Button.TextButton"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Settings"
+            android:minWidth="40dp"
+            android:paddingStart="6dp"
+            android:paddingEnd="6dp"
+            android:text="⚙ Settings"
             android:textColor="@color/text_light"
+            android:textSize="12sp" />
+
+        <Button
+            android:id="@+id/btnCollapse"
+            style="@style/Widget.MaterialComponents.Button.TextButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:minWidth="32dp"
+            android:paddingStart="4dp"
+            android:paddingEnd="4dp"
+            android:text="◀"
+            android:textColor="@color/text_muted"
             android:textSize="13sp" />
     </LinearLayout>
+
+    <!-- Minimized floating expand button when toolbar is collapsed -->
+    <Button
+        android:id="@+id/btnExpand"
+        style="@style/Widget.MaterialComponents.Button"
+        android:layout_width="38dp"
+        android:layout_height="38dp"
+        android:layout_gravity="start|top"
+        android:layout_margin="10dp"
+        android:backgroundTint="#A014161C"
+        android:insetTop="0dp"
+        android:insetBottom="0dp"
+        android:insetLeft="0dp"
+        android:insetRight="0dp"
+        android:padding="0dp"
+        android:text="▶"
+        android:textColor="@color/text_light"
+        android:textSize="13sp"
+        android:visibility="gone" />
 
 </FrameLayout>

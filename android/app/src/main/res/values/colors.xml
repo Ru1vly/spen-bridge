@@ -9,4 +9,5 @@
     <color name="pen_trail">#00E5FF</color>
     <color name="primary">#2979FF</color>
     <color name="primary_dark">#1565C0</color>
+    <color name="surface_card">#1C1F26</color>
 </resources>

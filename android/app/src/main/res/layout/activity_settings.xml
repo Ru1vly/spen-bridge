@@ -4,27 +4,38 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/canvas_bg"
-    android:padding="24dp">
+    android:padding="20dp">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical">
+        android:orientation="vertical"
+        android:paddingBottom="40dp">
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="24dp"
+            android:layout_marginBottom="20dp"
             android:text="@string/settings_title"
             android:textColor="@color/text_light"
             android:textSize="22sp"
+            android:textStyle="bold" />
+
+        <!-- 1. SERVER CONNECTION -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"
+            android:text="@string/settings_connection_section"
+            android:textColor="@color/primary"
+            android:textSize="14sp"
             android:textStyle="bold" />
 
         <com.google.android.material.textfield.TextInputLayout
             style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
+            android:layout_marginBottom="12dp"
             android:hint="@string/server_ip"
             android:textColorHint="@color/text_muted"
             app:boxStrokeColor="@color/primary">
@@ -41,7 +52,7 @@
             style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="24dp"
+            android:layout_marginBottom="16dp"
             android:hint="@string/server_port"
             android:textColorHint="@color/text_muted"
             app:boxStrokeColor="@color/primary">
@@ -54,56 +65,262 @@
                 android:textColor="@color/text_light" />
         </com.google.android.material.textfield.TextInputLayout>
 
-        <com.google.android.material.switchmaterial.SwitchMaterial
-            android:id="@+id/switchRejectTouch"
+        <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="12dp"
+            android:layout_marginBottom="24dp"
+            android:background="#1AFFFFFF"
+            android:padding="12dp"
+            android:text="@string/usb_mode_hint"
+            android:textColor="@color/text_muted"
+            android:textSize="12sp" />
+
+        <!-- 2. TABLET ACTIVE AREA -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"
+            android:text="@string/settings_area_section"
+            android:textColor="@color/primary"
+            android:textSize="14sp"
+            android:textStyle="bold" />
+
+        <RadioGroup
+            android:id="@+id/rgAreaMode"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp">
+
+            <RadioButton
+                android:id="@+id/rbArea169"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/area_mode_16_9"
+                android:textColor="@color/text_light" />
+
+            <RadioButton
+                android:id="@+id/rbAreaFull"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/area_mode_full"
+                android:textColor="@color/text_light" />
+
+            <RadioButton
+                android:id="@+id/rbArea1610"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/area_mode_16_10"
+                android:textColor="@color/text_light" />
+
+            <RadioButton
+                android:id="@+id/rbArea219"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/area_mode_21_9"
+                android:textColor="@color/text_light" />
+
+            <RadioButton
+                android:id="@+id/rbAreaCustom"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/area_mode_custom"
+                android:textColor="@color/text_light" />
+        </RadioGroup>
+
+        <!-- Custom Area Sliders & Presets Container -->
+        <LinearLayout
+            android:id="@+id/layoutCustomArea"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            android:background="#15FFFFFF"
+            android:orientation="vertical"
+            android:padding="14dp">
+
+            <TextView
+                android:id="@+id/tvWidthLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Active Width: 100%"
+                android:textColor="@color/text_light"
+                android:textSize="13sp" />
+
+            <com.google.android.material.slider.Slider
+                android:id="@+id/sliderWidth"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:stepSize="1"
+                android:value="100"
+                android:valueFrom="20"
+                android:valueTo="100" />
+
+            <TextView
+                android:id="@+id/tvHeightLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Active Height: 100%"
+                android:textColor="@color/text_light"
+                android:textSize="13sp" />
+
+            <com.google.android.material.slider.Slider
+                android:id="@+id/sliderHeight"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:stepSize="1"
+                android:value="100"
+                android:valueFrom="20"
+                android:valueTo="100" />
+
+            <TextView
+                android:id="@+id/tvOffsetXLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Horizontal Alignment: 50%"
+                android:textColor="@color/text_light"
+                android:textSize="13sp" />
+
+            <com.google.android.material.slider.Slider
+                android:id="@+id/sliderOffsetX"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:stepSize="1"
+                android:value="50"
+                android:valueFrom="0"
+                android:valueTo="100" />
+
+            <TextView
+                android:id="@+id/tvOffsetYLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Vertical Alignment: 50%"
+                android:textColor="@color/text_light"
+                android:textSize="13sp" />
+
+            <com.google.android.material.slider.Slider
+                android:id="@+id/sliderOffsetY"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:stepSize="1"
+                android:value="50"
+                android:valueFrom="0"
+                android:valueTo="100" />
+
+            <!-- Quick Position Buttons -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="6dp"
+                android:text="Quick Alignment Presets:"
+                android:textColor="@color/text_muted"
+                android:textSize="12sp" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+
+                <Button
+                    android:id="@+id/btnAlignLeft"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="4dp"
+                    android:layout_weight="1"
+                    android:text="@string/preset_right_hand"
+                    android:textSize="11sp" />
+
+                <Button
+                    android:id="@+id/btnAlignCenter"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="2dp"
+                    android:layout_marginEnd="2dp"
+                    android:layout_weight="1"
+                    android:text="@string/preset_center"
+                    android:textSize="11sp" />
+
+                <Button
+                    android:id="@+id/btnAlignRight"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="4dp"
+                    android:layout_weight="1"
+                    android:text="@string/preset_left_hand"
+                    android:textSize="11sp" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <com.google.android.material.switchmaterial.SwitchMaterial
+            android:id="@+id/switchShowBorder"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="10dp"
             android:checked="true"
-            android:text="@string/reject_touch"
+            android:text="@string/show_area_border"
             android:textColor="@color/text_light" />
 
         <com.google.android.material.switchmaterial.SwitchMaterial
-            android:id="@+id/switchShowPreview"
+            android:id="@+id/switchShowShade"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="12dp"
+            android:layout_marginBottom="24dp"
             android:checked="true"
-            android:text="@string/show_preview"
+            android:text="@string/show_area_shading"
+            android:textColor="@color/text_light" />
+
+        <!-- 3. DISPLAY & CONTROLS -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"
+            android:text="@string/settings_display_section"
+            android:textColor="@color/primary"
+            android:textSize="14sp"
+            android:textStyle="bold" />
+
+        <com.google.android.material.switchmaterial.SwitchMaterial
+            android:id="@+id/switchSidebarLeft"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="10dp"
+            android:checked="true"
+            android:text="@string/sidebar_left_option"
             android:textColor="@color/text_light" />
 
         <com.google.android.material.switchmaterial.SwitchMaterial
             android:id="@+id/switchForceLandscape"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="12dp"
+            android:layout_marginBottom="10dp"
             android:checked="true"
             android:text="@string/force_landscape"
             android:textColor="@color/text_light" />
 
         <com.google.android.material.switchmaterial.SwitchMaterial
-            android:id="@+id/switchMatchAspect"
+            android:id="@+id/switchShowPreview"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="24dp"
-            android:checked="false"
-            android:text="@string/match_aspect_ratio"
+            android:layout_marginBottom="10dp"
+            android:checked="true"
+            android:text="@string/show_preview"
             android:textColor="@color/text_light" />
 
-        <TextView
+        <com.google.android.material.switchmaterial.SwitchMaterial
+            android:id="@+id/switchRejectTouch"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="24dp"
-            android:background="#20FFFFFF"
-            android:padding="12dp"
-            android:text="@string/usb_mode_hint"
-            android:textColor="@color/text_muted"
-            android:textSize="13sp" />
+            android:layout_marginBottom="28dp"
+            android:checked="true"
+            android:text="@string/reject_touch"
+            android:textColor="@color/text_light" />
 
         <Button
             android:id="@+id/btnSave"
             android:layout_width="match_parent"
-            android:layout_height="54dp"
+            android:layout_height="52dp"
             android:backgroundTint="@color/primary"
             android:text="@string/save_settings"
             android:textColor="@color/text_light"
