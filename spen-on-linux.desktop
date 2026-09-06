@@ -1,0 +1,11 @@
+[Desktop Entry]
+Name=S Pen on Linux
+GenericName=Graphics Tablet Controller
+Comment=Turn Samsung Galaxy Tab & S Pen into a Linux graphics tablet
+Exec=/home/r1/Projects/spenonlinux/start.sh
+Icon=/home/r1/Projects/spenonlinux/spen_icon.png
+Terminal=false
+Type=Application
+Categories=Graphics;Utility;
+Keywords=spen;tablet;wacom;stylus;samsung;krita;gimp;
+StartupNotify=true

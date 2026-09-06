@@ -2,13 +2,14 @@
 Asynchronous TCP server for S Pen events.
 Receives high-frequency stylus motion events over TCP and forwards them
 to the virtual tablet subsystem with minimal latency (TCP_NODELAY enabled).
+Supports status callbacks for GUI integration.
 """
 
 import asyncio
 import logging
 import socket
 import time
-from typing import Optional
+from typing import Optional, Callable
 
 from server.protocol import (
     HEADER_SIZE,
@@ -26,19 +27,47 @@ logger = logging.getLogger("SPenServer")
 
 
 class SPenServer:
-    def __init__(self, tablet: VirtualTablet, host: str = "0.0.0.0", port: int = 40118):
+    def __init__(
+        self,
+        tablet: VirtualTablet,
+        host: str = "0.0.0.0",
+        port: int = 40118,
+        on_client_connected: Optional[Callable[[str], None]] = None,
+        on_client_disconnected: Optional[Callable[[str], None]] = None,
+        on_stats: Optional[Callable[[float, int, int], None]] = None,
+    ):
         self.tablet = tablet
         self.host = host
         self.port = port
+        self.on_client_connected = on_client_connected
+        self.on_client_disconnected = on_client_disconnected
+        self.on_stats = on_stats
+
         self.server: Optional[asyncio.Server] = None
         self._running = False
+        self.active_clients = set()
+
+        # Stats
         self.stats_events_count = 0
         self.stats_packets_count = 0
+        self.total_events_count = 0
         self._last_stats_time = time.time()
+
+    @property
+    def is_running(self) -> bool:
+        return self._running and self.server is not None
 
     async def _handle_client(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
         peer = writer.get_extra_info("peername")
-        logger.info(f"Client connected from {peer}")
+        peer_str = f"{peer[0]}:{peer[1]}" if peer else "Unknown"
+        logger.info(f"Client connected from {peer_str}")
+        self.active_clients.add(peer_str)
+
+        if self.on_client_connected:
+            try:
+                self.on_client_connected(peer_str)
+            except Exception as e:
+                logger.debug(f"Error in on_client_connected callback: {e}")
 
         # Configure socket for ultra-low latency
         sock: Optional[socket.socket] = writer.get_extra_info("socket")
@@ -51,7 +80,7 @@ class SPenServer:
             while self._running:
                 chunk = await reader.read(4096)
                 if not chunk:
-                    logger.info(f"Client {peer} disconnected (EOF)")
+                    logger.info(f"Client {peer_str} disconnected (EOF)")
                     break
 
                 buffer.extend(chunk)
@@ -80,7 +109,9 @@ class SPenServer:
                         events = unpack_events(payload)
                         for ev in events:
                             self.tablet.handle_event(ev)
-                        self.stats_events_count += len(events)
+                        num_events = len(events)
+                        self.stats_events_count += num_events
+                        self.total_events_count += num_events
                         self.stats_packets_count += 1
 
                     elif pkt_type == PKT_PING:
@@ -89,17 +120,23 @@ class SPenServer:
                         await writer.drain()
 
                     elif pkt_type == PKT_HANDSHAKE:
-                        logger.info(f"Handshake packet received from {peer}")
+                        logger.info(f"Handshake packet received from {peer_str}")
                         ack = pack_packet(PKT_HANDSHAKE, seq, b"OK")
                         writer.write(ack)
                         await writer.drain()
 
-                # Periodic stats logging (every 5 seconds)
+                # Periodic stats logging and callback (every 1.0 second)
                 now = time.time()
                 elapsed = now - self._last_stats_time
-                if elapsed >= 5.0 and self.stats_events_count > 0:
+                if elapsed >= 1.0:
                     rate = self.stats_events_count / elapsed
-                    logger.info(f"Traffic: {rate:.1f} events/sec ({self.stats_packets_count} packets)")
+                    if self.on_stats:
+                        try:
+                            self.on_stats(rate, self.stats_packets_count, self.total_events_count)
+                        except Exception:
+                            pass
+                    if self.stats_events_count > 0:
+                        logger.info(f"Traffic: {rate:.1f} events/sec ({self.stats_packets_count} packets)")
                     self.stats_events_count = 0
                     self.stats_packets_count = 0
                     self._last_stats_time = now
@@ -107,9 +144,15 @@ class SPenServer:
         except asyncio.CancelledError:
             pass
         except Exception as err:
-            logger.error(f"Error handling client {peer}: {err}")
+            logger.error(f"Error handling client {peer_str}: {err}")
         finally:
-            logger.info(f"Closing client connection {peer}")
+            logger.info(f"Closing client connection {peer_str}")
+            self.active_clients.discard(peer_str)
+            if self.on_client_disconnected:
+                try:
+                    self.on_client_disconnected(peer_str)
+                except Exception as e:
+                    logger.debug(f"Error in on_client_disconnected callback: {e}")
             writer.close()
             try:
                 await writer.wait_closed()
@@ -129,4 +172,5 @@ class SPenServer:
         if self.server:
             self.server.close()
             await self.server.wait_closed()
+            self.server = None
             logger.info("SPen Server stopped")

@@ -66,8 +66,13 @@ Your Linux apps recognize it as a real physical graphics tablet.
 uv venv server/.venv
 uv pip install --python server/.venv/bin/python -r server/requirements.txt
 
-# Start server
-server/.venv/bin/python server/main.py
+# Launch the Desktop GUI Control Panel
+./start.sh
+# Or launch directly:
+server/.venv/bin/python server/main.py --gui
+
+# Or run in headless console mode:
+server/.venv/bin/python server/main.py --cli
 ```
 
 ### 2. Verify with Synthetic Test
