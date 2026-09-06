@@ -116,7 +116,7 @@ class TabletConfig:
 
     # Virtual tablet device settings
     device_name: str = "Samsung S Pen Virtual Tablet"
-    desktop_size: List[int] = field(default_factory=lambda: [1920, 2160])
+    desktop_size: List[int] = field(default_factory=lambda: [1920, 1080])
     aspect_ratio_lock: bool = False
     tablet_aspect_ratio: str = "16:10"
 
@@ -260,14 +260,31 @@ class TabletConfig:
     def button_secondary(self, val: str):
         self.get_active_profile().button_secondary = val
 
-    def get_screen_bounds_and_desktop(self, detected_monitors: Optional[list] = None) -> Tuple[Optional[Tuple[int, int, int, int]], Optional[Tuple[int, int]]]:
-        """Compute effective (screen_bounds, desktop_size) tuple for active profile."""
+    def get_screen_bounds_and_desktop(
+        self,
+        detected_monitors: Optional[list] = None,
+        detected_desktop_size: Optional[Tuple[int, int]] = None,
+    ) -> Tuple[Optional[Tuple[int, int, int, int]], Optional[Tuple[int, int]]]:
+        """Compute effective (screen_bounds, desktop_size) tuple for active profile.
+
+        `detected_desktop_size`, when given, is a freshly-detected (width, height)
+        bounding box (e.g. from monitors.detect_monitors()) and always takes
+        priority over the persisted self.desktop_size. Without this, "monitor"/
+        "custom" mapping used the config's last-saved desktop_size as the
+        denominator for scaling to the uinput ABS coordinate range regardless of
+        whether it still matched reality — a stale or default value there
+        (e.g. a taller multi-monitor desktop_size against a single 1080p
+        monitor) silently caps how far down/right the pen can ever reach.
+        """
         prof = self.get_active_profile()
         if prof.mapping_mode == "all":
             return None, None
 
-        desk_w = self.desktop_size[0] if len(self.desktop_size) >= 2 else 1920
-        desk_h = self.desktop_size[1] if len(self.desktop_size) >= 2 else 1080
+        if detected_desktop_size and len(detected_desktop_size) >= 2:
+            desk_w, desk_h = detected_desktop_size[0], detected_desktop_size[1]
+        else:
+            desk_w = self.desktop_size[0] if len(self.desktop_size) >= 2 else 1920
+            desk_h = self.desktop_size[1] if len(self.desktop_size) >= 2 else 1080
         effective_desk = (desk_w, desk_h)
 
         if prof.mapping_mode == "custom" and len(prof.custom_bounds) == 4:

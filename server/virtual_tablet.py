@@ -293,20 +293,25 @@ class VirtualTablet:
         if self.uinput is None:
             return
 
-        # Stroke smoothing logic
-        if self.stroke_smoothing > 0.0:
-            if ev.action == ACTION_DOWN or self._smooth_x is None:
-                self._smooth_x = ev.x
-                self._smooth_y = ev.y
-            elif ev.action == ACTION_MOVE:
+        # Stroke smoothing logic. Only ACTION_MOVE (an actual drawn stroke) is
+        # ever smoothed. Every other action - DOWN, UP, CANCEL, and critically
+        # HOVER_ENTER/HOVER_MOVE (hovering to position the cursor before
+        # touching down) - tracks the raw position directly. Without this,
+        # hover events matched none of the branches here, so the smoothed
+        # coordinate stayed frozen at wherever it was last set (e.g. the end
+        # of the previous stroke) for as long as the pen was only hovering -
+        # the cursor would not follow the pen at all while hovering, then
+        # suddenly jump to the real position the moment it touched down.
+        if self.stroke_smoothing > 0.0 and ev.action == ACTION_MOVE:
+            if self._smooth_x is None:
+                self._smooth_x, self._smooth_y = ev.x, ev.y
+            else:
                 alpha = 1.0 - self.stroke_smoothing
                 self._smooth_x = alpha * ev.x + (1.0 - alpha) * self._smooth_x
                 self._smooth_y = alpha * ev.y + (1.0 - alpha) * self._smooth_y
-            elif ev.action in (ACTION_UP, ACTION_CANCEL):
-                self._smooth_x = ev.x
-                self._smooth_y = ev.y
             coord_x, coord_y = self._smooth_x, self._smooth_y
         else:
+            self._smooth_x, self._smooth_y = ev.x, ev.y
             coord_x, coord_y = ev.x, ev.y
 
         abs_x, abs_y = self._map_coordinates(coord_x, coord_y)

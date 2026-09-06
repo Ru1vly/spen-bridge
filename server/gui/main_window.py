@@ -195,7 +195,8 @@ class MainWindow(QMainWindow):
             direct_mode=profile.direct_mode,
             device_name=self.config.device_name,
         )
-        sb, desk = self.config.get_screen_bounds_and_desktop(self.profiles_tab.editor_panel.mapping_section.monitors)
+        mapping_section = self.profiles_tab.editor_panel.mapping_section
+        sb, desk = self.config.get_screen_bounds_and_desktop(mapping_section.monitors, mapping_section.desktop_size)
         self.worker.update_tablet_settings(
             click_on_touch=profile.click_on_touch,
             pressure_curve_type=profile.pressure_curve_type,

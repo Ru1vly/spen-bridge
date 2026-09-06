@@ -48,9 +48,14 @@ class ServerWorker(QObject):
         self._loop = asyncio.new_event_loop()
         asyncio.set_event_loop(self._loop)
 
-        # Detect monitors to calculate mapping
+        # Detect monitors to calculate mapping. Always pass the freshly-detected
+        # desktop size too (not just the monitor list) - see
+        # get_screen_bounds_and_desktop()'s docstring for why relying on the
+        # persisted config.desktop_size alone can silently cut off part of the
+        # screen.
         monitors, desk_size = detect_monitors()
-        sb, desk = self.config.get_screen_bounds_and_desktop(monitors)
+        self.config.desktop_size = [desk_size[0], desk_size[1]]
+        sb, desk = self.config.get_screen_bounds_and_desktop(monitors, desk_size)
 
         try:
             self.tablet = VirtualTablet(
@@ -135,8 +140,9 @@ class ServerWorker(QObject):
         if self.tablet is None:
             return
 
-        monitors, _ = detect_monitors()
-        sb, desk = self.config.get_screen_bounds_and_desktop(monitors)
+        monitors, desk_size = detect_monitors()
+        self.config.desktop_size = [desk_size[0], desk_size[1]]
+        sb, desk = self.config.get_screen_bounds_and_desktop(monitors, desk_size)
 
         try:
             new_tablet = VirtualTablet(

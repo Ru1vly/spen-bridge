@@ -101,7 +101,9 @@ class ProfileEditorPanel(QWidget):
             direct_mode=profile.direct_mode,
             device_name=self._config.device_name,
         )
-        sb, desk = self._config.get_screen_bounds_and_desktop(self.mapping_section.monitors)
+        sb, desk = self._config.get_screen_bounds_and_desktop(
+            self.mapping_section.monitors, self.mapping_section.desktop_size
+        )
         self._worker.update_tablet_settings(
             click_on_touch=profile.click_on_touch,
             pressure_curve_type=profile.pressure_curve_type,

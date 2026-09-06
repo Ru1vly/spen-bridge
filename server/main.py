@@ -14,6 +14,7 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from server.config import load_config
+from server.monitors import detect_monitors
 from server.virtual_tablet import VirtualTablet
 from server.server import SPenServer
 
@@ -109,8 +110,15 @@ async def run_cli(args):
         parts = [int(p.strip()) for p in args.desktop_size.split(",")]
         if len(parts) == 2:
             desktop_size = (parts[0], parts[1])
-    elif len(config.desktop_size) == 2:
-        desktop_size = tuple(config.desktop_size)
+    elif screen_bounds is not None:
+        # Auto-detect rather than trusting a possibly-stale saved config.desktop_size:
+        # it's only ever used as the scaling denominator when screen_bounds maps to
+        # less than the full desktop, so a wrong value here silently caps how far
+        # down/right the pen can reach. See
+        # TabletConfig.get_screen_bounds_and_desktop()'s docstring for the same issue
+        # on the GUI side.
+        _, detected_desktop_size = detect_monitors()
+        desktop_size = detected_desktop_size
 
     tablet = VirtualTablet(
         name=name,
