@@ -67,9 +67,27 @@
             android:id="@+id/switchShowPreview"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="24dp"
+            android:layout_marginBottom="12dp"
             android:checked="true"
             android:text="@string/show_preview"
+            android:textColor="@color/text_light" />
+
+        <com.google.android.material.switchmaterial.SwitchMaterial
+            android:id="@+id/switchForceLandscape"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp"
+            android:checked="true"
+            android:text="@string/force_landscape"
+            android:textColor="@color/text_light" />
+
+        <com.google.android.material.switchmaterial.SwitchMaterial
+            android:id="@+id/switchMatchAspect"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="24dp"
+            android:checked="false"
+            android:text="@string/match_aspect_ratio"
             android:textColor="@color/text_light" />
 
         <TextView

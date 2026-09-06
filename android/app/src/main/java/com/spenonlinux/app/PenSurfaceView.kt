@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.Path
+import android.graphics.RectF
 import android.util.AttributeSet
 import android.view.MotionEvent
 import android.view.View
@@ -17,6 +18,11 @@ class PenSurfaceView @JvmOverloads constructor(
     var sender: PenEventSender? = null
     var rejectFingerTouches: Boolean = true
     var showLocalPreview: Boolean = true
+    var matchAspectRatio: Boolean = false
+        set(value) {
+            field = value
+            invalidate()
+        }
 
     private val trailPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = 0xFF00E5FF.toInt()
@@ -32,10 +38,47 @@ class PenSurfaceView @JvmOverloads constructor(
         strokeWidth = 2f
     }
 
+    private val aspectFramePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = 0x55FFFFFF.toInt()
+        style = Paint.Style.STROKE
+        strokeWidth = 3f
+    }
+
+    private val aspectShadePaint = Paint().apply {
+        color = 0x66000000.toInt()
+        style = Paint.Style.FILL
+    }
+
     private val trailPath = Path()
     private var hoverX = -1f
     private var hoverY = -1f
     private var isHovering = false
+
+    fun getActiveRect(): RectF {
+        val w = width.toFloat().coerceAtLeast(1f)
+        val h = height.toFloat().coerceAtLeast(1f)
+        if (!matchAspectRatio) {
+            return RectF(0f, 0f, w, h)
+        }
+        val targetAspect = 16f / 9f
+        val currentAspect = w / h
+        return if (currentAspect > targetAspect) {
+            val activeW = h * targetAspect
+            val padX = (w - activeW) / 2f
+            RectF(padX, 0f, w - padX, h)
+        } else {
+            val activeH = w / targetAspect
+            val padY = (h - activeH) / 2f
+            RectF(0f, padY, w, h - padY)
+        }
+    }
+
+    private fun normalizeCoords(rawX: Float, rawY: Float): Pair<Float, Float> {
+        val rect = getActiveRect()
+        val nx = ((rawX - rect.left) / rect.width()).coerceIn(0f, 1f)
+        val ny = ((rawY - rect.top) / rect.height()).coerceIn(0f, 1f)
+        return Pair(nx, ny)
+    }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
         val toolType = getProtocolToolType(event.getToolType(0))
@@ -51,8 +94,7 @@ class PenSurfaceView @JvmOverloads constructor(
 
         when (event.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
-                val normX = (event.x / w).coerceIn(0f, 1f)
-                val normY = (event.y / h).coerceIn(0f, 1f)
+                val (normX, normY) = normalizeCoords(event.x, event.y)
                 val pressure = event.pressure.coerceIn(0f, 1f)
 
                 if (showLocalPreview) {
@@ -82,8 +124,7 @@ class PenSurfaceView @JvmOverloads constructor(
                 val events = ArrayList<Protocol.Event>(historySize + 1)
 
                 for (i in 0 until historySize) {
-                    val histX = (event.getHistoricalX(0, i) / w).coerceIn(0f, 1f)
-                    val histY = (event.getHistoricalY(0, i) / h).coerceIn(0f, 1f)
+                    val (histX, histY) = normalizeCoords(event.getHistoricalX(0, i), event.getHistoricalY(0, i))
                     val histP = event.getHistoricalPressure(0, i).coerceIn(0f, 1f)
 
                     if (showLocalPreview) {
@@ -104,8 +145,7 @@ class PenSurfaceView @JvmOverloads constructor(
                     )
                 }
 
-                val currentNormX = (event.x / w).coerceIn(0f, 1f)
-                val currentNormY = (event.y / h).coerceIn(0f, 1f)
+                val (currentNormX, currentNormY) = normalizeCoords(event.x, event.y)
                 val currentP = event.pressure.coerceIn(0f, 1f)
 
                 if (showLocalPreview) {
@@ -130,8 +170,7 @@ class PenSurfaceView @JvmOverloads constructor(
             }
 
             MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                val normX = (event.x / w).coerceIn(0f, 1f)
-                val normY = (event.y / h).coerceIn(0f, 1f)
+                val (normX, normY) = normalizeCoords(event.x, event.y)
 
                 if (showLocalPreview) {
                     trailPath.reset()
@@ -167,10 +206,7 @@ class PenSurfaceView @JvmOverloads constructor(
         val buttons = getProtocolButtons(event.buttonState)
         val (tiltX, tiltY) = getTiltDegrees(event)
 
-        val w = width.toFloat().coerceAtLeast(1f)
-        val h = height.toFloat().coerceAtLeast(1f)
-        val normX = (event.x / w).coerceIn(0f, 1f)
-        val normY = (event.y / h).coerceIn(0f, 1f)
+        val (normX, normY) = normalizeCoords(event.x, event.y)
 
         when (event.actionMasked) {
             MotionEvent.ACTION_HOVER_ENTER -> {
@@ -242,6 +278,25 @@ class PenSurfaceView @JvmOverloads constructor(
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
+
+        if (matchAspectRatio) {
+            val rect = getActiveRect()
+            val w = width.toFloat()
+            val h = height.toFloat()
+
+            // Shade letterbox areas outside 16:9 box
+            if (rect.left > 0f) {
+                canvas.drawRect(0f, 0f, rect.left, h, aspectShadePaint)
+                canvas.drawRect(rect.right, 0f, w, h, aspectShadePaint)
+            }
+            if (rect.top > 0f) {
+                canvas.drawRect(0f, 0f, w, rect.top, aspectShadePaint)
+                canvas.drawRect(0f, rect.bottom, w, h, aspectShadePaint)
+            }
+
+            // Draw clean 16:9 boundary
+            canvas.drawRect(rect, aspectFramePaint)
+        }
 
         if (showLocalPreview && !trailPath.isEmpty) {
             canvas.drawPath(trailPath, trailPaint)

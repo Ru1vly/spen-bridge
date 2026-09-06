@@ -15,8 +15,10 @@ class SettingsActivity : AppCompatActivity() {
         const val KEY_SERVER_PORT = "server_port"
         const val KEY_REJECT_TOUCH = "reject_touch"
         const val KEY_SHOW_PREVIEW = "show_preview"
+        const val KEY_FORCE_LANDSCAPE = "force_landscape"
+        const val KEY_MATCH_ASPECT = "match_aspect"
 
-        const val DEFAULT_IP = "192.168.1.100"
+        const val DEFAULT_IP = "192.168.1.7"
         const val DEFAULT_PORT = 40118
     }
 
@@ -30,12 +32,16 @@ class SettingsActivity : AppCompatActivity() {
         val editPort = findViewById<TextInputEditText>(R.id.editServerPort)
         val switchReject = findViewById<SwitchMaterial>(R.id.switchRejectTouch)
         val switchPreview = findViewById<SwitchMaterial>(R.id.switchShowPreview)
+        val switchLandscape = findViewById<SwitchMaterial>(R.id.switchForceLandscape)
+        val switchAspect = findViewById<SwitchMaterial>(R.id.switchMatchAspect)
         val btnSave = findViewById<Button>(R.id.btnSave)
 
         editIp.setText(prefs.getString(KEY_SERVER_IP, DEFAULT_IP))
         editPort.setText(prefs.getInt(KEY_SERVER_PORT, DEFAULT_PORT).toString())
         switchReject.isChecked = prefs.getBoolean(KEY_REJECT_TOUCH, true)
         switchPreview.isChecked = prefs.getBoolean(KEY_SHOW_PREVIEW, true)
+        switchLandscape.isChecked = prefs.getBoolean(KEY_FORCE_LANDSCAPE, true)
+        switchAspect.isChecked = prefs.getBoolean(KEY_MATCH_ASPECT, false)
 
         btnSave.setOnClickListener {
             val ip = editIp.text?.toString()?.trim() ?: DEFAULT_IP
@@ -46,6 +52,8 @@ class SettingsActivity : AppCompatActivity() {
                 .putInt(KEY_SERVER_PORT, port)
                 .putBoolean(KEY_REJECT_TOUCH, switchReject.isChecked)
                 .putBoolean(KEY_SHOW_PREVIEW, switchPreview.isChecked)
+                .putBoolean(KEY_FORCE_LANDSCAPE, switchLandscape.isChecked)
+                .putBoolean(KEY_MATCH_ASPECT, switchAspect.isChecked)
                 .apply()
 
             setResult(RESULT_OK)

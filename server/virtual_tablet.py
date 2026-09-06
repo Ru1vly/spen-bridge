@@ -1,7 +1,7 @@
 """
 Virtual Drawing Tablet implementation using Linux uinput via python-evdev.
-Creates a kernel-level input device that drawing software (Krita, GIMP,
-Blender, Inkscape, etc.) recognizes as a professional graphics tablet.
+Supports both "pointer" mode (absolute mouse/pointer for compositors like driftwm)
+and "tablet" mode (pure Wacom tablet tool for tablet-v2 compositors).
 """
 
 import logging
@@ -34,23 +34,27 @@ TILT_MAX = 90
 
 
 class VirtualTablet:
-    """Emulates a Wacom-compatible graphics tablet stylus via /dev/uinput."""
+    """Emulates a drawing tablet / pointer via /dev/uinput."""
 
     def __init__(
         self,
-        name: str = "Samsung S Pen Virtual Tablet",
+        name: str = "Samsung S Pen Device",
+        mode: str = "pointer",
         direct_mode: bool = False,
         screen_bounds: Optional[Tuple[int, int, int, int]] = None,
         desktop_size: Optional[Tuple[int, int]] = None,
     ):
         """
         Args:
-            name: Device name shown in system / xinput / libinput
-            direct_mode: If True, flags INPUT_PROP_DIRECT (screen-mapped Cintiq style)
+            name: Device name shown in system / libinput
+            mode: "pointer" (absolute pointer with BTN_LEFT, works on all compositors including driftwm)
+                  or "tablet" (pure Wacom TabletTool device for tablet-v2)
+            direct_mode: If True, flags INPUT_PROP_DIRECT
             screen_bounds: (x_offset, y_offset, width, height) of target monitor in desktop pixels
             desktop_size: (total_width, total_height) of the full virtual desktop in pixels
         """
         self.name = name
+        self.mode = mode
         self.direct_mode = direct_mode
         self.screen_bounds = screen_bounds
         self.desktop_size = desktop_size
@@ -66,14 +70,25 @@ class VirtualTablet:
 
     def _setup_device(self):
         """Register device capabilities with the Linux uinput kernel driver."""
-        capabilities = {
-            e.EV_KEY: [
+        if self.mode == "tablet":
+            key_codes = [
                 e.BTN_TOOL_PEN,
                 e.BTN_TOOL_RUBBER,
                 e.BTN_TOUCH,
                 e.BTN_STYLUS,
                 e.BTN_STYLUS2,
-            ],
+            ]
+        else:
+            # Pointer / Digitizer mode (dispatches PointerMotionAbsolute & PointerButton in Smithay / driftwm)
+            key_codes = [
+                e.BTN_LEFT,
+                e.BTN_RIGHT,
+                e.BTN_MIDDLE,
+                e.BTN_TOUCH,
+            ]
+
+        capabilities = {
+            e.EV_KEY: key_codes,
             e.EV_ABS: [
                 (
                     e.ABS_X,
@@ -135,7 +150,7 @@ class VirtualTablet:
 
         input_props = [e.INPUT_PROP_DIRECT] if self.direct_mode else [e.INPUT_PROP_POINTER]
 
-        logger.info(f"Creating virtual tablet device: {self.name} (direct={self.direct_mode})")
+        logger.info(f"Creating device '{self.name}' [mode={self.mode}, direct={self.direct_mode}]")
         self.uinput = evdev.UInput(
             events=capabilities,
             name=self.name,
@@ -143,7 +158,6 @@ class VirtualTablet:
             input_props=input_props,
         )
         logger.info(f"Device created: {self.uinput.device.path}")
-        # Allow kernel and display server / libinput to discover and initialize device
         time.sleep(0.3)
 
     def _map_coordinates(self, norm_x: float, norm_y: float) -> Tuple[int, int]:
@@ -176,39 +190,49 @@ class VirtualTablet:
         if self.uinput is None:
             return
 
-        tool_code = e.BTN_TOOL_RUBBER if ev.tool_type == TOOL_ERASER else e.BTN_TOOL_PEN
         abs_x, abs_y = self._map_coordinates(ev.x, ev.y)
         pressure_val = int(max(0.0, min(1.0, ev.pressure)) * ABS_MAX_PRESSURE)
         tilt_x = int(max(TILT_MIN, min(TILT_MAX, ev.tilt_x)))
         tilt_y = int(max(TILT_MIN, min(TILT_MAX, ev.tilt_y)))
 
-        # Update Tool Proximity
-        if not self._is_in_proximity or self._active_tool != ev.tool_type:
-            if self._is_in_proximity and self._active_tool != ev.tool_type:
-                # Switch active tool
-                old_code = e.BTN_TOOL_RUBBER if self._active_tool == TOOL_ERASER else e.BTN_TOOL_PEN
-                self.uinput.write(e.EV_KEY, old_code, 0)
+        is_tablet_mode = (self.mode == "tablet")
 
-            self.uinput.write(e.EV_KEY, tool_code, 1)
-            self._is_in_proximity = True
-            self._active_tool = ev.tool_type
-
-        # Update Stylus Barrel Buttons
+        # Barrel Button state
         has_stylus_btn = bool(ev.buttons & BUTTON_STYLUS)
         if has_stylus_btn != self._button_stylus_pressed:
-            self.uinput.write(e.EV_KEY, e.BTN_STYLUS, 1 if has_stylus_btn else 0)
+            if is_tablet_mode:
+                self.uinput.write(e.EV_KEY, e.BTN_STYLUS, 1 if has_stylus_btn else 0)
+            else:
+                # In pointer mode, barrel button acts as Right Click!
+                self.uinput.write(e.EV_KEY, e.BTN_RIGHT, 1 if has_stylus_btn else 0)
             self._button_stylus_pressed = has_stylus_btn
 
         has_stylus2_btn = bool(ev.buttons & BUTTON_STYLUS2)
         if has_stylus2_btn != self._button_stylus2_pressed:
-            self.uinput.write(e.EV_KEY, e.BTN_STYLUS2, 1 if has_stylus2_btn else 0)
+            if is_tablet_mode:
+                self.uinput.write(e.EV_KEY, e.BTN_STYLUS2, 1 if has_stylus2_btn else 0)
+            else:
+                self.uinput.write(e.EV_KEY, e.BTN_MIDDLE, 1 if has_stylus2_btn else 0)
             self._button_stylus2_pressed = has_stylus2_btn
 
-        # Handle Action States
+        # Tablet tool proximity management
+        if is_tablet_mode:
+            tool_code = e.BTN_TOOL_RUBBER if ev.tool_type == TOOL_ERASER else e.BTN_TOOL_PEN
+            if not self._is_in_proximity or self._active_tool != ev.tool_type:
+                if self._is_in_proximity and self._active_tool != ev.tool_type:
+                    old_code = e.BTN_TOOL_RUBBER if self._active_tool == TOOL_ERASER else e.BTN_TOOL_PEN
+                    self.uinput.write(e.EV_KEY, old_code, 0)
+                self.uinput.write(e.EV_KEY, tool_code, 1)
+                self._is_in_proximity = True
+                self._active_tool = ev.tool_type
+
+        # Action Handling
         if ev.action in (ACTION_HOVER_MOVE, ACTION_HOVER_ENTER):
             if self._is_down:
                 self.uinput.write(e.EV_ABS, e.ABS_PRESSURE, 0)
                 self.uinput.write(e.EV_KEY, e.BTN_TOUCH, 0)
+                if not is_tablet_mode:
+                    self.uinput.write(e.EV_KEY, e.BTN_LEFT, 0)
                 self._is_down = False
 
             self.uinput.write(e.EV_ABS, e.ABS_X, abs_x)
@@ -224,6 +248,8 @@ class VirtualTablet:
             self.uinput.write(e.EV_ABS, e.ABS_TILT_X, tilt_x)
             self.uinput.write(e.EV_ABS, e.ABS_TILT_Y, tilt_y)
             self.uinput.write(e.EV_KEY, e.BTN_TOUCH, 1)
+            if not is_tablet_mode:
+                self.uinput.write(e.EV_KEY, e.BTN_LEFT, 1)
             self._is_down = True
 
         elif ev.action == ACTION_MOVE:
@@ -234,20 +260,28 @@ class VirtualTablet:
             self.uinput.write(e.EV_ABS, e.ABS_TILT_Y, tilt_y)
             if not self._is_down and pressure_val > 0:
                 self.uinput.write(e.EV_KEY, e.BTN_TOUCH, 1)
+                if not is_tablet_mode:
+                    self.uinput.write(e.EV_KEY, e.BTN_LEFT, 1)
                 self._is_down = True
 
         elif ev.action in (ACTION_UP, ACTION_CANCEL):
             self.uinput.write(e.EV_ABS, e.ABS_PRESSURE, 0)
             self.uinput.write(e.EV_KEY, e.BTN_TOUCH, 0)
+            if not is_tablet_mode:
+                self.uinput.write(e.EV_KEY, e.BTN_LEFT, 0)
             self._is_down = False
 
         elif ev.action == ACTION_HOVER_EXIT:
             if self._is_down:
                 self.uinput.write(e.EV_ABS, e.ABS_PRESSURE, 0)
                 self.uinput.write(e.EV_KEY, e.BTN_TOUCH, 0)
+                if not is_tablet_mode:
+                    self.uinput.write(e.EV_KEY, e.BTN_LEFT, 0)
                 self._is_down = False
-            self.uinput.write(e.EV_KEY, tool_code, 0)
-            self._is_in_proximity = False
+            if is_tablet_mode:
+                tool_code = e.BTN_TOOL_RUBBER if self._active_tool == TOOL_ERASER else e.BTN_TOOL_PEN
+                self.uinput.write(e.EV_KEY, tool_code, 0)
+                self._is_in_proximity = False
 
         self.uinput.syn()
 
@@ -257,13 +291,14 @@ class VirtualTablet:
             try:
                 if self._is_down:
                     self.uinput.write(e.EV_KEY, e.BTN_TOUCH, 0)
-                if self._is_in_proximity:
+                    if self.mode != "tablet":
+                        self.uinput.write(e.EV_KEY, e.BTN_LEFT, 0)
+                if self.mode == "tablet" and self._is_in_proximity:
                     tool_code = e.BTN_TOOL_RUBBER if self._active_tool == TOOL_ERASER else e.BTN_TOOL_PEN
                     self.uinput.write(e.EV_KEY, tool_code, 0)
                 if self._button_stylus_pressed:
-                    self.uinput.write(e.EV_KEY, e.BTN_STYLUS, 0)
-                if self._button_stylus2_pressed:
-                    self.uinput.write(e.EV_KEY, e.BTN_STYLUS2, 0)
+                    btn = e.BTN_STYLUS if self.mode == "tablet" else e.BTN_RIGHT
+                    self.uinput.write(e.EV_KEY, btn, 0)
                 self.uinput.syn()
                 self.uinput.close()
             except Exception as err:

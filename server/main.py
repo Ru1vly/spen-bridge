@@ -39,6 +39,13 @@ def parse_args():
         help="Virtual tablet device name (default: 'Samsung S Pen Virtual Tablet')",
     )
     parser.add_argument(
+        "--mode",
+        type=str,
+        choices=["pointer", "tablet"],
+        default="pointer",
+        help="Device mode: 'pointer' (default, absolute cursor + clicks for all Wayland compositors) or 'tablet' (pure tablet-v2)",
+    )
+    parser.add_argument(
         "--direct",
         action="store_true",
         help="Enable INPUT_PROP_DIRECT (screen-mapped display tablet mode)",
@@ -85,6 +92,7 @@ async def main():
 
     tablet = VirtualTablet(
         name=args.name,
+        mode=args.mode,
         direct_mode=args.direct,
         screen_bounds=screen_bounds,
         desktop_size=desktop_size,
@@ -98,6 +106,11 @@ async def main():
     def _sig_handler():
         logging.info("Shutting down...")
         stop_event.set()
+
+    try:
+        signal.signal(signal.SIGHUP, signal.SIG_IGN)
+    except (AttributeError, ValueError):
+        pass
 
     for sig in (signal.SIGINT, signal.SIGTERM):
         try:

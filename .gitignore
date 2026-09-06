@@ -18,3 +18,4 @@ android/app/build/
 *.iml
 local.properties
 .DS_Store
+qr_spen.png
