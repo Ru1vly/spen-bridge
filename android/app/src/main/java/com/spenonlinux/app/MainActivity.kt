@@ -217,7 +217,7 @@ class MainActivity : AppCompatActivity(), PenEventSender.StatusListener {
             ?: SettingsActivity.DEFAULT_IP
         val port = prefs.getInt(SettingsActivity.KEY_SERVER_PORT, SettingsActivity.DEFAULT_PORT)
 
-        sender = PenEventSender(host, port, this).also {
+        sender = PenEventSender(applicationContext, host, port, this).also {
             penSurfaceView.sender = it
             it.start()
         }

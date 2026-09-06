@@ -17,6 +17,8 @@ from server.protocol import (
     PKT_PING,
     PKT_PONG,
     PKT_HANDSHAKE,
+    ACTION_HOVER_MOVE,
+    ACTION_MOVE,
     unpack_header,
     unpack_events,
     pack_packet,
@@ -83,9 +85,23 @@ class SPenServer:
                     logger.info(f"Client {peer_str} disconnected (EOF)")
                     break
 
+                # Re-arm TCP_QUICKACK after every read. Linux reverts a socket to
+                # delayed ACKs once it's judged the connection idle, and the ~40ms
+                # delayed-ACK timer is a real, avoidable source of jitter for a
+                # live pen-position stream over Wi-Fi. No-op on platforms without it.
+                if sock is not None and hasattr(socket, "TCP_QUICKACK"):
+                    try:
+                        sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_QUICKACK, 1)
+                    except OSError:
+                        pass
+
                 buffer.extend(chunk)
 
-                # Process all complete packets in buffer
+                # Drain every complete packet currently buffered. PKT_EVENT payloads
+                # are collected rather than dispatched immediately so a Wi-Fi
+                # backlog (several packets arriving in this one read()) can be
+                # coalesced below instead of replayed as visible catch-up lag.
+                event_groups = []
                 while len(buffer) >= HEADER_SIZE:
                     hdr_res = unpack_header(buffer[:HEADER_SIZE])
                     if hdr_res is None:
@@ -107,14 +123,15 @@ class SPenServer:
                     # Handle packet type
                     if pkt_type == PKT_EVENT:
                         events = unpack_events(payload)
-                        for ev in events:
-                            self.tablet.handle_event(ev)
-                        num_events = len(events)
-                        self.stats_events_count += num_events
-                        self.total_events_count += num_events
+                        event_groups.append(events)
                         self.stats_packets_count += 1
 
                     elif pkt_type == PKT_PING:
+                        # Sent/drained immediately even though PKT_EVENT dispatch below is
+                        # deferred to the end of this drain pass: a PONG here is only an
+                        # a link-liveness ack, not a "prior events applied" guarantee. If a
+                        # PING/PONG-based RTT measurement is ever added, re-check this
+                        # ordering against _dispatch_event_groups()'s deferred dispatch.
                         pong = pack_packet(PKT_PONG, seq, b"")
                         writer.write(pong)
                         await writer.drain()
@@ -124,6 +141,9 @@ class SPenServer:
                         ack = pack_packet(PKT_HANDSHAKE, seq, b"OK")
                         writer.write(ack)
                         await writer.drain()
+
+                if event_groups:
+                    self._dispatch_event_groups(event_groups)
 
                 # Periodic stats logging and callback (every 1.0 second)
                 now = time.time()
@@ -158,6 +178,55 @@ class SPenServer:
                 await writer.wait_closed()
             except Exception:
                 pass
+
+    def _dispatch_event_groups(self, groups):
+        """Forward received pen events to the virtual tablet, coalescing a
+        Wi-Fi backlog when one has formed.
+
+        Each element of `groups` is the list of PenEvent objects unpacked from
+        one received network packet, in arrival order. Normally there is only
+        ever one packet's worth of events per read() (the Android client
+        flushes on every touch/hover callback), so this is a plain pass-through.
+        But if delivery stalls for a moment - a Wi-Fi hiccup, a brief scheduling
+        delay - the OS can hand us several already-queued packets in a single
+        read(). Replaying every buffered position sample in order in that case
+        makes the on-screen cursor visibly "catch up in slow motion" instead of
+        jumping straight to where the pen actually is right now.
+
+        A pure position/pressure sample (ACTION_MOVE / ACTION_HOVER_MOVE) is
+        safe to drop only when it is the LAST event of its own packet and is
+        immediately superseded by the first event of the NEXT already-arrived
+        packet carrying the same action, the same button state, and the same
+        tool type - i.e. it was already stale the moment we got to it, and
+        skipping it changes nothing but which position sample got acted on.
+        This never skips anything within a single packet (preserving the
+        historical-sample batching Android provides for stroke fidelity),
+        never skips a press/release/proximity transition, a button-state
+        change, or a tool-type change (stylus/eraser), and never skips the
+        very last event overall (the freshest sample always gets delivered).
+
+        stats_events_count/total_events_count are incremented here (per event
+        actually forwarded to the tablet), not while draining the socket, so
+        the GUI's live "events/sec" reflects what the cursor actually did —
+        not how many samples arrived over the wire before coalescing.
+        """
+        flat = [(group_idx, ev) for group_idx, group in enumerate(groups) for ev in group]
+        last_idx = len(flat) - 1
+        dispatched = 0
+        for i, (group_idx, ev) in enumerate(flat):
+            if ev.action in (ACTION_HOVER_MOVE, ACTION_MOVE) and i < last_idx:
+                next_group_idx, next_ev = flat[i + 1]
+                if (
+                    next_group_idx != group_idx
+                    and next_ev.action == ev.action
+                    and next_ev.buttons == ev.buttons
+                    and next_ev.tool_type == ev.tool_type
+                ):
+                    continue  # superseded by an already-arrived newer packet
+            self.tablet.handle_event(ev)
+            dispatched += 1
+        self.stats_events_count += dispatched
+        self.total_events_count += dispatched
 
     async def start(self):
         """Start listening for client connections."""

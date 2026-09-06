@@ -22,6 +22,7 @@ class AppProfile:
     app_matches: List[str] = field(default_factory=list)  # e.g. ["osu!", "osu", "osu-lazer"]
     click_on_touch: bool = True                           # False for osu!
     device_mode: str = "pointer"                          # "pointer" or "tablet"
+    direct_mode: bool = False                             # INPUT_PROP_DIRECT (display tablet mode)
     mapping_mode: str = "all"                             # "all", "monitor", "custom"
     selected_monitor: str = ""
     custom_bounds: List[int] = field(default_factory=lambda: [0, 0, 1920, 1080])
@@ -115,7 +116,6 @@ class TabletConfig:
 
     # Virtual tablet device settings
     device_name: str = "Samsung S Pen Virtual Tablet"
-    direct_mode: bool = False
     desktop_size: List[int] = field(default_factory=lambda: [1920, 2160])
     aspect_ratio_lock: bool = False
     tablet_aspect_ratio: str = "16:10"
@@ -171,6 +171,14 @@ class TabletConfig:
     @device_mode.setter
     def device_mode(self, val: str):
         self.get_active_profile().device_mode = val
+
+    @property
+    def direct_mode(self) -> bool:
+        return self.get_active_profile().direct_mode
+
+    @direct_mode.setter
+    def direct_mode(self, val: bool):
+        self.get_active_profile().direct_mode = val
 
     @property
     def mapping_mode(self) -> str:
@@ -283,7 +291,6 @@ class TabletConfig:
             "auto_adb_forward": self.auto_adb_forward,
             "minimize_to_tray": self.minimize_to_tray,
             "device_name": self.device_name,
-            "direct_mode": self.direct_mode,
             "desktop_size": self.desktop_size,
             "aspect_ratio_lock": self.aspect_ratio_lock,
             "tablet_aspect_ratio": self.tablet_aspect_ratio,
@@ -293,6 +300,7 @@ class TabletConfig:
             # Active profile mirrors for backward compatibility
             "click_on_touch": prof.click_on_touch,
             "device_mode": prof.device_mode,
+            "direct_mode": prof.direct_mode,
             "mapping_mode": prof.mapping_mode,
             "selected_monitor": prof.selected_monitor,
             "custom_bounds": prof.custom_bounds,
@@ -315,7 +323,6 @@ class TabletConfig:
         cfg.auto_adb_forward = data.get("auto_adb_forward", cfg.auto_adb_forward)
         cfg.minimize_to_tray = data.get("minimize_to_tray", cfg.minimize_to_tray)
         cfg.device_name = data.get("device_name", cfg.device_name)
-        cfg.direct_mode = data.get("direct_mode", cfg.direct_mode)
         cfg.desktop_size = data.get("desktop_size", cfg.desktop_size)
         cfg.aspect_ratio_lock = data.get("aspect_ratio_lock", cfg.aspect_ratio_lock)
         cfg.tablet_aspect_ratio = data.get("tablet_aspect_ratio", cfg.tablet_aspect_ratio)
@@ -326,6 +333,12 @@ class TabletConfig:
         profiles_raw = data.get("profiles")
         if isinstance(profiles_raw, dict):
             cfg.profiles = {k: AppProfile.from_dict(v) for k, v in profiles_raw.items()}
+            # Migrate the old global "direct_mode" flag into any profile whose own
+            # serialized data didn't already carry a per-profile value.
+            legacy_direct_mode = data.get("direct_mode", False)
+            for prof_name, raw_prof in profiles_raw.items():
+                if prof_name in cfg.profiles and "direct_mode" not in raw_prof:
+                    cfg.profiles[prof_name].direct_mode = legacy_direct_mode
         else:
             # Migration from legacy flat config
             defaults = get_builtin_default_profiles()
@@ -333,6 +346,7 @@ class TabletConfig:
                 def_p = defaults["Default"]
                 def_p.click_on_touch = data.get("click_on_touch", True)
                 def_p.device_mode = data.get("device_mode", "pointer")
+                def_p.direct_mode = data.get("direct_mode", False)
                 def_p.mapping_mode = data.get("mapping_mode", "all")
                 def_p.selected_monitor = data.get("selected_monitor", "")
                 def_p.custom_bounds = data.get("custom_bounds", [0, 0, 1920, 1080])

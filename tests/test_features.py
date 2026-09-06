@@ -199,25 +199,34 @@ class TestSPenSettingsAndFeatures(unittest.TestCase):
         from server.gui import MainWindow
         win = MainWindow()
         try:
-            self.assertEqual(win.tabs.count(), 4)
+            self.assertEqual(win.tabs.count(), 2)
+
+            # Auto-switch off so selecting a profile also drives the live/active
+            # profile (deterministic: with auto-switch on, selection only changes
+            # the edit target, per the profile/editing decoupling in main_window.py).
+            win.config.auto_switch_profiles = False
+            win.profiles_tab.list_panel.chk_auto_switch.setChecked(False)
+
             # Switch to osu!
-            for i in range(win.combo_profiles.count()):
-                if win.combo_profiles.itemData(i) == "osu!":
-                    win.combo_profiles.setCurrentIndex(i)
-                    break
-            self.assertFalse(win.chk_click_on_touch.isChecked())
+            win.profiles_tab.select_profile("osu!")
+            device_section = win.profiles_tab.editor_panel.device_section
+            self.assertFalse(device_section.chk_click_on_touch.isChecked())
 
             # Switch to Default
-            win.combo_profiles.setCurrentIndex(0)
-            self.assertTrue(win.chk_click_on_touch.isChecked())
+            win.profiles_tab.select_profile("Default")
+            self.assertTrue(device_section.chk_click_on_touch.isChecked())
 
             # Toggle Click on Touch on Default
-            win.chk_click_on_touch.setChecked(False)
+            device_section.chk_click_on_touch.setChecked(False)
             self.assertFalse(win.config.click_on_touch)
             self.assertFalse(win.config.profiles["Default"].click_on_touch)
         finally:
             win.worker.stop_server()
             win.http_server.stop()
+            # Toggling settings above legitimately dirties the in-memory config;
+            # this test isn't exercising the unsaved-changes close prompt, so
+            # skip it and close directly.
+            win._dirty = False
             win.close()
 
     def test_barrel_button_mapping(self):
