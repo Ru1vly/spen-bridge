@@ -134,6 +134,7 @@ class MainWindow(QMainWindow):
         layout.addWidget(self.tabs)
 
         self.setCentralWidget(central)
+        theme.apply_elevation_to_cards(self)
 
         # Initial state (blockSignals so restoring saved config never marks the
         # document dirty — only real user edits should trigger the save prompt)
