@@ -1,4 +1,4 @@
-package com.spenonlinux.app
+package com.spenbridge.app
 
 import android.content.Context
 import android.os.Bundle
@@ -16,7 +16,7 @@ import com.google.android.material.textfield.TextInputEditText
 class SettingsActivity : AppCompatActivity() {
 
     companion object {
-        const val PREFS_NAME = "SPenOnLinuxPrefs"
+        const val PREFS_NAME = "SPenBridgePrefs"
         const val KEY_SERVER_IP = "server_ip"
         const val KEY_SERVER_PORT = "server_port"
         const val KEY_REJECT_TOUCH = "reject_touch"

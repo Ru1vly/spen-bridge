@@ -4,11 +4,11 @@ plugins {
 }
 
 android {
-    namespace = "com.spenonlinux.app"
+    namespace = "com.spenbridge.app"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.spenonlinux.app"
+        applicationId = "com.spenbridge.app"
         minSdk = 26
         targetSdk = 34
         versionCode = 1

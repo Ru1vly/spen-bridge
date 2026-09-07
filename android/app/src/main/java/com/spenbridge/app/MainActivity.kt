@@ -1,4 +1,4 @@
-package com.spenonlinux.app
+package com.spenbridge.app
 
 import android.content.Context
 import android.content.Intent

@@ -6,7 +6,7 @@
     android:background="@color/canvas_bg">
 
     <!-- Active S Pen Drawing & Capture Surface -->
-    <com.spenonlinux.app.PenSurfaceView
+    <com.spenbridge.app.PenSurfaceView
         android:id="@+id/penSurfaceView"
         android:layout_width="match_parent"
         android:layout_height="match_parent" />

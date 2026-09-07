@@ -1,5 +1,5 @@
 <resources>
-    <style name="Theme.SPenOnLinux" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+    <style name="Theme.SPenBridge" parent="Theme.MaterialComponents.DayNight.NoActionBar">
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
         <item name="android:windowBackground">@color/canvas_bg</item>

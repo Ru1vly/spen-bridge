@@ -16,7 +16,7 @@
         android:label="@string/app_name"
         android:roundIcon="@android:drawable/ic_menu_edit"
         android:supportsRtl="true"
-        android:theme="@style/Theme.SPenOnLinux">
+        android:theme="@style/Theme.SPenBridge">
 
         <activity
             android:name=".MainActivity"
