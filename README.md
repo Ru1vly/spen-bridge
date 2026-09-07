@@ -13,7 +13,7 @@ Turn your Samsung Galaxy Tab and S Pen into a low latency, pressure sensitive gr
 - [Platform Support](#platform-support)
 - [Architecture](#architecture)
 - [Quick Start](#quick-start)
-  - [1. Linux Server Setup](#1-linux-server-setup)
+  - [1. Install on Linux](#1-install-on-linux)
   - [2. Verify With a Synthetic Test](#2-verify-with-a-synthetic-test)
   - [3. Connect the Android App](#3-connect-the-android-app)
 - [Documentation](#documentation)
@@ -73,7 +73,18 @@ Your Linux apps recognize the result as a real physical graphics tablet.
 
 ## Quick Start
 
-### 1. Linux Server Setup
+### 1. Install on Linux
+
+The fastest way to get set up is the one-command installer. It clones the repo into `~/spen-bridge`, sets up uinput permissions, creates the Python virtual environment, and installs a desktop launcher entry. Running it again later updates an existing install in place.
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Ru1vly/spen-bridge/main/install.sh | bash
+```
+
+> [!TIP]
+> Piping a script into `bash` runs it with your permissions. Read [install.sh](install.sh) first if you would rather see exactly what it does before running it.
+
+Prefer to do it by hand, or already have the repo cloned? Run the same steps yourself:
 
 ```bash
 # Set up uinput permissions
@@ -82,8 +93,12 @@ Your Linux apps recognize the result as a real physical graphics tablet.
 # Create a virtual environment and install dependencies
 uv venv server/.venv
 uv pip install --python server/.venv/bin/python -r server/requirements.txt
+```
 
-# Launch the Desktop GUI control panel
+Either way, launch with:
+
+```bash
+# Desktop GUI control panel
 ./start.sh
 
 # Or launch the GUI directly:
@@ -103,7 +118,15 @@ server/.venv/bin/python server/test_synthetic.py
 
 ### 3. Connect the Android App
 
-Open the `android/` directory in Android Studio, install the app onto your Samsung tablet, open **Settings**, and enter your PC's IP address, or connect via USB:
+Fastest path: connect your tablet over USB, download the latest APK from [Releases](https://github.com/Ru1vly/spen-bridge/releases/latest), and install it directly:
+
+```bash
+adb install spen-bridge-android-*.apk
+```
+
+Prefer building it yourself instead? Open the `android/` directory in Android Studio and install the app onto your tablet from there.
+
+Either way, open **Settings** in the app and enter your PC's IP address, or connect via USB:
 
 ```bash
 # For USB mode:
