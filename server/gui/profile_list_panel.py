@@ -26,7 +26,7 @@ from server.gui.widgets.pill_badge import PillBadge
 def is_profile_customized(profile: AppProfile) -> bool:
     """A profile is 'customized' if any of its settings fields differ from its
     baseline: the matching built-in preset for one of the four shipped names,
-    or plain dataclass defaults otherwise. Computed fresh every call — never
+    or plain dataclass defaults otherwise. Computed fresh every call, never
     persisted, so it's always correct for whatever the profile currently holds."""
     baseline = get_builtin_default_profiles().get(profile.name)
     if baseline is None:
@@ -53,12 +53,11 @@ class ProfileListRow(QWidget):
         self._accent_bar.setStyleSheet("background: transparent; border-radius: 1px;")
         layout.addWidget(self._accent_bar)
 
-        display_name = f"★ {name}" if name == "Default" else name
-        self._lbl_name = QLabel(display_name)
+        self._lbl_name = QLabel(name)
         self._lbl_name.setStyleSheet("font-weight: 500;")
         layout.addWidget(self._lbl_name, stretch=1)
         if name == "Default":
-            self.setToolTip("Global fallback — used when no other profile matches.")
+            self.setToolTip("Global fallback: used when no other profile matches.")
 
         self._customized_badge = PillBadge("customized", state="customized")
         layout.addWidget(self._customized_badge)
@@ -141,7 +140,7 @@ class ProfileListPanel(QWidget):
         self.btn_del_prof.setToolTip(
             ""
             if can_delete
-            else "The Default profile cannot be deleted — it is the fallback used when no other profile matches."
+            else "The Default profile cannot be deleted: it is the fallback used when no other profile matches."
         )
 
     def refresh_markers(self, active_profile_name: str, editing_profile_name: str):
@@ -151,7 +150,7 @@ class ProfileListPanel(QWidget):
             row.set_live(auto_switch and name == active_profile_name)
 
     def set_current_by_name(self, name: str):
-        """Select a row AND fire profile_selected — the entry point for
+        """Select a row AND fire profile_selected: the entry point for
         actions that need the full selection-change chain to run (new/
         duplicate/delete, tests, ProfilesTab.select_profile)."""
         item = self._items.get(name)
@@ -159,7 +158,7 @@ class ProfileListPanel(QWidget):
             self.list_widget.setCurrentItem(item)
 
     def sync_current_by_name(self, name: str):
-        """Update which row is highlighted WITHOUT emitting profile_selected —
+        """Update which row is highlighted WITHOUT emitting profile_selected:
         used when the selection change already originated elsewhere (e.g. the
         header combo) and the list just needs to visually agree, without
         re-entering the selection-change handling a second time."""
@@ -170,7 +169,7 @@ class ProfileListPanel(QWidget):
             self.list_widget.blockSignals(False)
 
     def refresh_customized_badge(self, name: str):
-        """Recompute one row's 'customized' badge — call this whenever the
+        """Recompute one row's 'customized' badge: call this whenever the
         currently-edited profile's settings change, since editing a profile
         in place doesn't otherwise trigger a full repopulate()."""
         row = self._rows.get(name)

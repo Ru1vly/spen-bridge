@@ -20,7 +20,7 @@ GUIDE_TEXT = (
     "- Enter window class / process name substrings above; when any matching application is\n"
     "  focused, this profile activates automatically (if Auto-Switch is enabled).\n"
     "- Every field in this panel (device mode, pressure, buttons, mapping) is fully independent\n"
-    "  per profile — changing one profile never affects another."
+    "  per profile: changing one profile never affects another."
 )
 
 
@@ -51,14 +51,14 @@ class IdentitySection(QGroupBox):
         layout.addWidget(self.chip_input)
 
         self.lbl_default_note = QLabel(
-            "Used when no other profile matches — Default has no match rules of its own."
+            "Used when no other profile matches. Default has no match rules of its own."
         )
         self.lbl_default_note.setWordWrap(True)
         self.lbl_default_note.setStyleSheet("color: #a6adc8; font-style: italic;")
         layout.addWidget(self.lbl_default_note)
 
         live_row = QHBoxLayout()
-        self.lbl_live_match = QLabel("Detected active window right now: —")
+        self.lbl_live_match = QLabel("Detected active window right now: (none yet)")
         self.lbl_live_match.setWordWrap(True)
         live_row.addWidget(self.lbl_live_match, stretch=1)
         self.badge_live_match = PillBadge("No match", state="idle")

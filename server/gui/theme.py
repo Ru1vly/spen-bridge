@@ -2,7 +2,7 @@
 Central style tokens and stylesheet for the S Pen Bridge desktop GUI.
 Dark, Catppuccin-Mocha-inspired palette, styled as soft/neumorphic UI: cards
 and controls sit at the same tone as their background and get their depth
-from a light/dark bevel pair instead of flat borders — raised for resting
+from a light/dark bevel pair instead of flat borders: raised for resting
 controls, inverted (inset) for anything "pressed", active, or selected.
 Every widget module should size/space things using the constants here rather
 than hard-coding new magic numbers.
@@ -44,7 +44,7 @@ CONTROL_MIN_HEIGHT = 28
 CONTROL_H_PADDING = 8
 
 # objectNames that opt OUT of the automatic card elevation sweep (see
-# apply_elevation) because they are nested inside an already-elevated card —
+# apply_elevation) because they are nested inside an already-elevated card:
 # stacking a second soft shadow there just muddies the edge instead of
 # reading as "more raised".
 _NO_SHADOW_OBJECT_NAMES = {"CollapsibleBox"}
@@ -52,7 +52,7 @@ _NO_SHADOW_OBJECT_NAMES = {"CollapsibleBox"}
 # Class names that opt out because their contents repaint continuously
 # (a 30Hz diagnostics timer, or live pen-stroke drawing). A
 # QGraphicsDropShadowEffect makes Qt re-rasterize the whole blurred subtree
-# on every single repaint of any child inside it — fine for a card that only
+# on every single repaint of any child inside it: fine for a card that only
 # changes on user interaction, but on these it turns every frame of a 30Hz
 # update (or every point of a pen stroke) into a full soft-shadow re-blur,
 # which reads as dropped frames / input lag rather than depth.

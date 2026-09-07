@@ -272,7 +272,7 @@ class TabletConfig:
         priority over the persisted self.desktop_size. Without this, "monitor"/
         "custom" mapping used the config's last-saved desktop_size as the
         denominator for scaling to the uinput ABS coordinate range regardless of
-        whether it still matched reality — a stale or default value there
+        whether it still matched reality: a stale or default value there
         (e.g. a taller multi-monitor desktop_size against a single 1080p
         monitor) silently caps how far down/right the pen can ever reach.
         """

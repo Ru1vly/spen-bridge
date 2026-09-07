@@ -1,6 +1,6 @@
 """
 Device Behavior profile section: pointer vs tablet device mode, click-on-touch,
-and (advanced) INPUT_PROP_DIRECT mode — all per-profile.
+and (advanced) INPUT_PROP_DIRECT mode: all per-profile.
 """
 
 from typing import Optional
@@ -40,7 +40,7 @@ class DeviceSection(QGroupBox):
 
         desc = QLabel(
             "When disabled, hovering, movement, and pressure are tracked without emitting mouse "
-            "click events — ideal for keyboard-tapping rhythm games, custom gesture controls, or "
+            "click events, ideal for keyboard-tapping rhythm games, custom gesture controls, or "
             "hover-only navigation."
         )
         desc.setWordWrap(True)

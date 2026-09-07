@@ -35,4 +35,4 @@ fi
 sudo udevadm control --reload-rules
 sudo udevadm trigger
 
-echo "[✓] uinput permissions setup complete!"
+echo "[+] uinput permissions setup complete!"

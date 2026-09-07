@@ -1,5 +1,5 @@
 """
-S Pen Bridge — Main entry point (supports both GUI and Headless CLI).
+S Pen Bridge: main entry point (supports both GUI and headless CLI).
 """
 
 import argparse
@@ -21,7 +21,7 @@ from server.server import SPenServer
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description="S Pen Bridge — Turn Samsung S Pen and tablet into a Linux graphics tablet."
+        description="S Pen Bridge: turn Samsung S Pen and tablet into a Linux graphics tablet."
     )
     parser.add_argument(
         "--gui",
@@ -160,7 +160,7 @@ async def run_cli(args):
     try:
         await server.start()
         print("\n" + "=" * 55)
-        print(" 🎨 S Pen Bridge Server is running (Headless Mode)!")
+        print(" S Pen Bridge Server is running (Headless Mode)!")
         print(f" Listening on {host}:{port}")
         print(" Ready for Android app connection.")
         print(" Press Ctrl+C to stop.")

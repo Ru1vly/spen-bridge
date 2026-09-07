@@ -1,5 +1,5 @@
 """
-S Pen Bridge — Network Protocol Definition.
+S Pen Bridge: Network Protocol Definition.
 
 Binary packet specification:
 - Header (9 bytes):

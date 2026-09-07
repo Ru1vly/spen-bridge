@@ -41,7 +41,7 @@ WINDOW_POLL_INTERVAL_MS = 300
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("S Pen Bridge — Tablet Controller")
+        self.setWindowTitle("S Pen Bridge: Tablet Controller")
         self.resize(1200, 760)
         self.setMinimumSize(1100, 720)
 
@@ -133,7 +133,7 @@ class MainWindow(QMainWindow):
         theme.apply_elevation_to_cards(self)
 
         # Initial state (blockSignals so restoring saved config never marks the
-        # document dirty — only real user edits should trigger the save prompt)
+        # document dirty: only real user edits should trigger the save prompt)
         chk_auto_switch = self.profiles_tab.list_panel.chk_auto_switch
         chk_auto_switch.blockSignals(True)
         chk_auto_switch.setChecked(self.config.auto_switch_profiles)
@@ -149,7 +149,7 @@ class MainWindow(QMainWindow):
 
         self.tabs.setCurrentIndex(self.gui_state.last_tab_index)
 
-        # Nothing up to this point is a real user edit — start clean.
+        # Nothing up to this point is a real user edit: start clean.
         self._dirty = False
         self.header_bar.set_dirty(False)
 
@@ -164,7 +164,7 @@ class MainWindow(QMainWindow):
             self.set_active_profile(name)
 
     def set_editing_profile(self, name: str):
-        """Change ONLY what is shown/edited — never touches active_profile_name."""
+        """Change ONLY what is shown/edited: never touches active_profile_name."""
         profile = self.config.profiles.get(name)
         if profile is None:
             return
@@ -358,7 +358,7 @@ class MainWindow(QMainWindow):
         self._repopulate_profiles()
         self.profiles_tab.select_profile("Default")
         # select_profile() only pushes to the live tablet when auto-switch is
-        # off (see _on_profile_selection_changed) — but a reset must always
+        # off (see _on_profile_selection_changed), but a reset must always
         # resync the running VirtualTablet to the fresh defaults, regardless
         # of auto-switch state, since the whole config object was replaced.
         self.set_active_profile(self.config.active_profile_name)

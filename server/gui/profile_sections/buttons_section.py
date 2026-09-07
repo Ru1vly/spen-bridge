@@ -27,7 +27,7 @@ class ButtonsSection(QGroupBox):
 
         grid.addWidget(QLabel("Primary Button (Side Barrel):"), 0, 0)
         self.combo_btn_prim = QComboBox()
-        self.combo_btn_prim.addItem("Right Click (Default — Context Menu / Color Picker)", "right_click")
+        self.combo_btn_prim.addItem("Right Click (Default: Context Menu / Color Picker)", "right_click")
         self.combo_btn_prim.addItem("Middle Click (Pan / Rotate Canvas)", "middle_click")
         self.combo_btn_prim.addItem("Toggle Eraser Mode", "eraser")
         self.combo_btn_prim.addItem("Undo Shortcut (Ctrl+Z)", "undo")

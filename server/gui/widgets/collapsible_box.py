@@ -2,7 +2,7 @@
 Shared collapsible section widget: a clickable header (chevron + title + a
 right-aligned one-line summary that stays visible even while collapsed) above
 a body that hides/shows. Used for every "Advanced: ..." sub-section and for
-the Server Logs panel — one shared mechanism, no parallel "Card" hierarchy.
+the Server Logs panel: one shared mechanism, no parallel "Card" hierarchy.
 """
 
 from PySide6.QtCore import Qt, Signal

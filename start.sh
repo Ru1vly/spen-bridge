@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# S Pen Bridge — All-in-One Launcher
+# S Pen Bridge: All-in-One Launcher
 
 set -e
 
@@ -30,19 +30,19 @@ fi
 
 if [ "$IS_CLI" -eq 0 ]; then
     echo "========================================================"
-    echo "       🎨 S Pen Bridge — Launching Desktop GUI        "
+    echo "       S Pen Bridge: Launching Desktop GUI        "
     echo "========================================================"
     exec "$DIR/server/.venv/bin/python" "$DIR/server/main.py" --gui "$@"
 fi
 
 # CLI / Headless Mode
 echo "========================================================"
-echo "          🎨 S Pen Bridge — Console Server            "
+echo "          S Pen Bridge: Console Server            "
 echo "========================================================"
 echo " Detected PC IP: $IP"
 echo " Tablet Port:   40118"
 echo ""
-echo "🖌️  [ON YOUR SAMSUNG TABLET / S22-S24 ULTRA]:"
+echo "[ON YOUR SAMSUNG TABLET / S22-S24 ULTRA]:"
 echo "   1. Install the 'S Pen Bridge' app (see docs/SETUP.md)."
 echo "   2. Ensure it's on the same Wi-Fi network as this PC."
 echo "   3. Open Settings -> Server IP: $IP (Port: 40118)."

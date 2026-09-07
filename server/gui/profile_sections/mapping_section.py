@@ -1,7 +1,7 @@
 """
 Screen Mapping profile section: which screen region the tablet surface maps
 to (whole desktop / single monitor / custom rect), plus the always-visible,
-globally-scoped aspect ratio lock (applies to all profiles — see the GUI
+globally-scoped aspect ratio lock (applies to all profiles: see the GUI
 redesign spec section 4 for why aspect ratio stays global for this pass).
 """
 

@@ -1,4 +1,4 @@
-"""Collapsible server log panel — collapsed by default, summary always visible."""
+"""Collapsible server log panel: collapsed by default, summary always visible."""
 
 import time
 

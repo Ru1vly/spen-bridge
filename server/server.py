@@ -207,7 +207,7 @@ class SPenServer:
 
         stats_events_count/total_events_count are incremented here (per event
         actually forwarded to the tablet), not while draining the socket, so
-        the GUI's live "events/sec" reflects what the cursor actually did —
+        the GUI's live "events/sec" reflects what the cursor actually did,
         not how many samples arrived over the wire before coalescing.
         """
         flat = [(group_idx, ev) for group_idx, group in enumerate(groups) for ev in group]

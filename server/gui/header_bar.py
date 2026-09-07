@@ -16,7 +16,7 @@ class HeaderBar(QFrame):
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        # NOTE: deliberately no local setStyleSheet() call here — setting a
+        # NOTE: deliberately no local setStyleSheet() call here: setting a
         # stylesheet directly on a container widget stops the app-level
         # stylesheet from cascading into its children (a well-known Qt
         # gotcha), which would break every themed child below (the
@@ -78,7 +78,7 @@ class HeaderBar(QFrame):
         self.lbl_active_mode_prefix.setText("Auto:" if auto else "Active:")
         self.combo_profiles.setEnabled(not auto)
         self.combo_profiles.setToolTip(
-            "Auto-switch is enabled — the live profile follows the focused window. "
+            "Auto-switch is enabled: the live profile follows the focused window. "
             "Uncheck 'Auto-switch by focused window' in the Profiles tab to pick manually."
             if auto
             else ""

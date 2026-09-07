@@ -200,4 +200,4 @@ class ScratchpadWidget(QWidget):
 
         # Hint text if blank
         painter.setPen(QColor("#45475a"))
-        painter.drawText(12, self.height() - 12, "Test Canvas — Draw here with S Pen or mouse")
+        painter.drawText(12, self.height() - 12, "Test Canvas: Draw here with S Pen or mouse")

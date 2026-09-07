@@ -2,7 +2,7 @@
 Profiles tab: the profile list on the left and the full profile editor on
 the right, in a resizable splitter. This is the tab that used to be spread
 across three separate tabs (Pen & Buttons / Display & Area / Application
-Profiles) — everything about one profile is editable from here.
+Profiles): everything about one profile is editable from here.
 """
 
 from PySide6.QtCore import Qt, Signal
@@ -40,7 +40,7 @@ class ProfilesTab(QWidget):
         self.list_panel.profile_selected.connect(self.profile_selected.emit)
 
     def select_profile(self, name: str):
-        """Programmatically select a profile in the list — the single public
+        """Programmatically select a profile in the list: the single public
         entry point used by MainWindow, tests, and internal signal handlers
         alike. Fires through the exact same signal path a user click would."""
         self.list_panel.set_current_by_name(name)

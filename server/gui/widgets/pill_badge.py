@@ -1,7 +1,7 @@
 """
 Small rounded status pill (colored label) used for every "state" indicator in the GUI:
 server status, running/idle badges, live diagnostics badges, and "customized" tags.
-Replaces the old pattern of ad hoc setStyleSheet() calls scattered across the code —
+Replaces the old pattern of ad hoc setStyleSheet() calls scattered across the code:
 this widget just flips a Qt dynamic property; theme.py owns the actual colors.
 """
 

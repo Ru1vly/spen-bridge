@@ -67,7 +67,7 @@ class ProfileEditorPanel(QWidget):
 
     def bind_profile(self, profile: AppProfile):
         """Re-populate every section's existing widgets from `profile` in place
-        (blockSignals-guarded inside each section's set_profile) — never
+        (blockSignals-guarded inside each section's set_profile): never
         destroys/recreates widgets, so scroll position is preserved."""
         self._push_timer.stop()
         self._profile = profile
@@ -89,7 +89,7 @@ class ProfileEditorPanel(QWidget):
         self.profile_dirty.emit()
 
     def _push_live_settings(self):
-        """Push the bound profile's settings to the live VirtualTablet — but only
+        """Push the bound profile's settings to the live VirtualTablet, but only
         if it's actually the profile currently driving the device. Re-checked at
         fire time (not cached at edit time), so this is a no-op if auto-switch
         moved the active profile elsewhere mid-edit."""

@@ -78,7 +78,7 @@
             android:minWidth="40dp"
             android:paddingStart="6dp"
             android:paddingEnd="6dp"
-            android:text="⚙ Settings"
+            android:text="Settings"
             android:textColor="@color/text_light"
             android:textSize="12sp" />
 

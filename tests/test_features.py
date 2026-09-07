@@ -92,7 +92,7 @@ class TestSPenSettingsAndFeatures(unittest.TestCase):
         profile, smoothing=0.15), hovering (not touching) must track the pen
         1:1. Previously HOVER_ENTER/HOVER_MOVE matched none of the smoothing
         branches, so the reported cursor position froze at wherever the last
-        stroke ended and never followed the pen while it was only hovering —
+        stroke ended and never followed the pen while it was only hovering:
         it would only "catch up" the instant the pen touched down again."""
         from server.protocol import PenEvent, ACTION_DOWN, ACTION_UP, ACTION_HOVER_ENTER, ACTION_HOVER_MOVE, TOOL_STYLUS
 
@@ -127,7 +127,7 @@ class TestSPenSettingsAndFeatures(unittest.TestCase):
         doesn't match any particular real monitor, and nothing else keeps it in
         sync unless the user manually refreshes). get_screen_bounds_and_desktop()
         must prefer a freshly-detected desktop size when the caller has one,
-        instead of always trusting the persisted config value — otherwise, e.g.
+        instead of always trusting the persisted config value. Otherwise, e.g.,
         selecting a real 1920x1080 monitor in "monitor" mapping mode while
         config.desktop_size still holds a taller stale/default value silently
         caps the pen's vertical reach partway down the screen."""

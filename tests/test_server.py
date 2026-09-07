@@ -105,7 +105,7 @@ class TestEventGroupDispatch(unittest.TestCase):
             [PenEvent(ACTION_MOVE, 0, BUTTON_TOUCH, 0.3, 0.3, 0.5)],
         ]
         self.server._dispatch_event_groups(groups)
-        # 3 raw events arrived, but only the freshest is actually applied —
+        # 3 raw events arrived, but only the freshest is actually applied:
         # stats must reflect what was applied, not what arrived.
         self.assertEqual(len(self.tablet.calls), 1)
         self.assertEqual(self.server.stats_events_count, 1)

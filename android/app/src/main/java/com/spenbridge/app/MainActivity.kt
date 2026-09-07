@@ -157,7 +157,7 @@ class MainActivity : AppCompatActivity(), PenEventSender.StatusListener {
             barSpacer.visibility = View.GONE
 
             btnRotate.text = "⟳ Rotate"
-            btnSettings.text = "⚙ Settings"
+            btnSettings.text = "Settings"
             btnCollapse.text = if (sidebarOnLeft) "◀" else "▶"
 
             val expandParams = FrameLayout.LayoutParams(
@@ -187,7 +187,7 @@ class MainActivity : AppCompatActivity(), PenEventSender.StatusListener {
             barSpacer.visibility = View.VISIBLE
 
             btnRotate.text = "⟳ Rotate"
-            btnSettings.text = "⚙ Settings"
+            btnSettings.text = "Settings"
             btnCollapse.text = "▲"
 
             val expandParams = FrameLayout.LayoutParams(
