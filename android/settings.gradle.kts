@@ -13,5 +13,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "SPenOnLinux"
+rootProject.name = "SPenBridge"
 include(":app")

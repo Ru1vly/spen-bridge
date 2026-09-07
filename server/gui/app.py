@@ -1,4 +1,4 @@
-"""Application entry point for the S Pen on Linux desktop GUI."""
+"""Application entry point for the S Pen Bridge desktop GUI."""
 
 import logging
 import sys
@@ -11,7 +11,7 @@ from server.gui.main_window import MainWindow
 def launch_gui():
     logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
     app = QApplication(sys.argv)
-    app.setApplicationName("S Pen on Linux")
+    app.setApplicationName("S Pen Bridge")
     app.setOrganizationName("SPenOnLinux")
 
     window = MainWindow()

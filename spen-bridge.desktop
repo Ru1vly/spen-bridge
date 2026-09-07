@@ -1,5 +1,5 @@
 [Desktop Entry]
-Name=S Pen on Linux
+Name=S Pen Bridge
 GenericName=Graphics Tablet Controller
 Comment=Turn Samsung Galaxy Tab & S Pen into a Linux graphics tablet
 Exec=/home/r1/Projects/spenonlinux/start.sh

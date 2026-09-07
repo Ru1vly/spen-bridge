@@ -1,5 +1,5 @@
 """
-S Pen on Linux — Desktop GUI package.
+S Pen Bridge — Desktop GUI package.
 Public surface kept identical to the old single-file server/gui.py module:
 `from server.gui import launch_gui` and `from server.gui import MainWindow, ServerWorker`.
 """

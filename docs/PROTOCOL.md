@@ -1,4 +1,4 @@
-# S Pen on Linux — Network Wire Protocol (v1)
+# S Pen Bridge — Network Wire Protocol (v1)
 
 This document defines the binary wire protocol used for transmitting S Pen events between the Android tablet client and the Linux server over TCP.
 

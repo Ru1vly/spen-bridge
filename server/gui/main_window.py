@@ -23,7 +23,7 @@ from server.window_watcher import get_active_window
 from server.gui import theme
 from server.gui.state import GuiState
 from server.gui.server_worker import ServerWorker
-from server.gui.http_server import MiniHttpServer, get_local_ip
+from server.gui.network_info import get_local_ip
 from server.gui.header_bar import HeaderBar
 from server.gui.tray import SystemTrayController
 from server.gui.dialogs import NewProfileDialog, DuplicateProfileDialog
@@ -41,7 +41,7 @@ WINDOW_POLL_INTERVAL_MS = 300
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("S Pen on Linux — Tablet Controller")
+        self.setWindowTitle("S Pen Bridge — Tablet Controller")
         self.resize(1200, 760)
         self.setMinimumSize(1100, 720)
 
@@ -62,10 +62,6 @@ class MainWindow(QMainWindow):
         self.worker.sig_client_disconnected.connect(self.on_client_disconnected)
         self.worker.sig_stats.connect(self.on_server_stats)
         self.worker.sig_pen_event.connect(self.on_pen_event)
-
-        # Background HTTP server for APK download
-        self.http_server = MiniHttpServer(8080, str(REPO_ROOT))
-        self.http_server.start()
 
         # Latest pen event cache, throttled to ~30 Hz for the diagnostics UI
         self._latest_pen_event: Optional[PenEvent] = None
@@ -356,7 +352,6 @@ class MainWindow(QMainWindow):
         self.system_tab.connection_panel._config = self.config
         self.system_tab.startup_panel._sync_from_config()
         self.system_tab.connection_panel.refresh_ip_label()
-        self.system_tab.connection_panel.update_qr_code()
         self.profiles_tab.list_panel._config = self.config
         self.profiles_tab.editor_panel._config = self.config
         self.profiles_tab.editor_panel.mapping_section._config = self.config
@@ -423,11 +418,13 @@ class MainWindow(QMainWindow):
         self.system_tab.log_panel.log(f"Tablet connected from {client_addr}")
         self.header_bar.set_server_status("connected", f"Connected: {client_addr}")
         self.tray.notify("S Pen Connected", f"Tablet connected from {client_addr}")
+        self.system_tab.scratchpad_panel.scratchpad.set_live_input_active(True)
 
     def on_client_disconnected(self, client_addr: str):
         self.system_tab.log_panel.log(f"Tablet disconnected: {client_addr}")
         if self.worker._is_running:
             self.header_bar.set_server_status("running", f"Listening (Port {self.config.port})")
+        self.system_tab.scratchpad_panel.scratchpad.set_live_input_active(False)
 
     def on_server_stats(self, rate: float, packets: int, total_events: int):
         self.system_tab.diagnostics_panel.update_traffic(rate, packets)
@@ -462,7 +459,7 @@ class MainWindow(QMainWindow):
         if self.config.minimize_to_tray and self.tray.tray_icon.isVisible():
             event.ignore()
             self.hide()
-            self.tray.notify("S Pen on Linux", "Application minimized to system tray.")
+            self.tray.notify("S Pen Bridge", "Application minimized to system tray.")
             return
 
         if self._dirty:
@@ -483,5 +480,4 @@ class MainWindow(QMainWindow):
 
     def force_quit(self):
         self.worker.stop_server()
-        self.http_server.stop()
         QApplication.quit()

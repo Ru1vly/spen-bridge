@@ -278,7 +278,6 @@ class TestSPenSettingsAndFeatures(unittest.TestCase):
             self.assertFalse(win.config.profiles["Default"].click_on_touch)
         finally:
             win.worker.stop_server()
-            win.http_server.stop()
             # Toggling settings above legitimately dirties the in-memory config;
             # this test isn't exercising the unsaved-changes close prompt, so
             # skip it and close directly.

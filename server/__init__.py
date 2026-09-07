@@ -1,1 +1,1 @@
-"""S Pen on Linux Server Package"""
+"""S Pen Bridge Server Package"""

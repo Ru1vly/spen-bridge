@@ -28,7 +28,7 @@ class HeaderBar(QFrame):
         layout.setContentsMargins(12, 6, 12, 6)
         layout.setSpacing(10)
 
-        title_label = QLabel("S Pen on Linux")
+        title_label = QLabel("S Pen Bridge")
         title_label.setStyleSheet("font-size: 16px; font-weight: 700; color: #89b4fa;")
         layout.addWidget(title_label)
 

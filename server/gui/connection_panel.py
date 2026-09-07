@@ -1,21 +1,18 @@
 """
-Quick Connect panel: LAN IP + port display, QR code pairing (APK download or
-direct connect), and the USB/ADB low-latency forwarding shortcut.
+Quick Connect panel: LAN IP + port display (enter these in the Android app's
+Settings screen) and the USB/ADB low-latency forwarding shortcut.
 """
 
 import logging
 import subprocess
 
-import qrcode
-from PySide6.QtCore import Qt, Signal, QTimer
-from PySide6.QtGui import QImage, QPixmap
+from PySide6.QtCore import Signal, QTimer
 from PySide6.QtWidgets import (
     QGroupBox,
     QVBoxLayout,
     QHBoxLayout,
     QLabel,
     QPushButton,
-    QRadioButton,
     QMessageBox,
     QApplication,
 )
@@ -45,26 +42,10 @@ class ConnectionPanel(QGroupBox):
         ip_row.addWidget(btn_copy_ip)
         layout.addLayout(ip_row)
 
-        qr_mode_row = QHBoxLayout()
-        self.rb_qr_apk = QRadioButton("Download APK")
-        self.rb_qr_apk.setChecked(True)
-        self.rb_qr_apk.toggled.connect(self.update_qr_code)
-        self.rb_qr_conn = QRadioButton("Direct Connect")
-        self.rb_qr_conn.toggled.connect(self.update_qr_code)
-        qr_mode_row.addWidget(self.rb_qr_apk)
-        qr_mode_row.addWidget(self.rb_qr_conn)
-        layout.addLayout(qr_mode_row)
-
-        self.lbl_qr = QLabel()
-        self.lbl_qr.setAlignment(Qt.AlignCenter)
-        self.lbl_qr.setMinimumSize(115, 115)
-        self.lbl_qr.setStyleSheet("background: #ffffff; border-radius: 8px; padding: 4px;")
-        layout.addWidget(self.lbl_qr, alignment=Qt.AlignCenter)
-
-        self.lbl_qr_hint = QLabel("Scan with tablet camera to download APK")
-        self.lbl_qr_hint.setAlignment(Qt.AlignCenter)
-        self.lbl_qr_hint.setStyleSheet("color: #a6adc8; font-size: 11px;")
-        layout.addWidget(self.lbl_qr_hint)
+        self.lbl_hint = QLabel("Enter this IP and port in the tablet app's Settings screen.")
+        self.lbl_hint.setWordWrap(True)
+        self.lbl_hint.setStyleSheet("color: #a6adc8; font-size: 11px;")
+        layout.addWidget(self.lbl_hint)
 
         self.btn_adb = QPushButton("Forward USB Port (ADB)")
         self.btn_adb.setToolTip("Sets up an ultra-low-latency USB cable connection via adb forward")
@@ -72,31 +53,12 @@ class ConnectionPanel(QGroupBox):
         layout.addWidget(self.btn_adb)
 
         self.refresh_ip_label()
-        self.update_qr_code()
 
     def refresh_ip_label(self):
         self.lbl_ip_info.setText(f"IP: <b>{self._local_ip}</b>   Port: <b>{self._config.port}</b>")
 
     def on_port_changed(self, port: int):
         self.refresh_ip_label()
-        self.update_qr_code()
-
-    def update_qr_code(self):
-        if self.rb_qr_apk.isChecked():
-            data = f"http://{self._local_ip}:8080/spen-on-linux.apk"
-            self.lbl_qr_hint.setText(f"Scan to download APK (http://{self._local_ip}:8080)")
-        else:
-            data = f"spen://{self._local_ip}:{self._config.port}"
-            self.lbl_qr_hint.setText(f"Server Target: {self._local_ip}:{self._config.port}")
-
-        qr = qrcode.QRCode(box_size=3, border=2)
-        qr.add_data(data)
-        qr.make(fit=True)
-        img = qr.make_image(fill_color="#11111b", back_color="#ffffff").convert("RGB")
-        data_bytes = img.tobytes("raw", "RGB")
-        qimg = QImage(data_bytes, img.size[0], img.size[1], QImage.Format_RGB888)
-        pix = QPixmap.fromImage(qimg).scaled(115, 115, Qt.KeepAspectRatio, Qt.SmoothTransformation)
-        self.lbl_qr.setPixmap(pix)
 
     def _copy_connection_info(self):
         text = f"{self._local_ip}:{self._config.port}"

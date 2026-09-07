@@ -128,13 +128,13 @@ class StartupPanel(QGroupBox):
         """Create and install .desktop file for system application launcher."""
         apps_dir = Path.home() / ".local" / "share" / "applications"
         apps_dir.mkdir(parents=True, exist_ok=True)
-        desktop_file = apps_dir / "spen-on-linux.desktop"
+        desktop_file = apps_dir / "spen-bridge.desktop"
 
         content = f"""[Desktop Entry]
-Name=S Pen on Linux
+Name=S Pen Bridge
 Comment=Turn Samsung Galaxy Tab & S Pen into a Linux graphics tablet
 Exec={REPO_ROOT}/server/.venv/bin/python {REPO_ROOT}/server/main.py --gui
-Icon={REPO_ROOT}/qr_spen.png
+Icon={REPO_ROOT}/spen_icon.png
 Terminal=false
 Type=Application
 Categories=Graphics;Utility;
@@ -147,7 +147,7 @@ Keywords=spen;tablet;wacom;stylus;samsung;
             QMessageBox.information(
                 self,
                 "Desktop Launcher Installed",
-                f"Application menu entry created:\n{desktop_file}\n\nYou can now launch 'S Pen on Linux' from your app menu / launcher!",
+                f"Application menu entry created:\n{desktop_file}\n\nYou can now launch 'S Pen Bridge' from your app menu / launcher!",
             )
         except Exception as e:
             QMessageBox.warning(self, "Error", f"Failed to install desktop launcher: {e}")

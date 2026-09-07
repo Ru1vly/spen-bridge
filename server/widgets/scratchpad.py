@@ -27,6 +27,16 @@ class ScratchpadWidget(QWidget):
 
         # Mouse drawing simulation state
         self._mouse_down = False
+        # While a real S Pen is connected, the virtual tablet drives the
+        # absolute desktop cursor - if that cursor happens to sit over this
+        # widget, Qt also delivers it as a genuine mouse press/move here.
+        # Left on, that duplicates every stroke: once via add_tablet_point()
+        # (using the pen's raw normalized position) and once via the mouse
+        # fallback below (using the cursor's actual on-screen position),
+        # producing two mismatched drawings for a single pen stroke. So the
+        # mouse fallback is only for testing with a literal mouse when no
+        # tablet client is connected.
+        self._live_input_active = False
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
@@ -52,6 +62,16 @@ class ScratchpadWidget(QWidget):
 
     def set_pen_color(self, color: QColor):
         self.pen_color = color
+
+    def set_live_input_active(self, active: bool):
+        """Toggle whether a real tablet client is feeding add_tablet_point().
+
+        Call with True on client connect and False on disconnect, so the
+        mouse fallback below never double-draws alongside live pen events.
+        """
+        self._live_input_active = active
+        if active:
+            self._mouse_down = False
 
     def add_tablet_point(self, norm_x: float, norm_y: float, pressure: float, action: int):
         """
@@ -138,9 +158,10 @@ class ScratchpadWidget(QWidget):
 
         self.update()
 
-    # Mouse drawing fallback
+    # Mouse drawing fallback (only when no live tablet client is connected;
+    # see set_live_input_active).
     def mousePressEvent(self, event):
-        if event.button() == Qt.LeftButton:
+        if not self._live_input_active and event.button() == Qt.LeftButton:
             self._mouse_down = True
             pos = event.position()
             self._last_point = pos
@@ -150,7 +171,7 @@ class ScratchpadWidget(QWidget):
         super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event):
-        if self._mouse_down:
+        if not self._live_input_active and self._mouse_down:
             pos = event.position()
             if self._last_point is not None:
                 self._draw_segment(self._last_point, pos, 0.6)
@@ -159,7 +180,7 @@ class ScratchpadWidget(QWidget):
         super().mouseMoveEvent(event)
 
     def mouseReleaseEvent(self, event):
-        if event.button() == Qt.LeftButton:
+        if not self._live_input_active and event.button() == Qt.LeftButton:
             self._mouse_down = False
             self._last_point = None
             self.update()

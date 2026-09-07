@@ -1,4 +1,4 @@
-# S Pen on Linux — Complete Setup Guide
+# S Pen Bridge — Complete Setup Guide
 
 Follow this guide to get your Samsung S Pen and tablet working as a professional graphics tablet on Linux.
 
@@ -67,7 +67,7 @@ Using USB provides near-zero latency and is immune to Wi-Fi jitter.
    ```bash
    adb forward tcp:40118 tcp:40118
    ```
-4. Open the **S Pen on Linux** app on your tablet.
+4. Open the **S Pen Bridge** app on your tablet.
 5. Tap **Settings**, set **Server IP** to `127.0.0.1`, and tap **Save & Reconnect**.
 
 ### Mode B: Local Wi-Fi
@@ -77,7 +77,7 @@ Using USB provides near-zero latency and is immune to Wi-Fi jitter.
    ip -brief address
    # Look for 192.168.x.x or 10.x.x.x under your wifi or ethernet interface
    ```
-3. Open the **S Pen on Linux** app on your tablet.
+3. Open the **S Pen Bridge** app on your tablet.
 4. Tap **Settings**, enter your PC's IP address and port (default `40118`), and tap **Save & Reconnect**.
 5. The status dot will turn **Green (Connected)**.
 

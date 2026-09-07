@@ -1,5 +1,5 @@
 """
-Configuration manager for S Pen on Linux.
+Configuration manager for S Pen Bridge.
 Supports persistent JSON storage, per-application profiles, and auto-switching.
 """
 
@@ -12,7 +12,7 @@ from typing import Optional, List, Dict, Tuple, Any
 
 logger = logging.getLogger("SPenConfig")
 
-DEFAULT_CONFIG_DIR = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config")) / "spenonlinux"
+DEFAULT_CONFIG_DIR = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config")) / "spen-bridge"
 CONFIG_FILE_PATH = DEFAULT_CONFIG_DIR / "config.json"
 
 
@@ -112,7 +112,7 @@ class TabletConfig:
     port: int = 40118
     auto_start_server: bool = True
     auto_adb_forward: bool = False
-    minimize_to_tray: bool = False
+    minimize_to_tray: bool = True
 
     # Virtual tablet device settings
     device_name: str = "Samsung S Pen Virtual Tablet"
@@ -380,7 +380,13 @@ class TabletConfig:
 
 
 def load_config() -> TabletConfig:
-    """Load settings from JSON file or return default configuration."""
+    """Load settings from the per-user JSON file, or return built-in defaults.
+
+    Intentionally has no fallback to a config bundled next to the source
+    (e.g. a `server/config.json`): a fresh install must always start from
+    `TabletConfig()` defaults, never whatever settings happen to ship in the
+    installed/checked-out tree.
+    """
     if CONFIG_FILE_PATH.is_file():
         try:
             with open(CONFIG_FILE_PATH, "r", encoding="utf-8") as f:
@@ -390,20 +396,11 @@ def load_config() -> TabletConfig:
         except Exception as e:
             logger.warning(f"Failed to load configuration from {CONFIG_FILE_PATH}: {e}. Using defaults.")
 
-    repo_config = Path(__file__).resolve().parent / "config.json"
-    if repo_config.is_file():
-        try:
-            with open(repo_config, "r", encoding="utf-8") as f:
-                data = json.load(f)
-                return TabletConfig.from_dict(data)
-        except Exception:
-            pass
-
     return TabletConfig()
 
 
 def save_config(config: TabletConfig) -> bool:
-    """Save configuration to JSON file."""
+    """Save configuration to the per-user JSON file."""
     try:
         DEFAULT_CONFIG_DIR.mkdir(parents=True, exist_ok=True)
         with open(CONFIG_FILE_PATH, "w", encoding="utf-8") as f:
@@ -412,11 +409,4 @@ def save_config(config: TabletConfig) -> bool:
         return True
     except Exception as e:
         logger.error(f"Error saving configuration to {CONFIG_FILE_PATH}: {e}")
-        try:
-            repo_config = Path(__file__).resolve().parent / "config.json"
-            with open(repo_config, "w", encoding="utf-8") as f:
-                json.dump(config.to_dict(), f, indent=2)
-            return True
-        except Exception as e2:
-            logger.error(f"Error saving fallback configuration: {e2}")
-            return False
+        return False

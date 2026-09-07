@@ -1,5 +1,5 @@
 """
-Central style tokens and stylesheet for the S Pen on Linux desktop GUI.
+Central style tokens and stylesheet for the S Pen Bridge desktop GUI.
 Dark, Catppuccin-Mocha-inspired palette, styled as soft/neumorphic UI: cards
 and controls sit at the same tone as their background and get their depth
 from a light/dark bevel pair instead of flat borders — raised for resting

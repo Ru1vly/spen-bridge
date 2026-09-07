@@ -10,7 +10,7 @@ from PySide6.QtCore import QSettings
 
 class GuiState:
     def __init__(self):
-        self._settings = QSettings("SPenOnLinux", "S Pen on Linux")
+        self._settings = QSettings("SPenBridge", "S Pen Bridge")
 
     @property
     def last_tab_index(self) -> int:

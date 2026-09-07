@@ -1,6 +1,6 @@
-# S Pen on Linux 🎨
+# S Pen Bridge 🎨
 
-Turn your Samsung Galaxy Tab and S Pen into a low-latency, pressure-sensitive graphics tablet for Linux (Krita, GIMP, Blender, Inkscape, Xournal++, etc.).
+Turn your Samsung Galaxy Tab and S Pen into a low-latency, pressure-sensitive graphics tablet for Linux (Krita, GIMP, Blender, Inkscape, Xournal++, etc.). Windows support is planned for an upcoming release.
 
 ---
 
@@ -8,7 +8,7 @@ Turn your Samsung Galaxy Tab and S Pen into a low-latency, pressure-sensitive gr
 
 Samsung's S Pen uses **Wacom EMR digitizer technology** inside the tablet screen for drawing (4096 levels of pressure sensitivity, tilt angles, hover tracking, and palm rejection). The S Pen does **not** send drawing coordinates over Bluetooth.
 
-**S Pen on Linux** bridges this by running:
+**S Pen Bridge** bridges this by running:
 1. **An Android app** on your Samsung tablet that captures native S Pen hardware events (`MotionEvent`).
 2. **A Linux server** that creates a virtual Wacom tablet device via the Linux kernel's `uinput` subsystem and injects the events into your desktop.
 

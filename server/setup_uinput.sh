@@ -3,7 +3,7 @@
 
 set -euo pipefail
 
-echo "[*] Setting up uinput permissions for S Pen on Linux..."
+echo "[*] Setting up uinput permissions for S Pen Bridge..."
 
 # Ensure uinput kernel module is loaded
 if ! lsmod | grep -q "^uinput"; then
