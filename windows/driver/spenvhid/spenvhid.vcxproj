@@ -59,7 +59,17 @@
   <PropertyGroup Label="Configuration">
     <ConfigurationType>Driver</ConfigurationType>
     <DriverType>KMDF</DriverType>
-    <DriverTargetPlatform>Universal</DriverTargetPlatform>
+    <!-- Desktop, not Universal: this driver only ever targets desktop
+         Windows 10/11 (see the top-level plan - no HLK/WHQL/UWD
+         certification is being pursued). Universal additionally triggers
+         an ApiValidator build step that checks the binary only calls DDIs
+         guaranteed present on every Windows SKU (IoT Core, Xbox,
+         HoloLens...) - real CI hit apivalidator.exe missing from this WDK
+         package's x86 tools folder (same packaging gap as stampinf.exe
+         above; it only ships under x64/ARM64 in this version), and even
+         with that fixed, Desktop is the actually-correct target rather
+         than something to route around. -->
+    <DriverTargetPlatform>Desktop</DriverTargetPlatform>
     <PlatformToolset>WindowsKernelModeDriver10.0</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Label="Configuration" Condition="'$(Configuration)'=='Debug'">
