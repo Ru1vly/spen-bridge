@@ -129,8 +129,9 @@ Prefer building it yourself instead? Open the `android/` directory in Android St
 Either way, open **Settings** in the app and enter your PC's IP address, or connect via USB:
 
 ```bash
-# For USB mode:
-adb forward tcp:40118 tcp:40118
+# For USB mode (the server listens on the PC; the app connects to
+# 127.0.0.1 on the tablet, so the tunnel must run device-port -> host-port):
+adb reverse tcp:40118 tcp:40118
 ```
 
 See [docs/SETUP.md](docs/SETUP.md) for detailed instructions.

@@ -5,6 +5,7 @@ Settings screen) and the USB/ADB low-latency forwarding shortcut.
 
 import logging
 import subprocess
+import sys
 
 from PySide6.QtCore import Signal, QTimer
 from PySide6.QtWidgets import (
@@ -47,9 +48,9 @@ class ConnectionPanel(QGroupBox):
         self.lbl_hint.setStyleSheet("color: #a6adc8; font-size: 11px;")
         layout.addWidget(self.lbl_hint)
 
-        self.btn_adb = QPushButton("Forward USB Port (ADB)")
-        self.btn_adb.setToolTip("Sets up an ultra-low-latency USB cable connection via adb forward")
-        self.btn_adb.clicked.connect(self.run_adb_forward)
+        self.btn_adb = QPushButton("Enable USB Mode (ADB)")
+        self.btn_adb.setToolTip("Sets up an ultra-low-latency USB cable connection via adb reverse")
+        self.btn_adb.clicked.connect(self.run_adb_reverse)
         layout.addWidget(self.btn_adb)
 
         self.refresh_ip_label()
@@ -66,34 +67,41 @@ class ConnectionPanel(QGroupBox):
         self.lbl_ip_info.setText(f"IP: <b>{self._local_ip}</b>  (Copied!)")
         QTimer.singleShot(1500, self.refresh_ip_label)
 
-    def run_adb_forward(self):
-        self.log_message.emit(f"Running 'adb forward tcp:{self._config.port} tcp:{self._config.port}'...")
+    def run_adb_reverse(self):
+        # The Android app in USB mode is told to connect to 127.0.0.1:{port}
+        # (i.e. "localhost" from the DEVICE's perspective), while the desktop
+        # server listens on {port} on the HOST. `adb reverse` is what tunnels
+        # a connection made TO a port ON THE DEVICE to a port ON THE HOST -
+        # `adb forward` does the opposite (host listens, tunnels to device)
+        # and previously made this button fail outright, since it tried to
+        # bind the same host port the Python server already owns.
+        self.log_message.emit(f"Running 'adb reverse tcp:{self._config.port} tcp:{self._config.port}'...")
         try:
             res = subprocess.run(
-                ["adb", "forward", f"tcp:{self._config.port}", f"tcp:{self._config.port}"],
+                ["adb", "reverse", f"tcp:{self._config.port}", f"tcp:{self._config.port}"],
                 capture_output=True,
                 text=True,
                 timeout=3.0,
                 check=False,
             )
             if res.returncode == 0:
-                self.log_message.emit("ADB forward successful! USB Mode ready.")
+                self.log_message.emit("ADB reverse successful! USB Mode ready.")
                 self.btn_adb.setText("USB Active (ADB)")
                 self.btn_adb.setStyleSheet("background-color: #a6e3a1; color: #11111b; font-weight: bold;")
             else:
                 err = res.stderr.strip() or "No device found"
-                self.log_message.emit(f"ADB forward failed: {err}")
+                self.log_message.emit(f"ADB reverse failed: {err}")
                 QMessageBox.warning(
                     self,
-                    "ADB Forward",
-                    f"ADB forward returned error:\n{err}\n\nMake sure your tablet is connected via USB and USB Debugging is enabled.",
+                    "ADB Reverse",
+                    f"ADB reverse returned error:\n{err}\n\nMake sure your tablet is connected via USB and USB Debugging is enabled.",
                 )
         except FileNotFoundError:
             self.log_message.emit("ADB command not found.")
-            QMessageBox.warning(
-                self,
-                "ADB Missing",
-                "adb is not installed on this system.\nInstall with: sudo pacman -S android-tools (or sudo apt install adb)",
-            )
+            if sys.platform == "win32":
+                hint = "adb is not on your PATH.\nInstall Android Studio (or just the platform-tools ZIP) and add it to PATH."
+            else:
+                hint = "adb is not installed on this system.\nInstall with: sudo pacman -S android-tools (or sudo apt install adb)"
+            QMessageBox.warning(self, "ADB Missing", hint)
         except Exception as e:
             self.log_message.emit(f"ADB forward error: {e}")

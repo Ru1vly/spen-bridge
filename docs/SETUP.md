@@ -81,9 +81,12 @@ Using USB provides near zero latency and is immune to Wi-Fi jitter.
 
 1. Connect the tablet to your PC via USB cable.
 2. Make sure `adb` is installed on your PC (`sudo pacman -S android-tools` or `sudo apt install adb`).
-3. Run port forwarding:
+3. Set up the reverse tunnel (the server listens on the PC; the app connects
+   to `127.0.0.1` on the tablet, so the tunnel must run device-port -> host-port,
+   which is what `adb reverse` does - `adb forward` runs the opposite direction
+   and won't work here):
    ```bash
-   adb forward tcp:40118 tcp:40118
+   adb reverse tcp:40118 tcp:40118
    ```
 4. Open the **S Pen Bridge** app on your tablet.
 5. Tap **Settings**, set **Server IP** to `127.0.0.1`, then tap **Save & Reconnect**.
