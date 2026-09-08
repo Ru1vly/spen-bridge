@@ -68,40 +68,47 @@
   <PropertyGroup Label="Configuration" Condition="'$(Configuration)'=='Release'">
     <UseDebugLibraries>false</UseDebugLibraries>
   </PropertyGroup>
-  <!--
-    Phase 2a's only goal is proving driver.c/device.c compile and link
-    against vhf.h/Vhfkm.lib - INF package verification and driver
-    test-signing are separate, later concerns (test-signing specifically
-    needs a real Windows machine with testsigning mode enabled - see
-    README.md's "human + real Windows hardware only" gate, Phase 2b/4b).
-    Disabled explicitly here rather than left to fail: a real CI run hit
-    both a DPVerifierTask DLL-load failure (x86\InfVerif.dll not found -
-    the same x86-vs-x64 tools-folder mismatch as stampinf.exe above) and a
-    SignTool error (newer signtool requires an explicit /fd digest
-    algorithm this project never configured, since it was never trying to
-    sign anything yet).
-  -->
-  <PropertyGroup>
-    <SkipPackageVerification>true</SkipPackageVerification>
-    <EnableTestSign>false</EnableTestSign>
-  </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings" />
   <!--
-    Real Phase 2a CI run (windows-2025, this exact package version) hit
-    TRK0005: Failed to locate "stampinf.exe" during the StampInf build
-    step. Confirmed by extracting the real package: stampinf.exe lives at
-    c\bin\10.0.28000.0\x64\stampinf.exe, NOT under the x86 tools folder
-    (c\bin\10.0.28000.0\x86\ only has Inf2Cat.exe/aitstatic.exe/DLLs) that
-    WindowsDriver.Common.targets' StampInf target defaults InfToolPath to
-    ($(WDKBinRoot_x86)) - a real packaging difference from the classic
-    MSI-installed WDK, where stampinf.exe was x86-hosted. Overriding
-    InfToolPath directly to the x64 folder this package actually ships it
-    in; guarded by Exists() so this fails loudly instead of silently if a
-    future WDK version moves it again.
+    Both overrides below must come AFTER the Microsoft.Cpp.props import
+    above, not before it: that import is what pulls in the
+    WindowsKernelModeDriver10.0 toolset chain (WindowsDriver.*.props),
+    which sets its own defaults for InfToolPath/EnableTestSign along the
+    way - some unconditionally, discovered the hard way when an earlier
+    draft set EnableTestSign=false BEFORE this import and it was silently
+    overwritten back to true by the toolset's own props. Placing overrides
+    here, after the toolset chain has already run, guarantees they win.
+
+    1) Real Phase 2a CI run (windows-2025, this exact package version) hit
+       TRK0005: Failed to locate "stampinf.exe" during the StampInf build
+       step. Confirmed by extracting the real package: stampinf.exe lives
+       at c\bin\10.0.28000.0\x64\stampinf.exe, NOT under the x86 tools
+       folder (c\bin\10.0.28000.0\x86\ only has Inf2Cat.exe/aitstatic.exe/
+       DLLs) that WindowsDriver.Common.targets' StampInf target defaults
+       InfToolPath to ($(WDKBinRoot_x86)) - a real packaging difference
+       from the classic MSI-installed WDK, where stampinf.exe was
+       x86-hosted. Guarded by Exists() so this fails loudly instead of
+       silently if a future WDK version moves it again.
+
+    2) Phase 2a's only goal is proving driver.c/device.c compile and link
+       against vhf.h/Vhfkm.lib - INF package verification and driver
+       test-signing are separate, later concerns (test-signing needs a
+       real Windows machine with testsigning mode enabled - see
+       README.md's "human + real Windows hardware only" gate, Phase
+       2b/4b). Disabled explicitly rather than left to fail: a real CI run
+       hit both a DPVerifierTask DLL-load failure (x86\InfVerif.dll not
+       found - the same x86-vs-x64 tools-folder mismatch as stampinf.exe)
+       and a SignTool error (newer signtool requires an explicit /fd
+       digest algorithm this project never configured).
   -->
   <PropertyGroup Condition="Exists('$(WdkContentRoot)bin\$(TargetPlatformVersion)\x64\stampinf.exe')">
     <InfToolPath>$(WdkContentRoot)bin\$(TargetPlatformVersion)\x64\</InfToolPath>
+  </PropertyGroup>
+  <PropertyGroup>
+    <SkipPackageVerification>true</SkipPackageVerification>
+    <EnableTestSign>false</EnableTestSign>
+    <SignMode></SignMode>
   </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile>
