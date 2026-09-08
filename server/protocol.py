@@ -56,7 +56,7 @@ BUTTON_STYLUS2 = 1 << 1  # Second barrel button (if present)
 BUTTON_TOUCH = 1 << 2    # Tip contact
 
 
-@dataclass
+@dataclass(slots=True)
 class PenEvent:
     action: int
     tool_type: int
@@ -99,26 +99,35 @@ def pack_events(events: List[PenEvent], seq: int = 0) -> bytes:
     return pack_packet(PKT_EVENT, seq, bytes(payload))
 
 
-def unpack_header(data: bytes) -> Optional[Tuple[int, int, int]]:
+def unpack_header(data: bytes, offset: int = 0) -> Optional[Tuple[int, int, int]]:
     """
-    Unpack header from byte buffer (must be at least HEADER_SIZE bytes).
+    Unpack header from a byte buffer at `offset` (must have at least
+    HEADER_SIZE bytes remaining from there). Reads directly off `data` via
+    unpack_from instead of requiring a pre-sliced copy, so a caller draining
+    a growing bytearray can pass it (and an advancing offset) directly.
     Returns (pkt_type, seq, payload_len) or None if invalid magic.
     """
-    if len(data) < HEADER_SIZE:
+    if len(data) - offset < HEADER_SIZE:
         return None
-    magic, pkt_type, seq, payload_len = HEADER_STRUCT.unpack_from(data, 0)
+    magic, pkt_type, seq, payload_len = HEADER_STRUCT.unpack_from(data, offset)
     if magic != MAGIC:
         return None
     return pkt_type, seq, payload_len
 
 
 def unpack_events(payload: bytes) -> List[PenEvent]:
-    """Unpack event records from payload bytes."""
-    events = []
-    offset = 0
-    while offset + EVENT_RECORD_SIZE <= len(payload):
-        action, tool_type, buttons, x, y, pressure, tilt_x, tilt_y = EVENT_STRUCT.unpack_from(payload, offset)
-        events.append(PenEvent(
+    """Unpack event records from payload bytes.
+
+    Uses struct.iter_unpack (a C-level iterator, faster than a manual
+    unpack_from loop) which requires the buffer length to be an exact
+    multiple of the record size - unlike a manual loop, it raises on a
+    short trailing fragment instead of silently stopping. Truncating to a
+    whole number of records first preserves the previous lenient behavior
+    against a malformed/truncated payload_len.
+    """
+    whole_len = (len(payload) // EVENT_RECORD_SIZE) * EVENT_RECORD_SIZE
+    return [
+        PenEvent(
             action=action,
             tool_type=tool_type,
             buttons=buttons,
@@ -126,7 +135,8 @@ def unpack_events(payload: bytes) -> List[PenEvent]:
             y=y,
             pressure=pressure,
             tilt_x=tilt_x,
-            tilt_y=tilt_y
-        ))
-        offset += EVENT_RECORD_SIZE
-    return events
+            tilt_y=tilt_y,
+        )
+        for action, tool_type, buttons, x, y, pressure, tilt_x, tilt_y
+        in EVENT_STRUCT.iter_unpack(payload[:whole_len])
+    ]

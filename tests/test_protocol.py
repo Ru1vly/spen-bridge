@@ -63,6 +63,24 @@ class TestSPenProtocol(unittest.TestCase):
         self.assertEqual(unpacked[1].action, ACTION_MOVE)
         self.assertAlmostEqual(unpacked[1].pressure, 0.7, places=4)
 
+    def test_unpack_events_ignores_short_trailing_fragment(self):
+        """unpack_events() must silently drop a trailing fragment shorter
+        than one full record (e.g. a malformed/truncated payload_len),
+        matching the original manual-loop implementation's leniency -
+        struct.iter_unpack() itself would raise on a non-exact-multiple
+        buffer if the payload weren't defensively truncated first."""
+        events = [
+            PenEvent(ACTION_DOWN, TOOL_STYLUS, BUTTON_TOUCH, 0.1, 0.1, 0.5),
+            PenEvent(ACTION_MOVE, TOOL_STYLUS, BUTTON_TOUCH, 0.2, 0.2, 0.7),
+        ]
+        packet = pack_events(events, seq=1)
+        payload = packet[HEADER_SIZE:]
+        truncated = payload + b"\x00" * 5  # 5 stray bytes, not a full record
+        unpacked = unpack_events(truncated)
+        self.assertEqual(len(unpacked), 2)
+        self.assertEqual(unpacked[0].action, ACTION_DOWN)
+        self.assertEqual(unpacked[1].action, ACTION_MOVE)
+
     def test_clamping(self):
         # Coordinates and pressure out of bounds should be clamped safely
         events = [

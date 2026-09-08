@@ -23,7 +23,7 @@ from server.protocol import (
     unpack_events,
     pack_packet,
 )
-from server.virtual_tablet import VirtualTablet
+from server.backends.base import TabletBackendBase
 
 logger = logging.getLogger("SPenServer")
 
@@ -31,7 +31,7 @@ logger = logging.getLogger("SPenServer")
 class SPenServer:
     def __init__(
         self,
-        tablet: VirtualTablet,
+        tablet: TabletBackendBase,
         host: str = "0.0.0.0",
         port: int = 40118,
         on_client_connected: Optional[Callable[[str], None]] = None,
@@ -101,24 +101,32 @@ class SPenServer:
                 # are collected rather than dispatched immediately so a Wi-Fi
                 # backlog (several packets arriving in this one read()) can be
                 # coalesced below instead of replayed as visible catch-up lag.
+                #
+                # Parsing walks an `offset` cursor over `buffer` instead of
+                # slicing/deleting per packet: unpack_header reads directly
+                # off `buffer` via unpack_from (no 9-byte copy per packet),
+                # and the whole drained prefix is trimmed with a single
+                # `del buffer[:offset]` once at the end of the pass instead
+                # of one O(remaining-bytes) memmove per packet.
                 event_groups = []
-                while len(buffer) >= HEADER_SIZE:
-                    hdr_res = unpack_header(buffer[:HEADER_SIZE])
+                offset = 0
+                buf_len = len(buffer)
+                while buf_len - offset >= HEADER_SIZE:
+                    hdr_res = unpack_header(buffer, offset)
                     if hdr_res is None:
-                        # Corrupted or non-protocol data: discard 1 byte to seek next magic
-                        buffer.pop(0)
+                        # Corrupted or non-protocol data: skip 1 byte to seek next magic
+                        offset += 1
                         continue
 
                     pkt_type, seq, payload_len = hdr_res
                     total_len = HEADER_SIZE + payload_len
 
-                    if len(buffer) < total_len:
+                    if buf_len - offset < total_len:
                         # Wait for remaining payload bytes
                         break
 
-                    # Slice out packet
-                    payload = buffer[HEADER_SIZE:total_len]
-                    del buffer[:total_len]
+                    payload = buffer[offset + HEADER_SIZE : offset + total_len]
+                    offset += total_len
 
                     # Handle packet type
                     if pkt_type == PKT_EVENT:
@@ -141,6 +149,9 @@ class SPenServer:
                         ack = pack_packet(PKT_HANDSHAKE, seq, b"OK")
                         writer.write(ack)
                         await writer.drain()
+
+                if offset:
+                    del buffer[:offset]
 
                 if event_groups:
                     self._dispatch_event_groups(event_groups)
@@ -210,6 +221,21 @@ class SPenServer:
         the GUI's live "events/sec" reflects what the cursor actually did,
         not how many samples arrived over the wire before coalescing.
         """
+        if len(groups) == 1:
+            # Common case per the docstring above: normally there's exactly
+            # one packet's worth of events per read(). The coalescing below
+            # only ever fires when a look-ahead event belongs to a
+            # DIFFERENT, already-arrived group - structurally impossible
+            # with a single group - so skip building the flattened
+            # (group_idx, ev) list and the lookahead loop entirely.
+            events = groups[0]
+            for ev in events:
+                self.tablet.handle_event(ev)
+            dispatched = len(events)
+            self.stats_events_count += dispatched
+            self.total_events_count += dispatched
+            return
+
         flat = [(group_idx, ev) for group_idx, group in enumerate(groups) for ev in group]
         last_idx = len(flat) - 1
         dispatched = 0
