@@ -2,15 +2,27 @@
 Virtual Drawing Tablet implementation using Linux uinput via python-evdev.
 Supports both "pointer" mode (absolute mouse/pointer for compositors like driftwm, sway, GNOME, KDE)
 and "tablet" mode (pure Wacom tablet tool for tablet-v2 compositors).
+
+This is the only module in the repository allowed to `import evdev` - keeping
+that import confined here (rather than at server.backends package level) is
+what lets the rest of the app, including server.gui, be imported on Windows
+before a real Windows backend exists (see server.backends.factory).
 """
 
 import logging
-import math
 import time
-from typing import Optional, Tuple, Callable
+from typing import Optional
+
 import evdev
 from evdev import ecodes as e
 
+from server.backends.base import (
+    ABS_MAX_COORDINATE,
+    ABS_MAX_PRESSURE,
+    TILT_MIN,
+    TILT_MAX,
+    TabletBackendBase,
+)
 from server.protocol import (
     PenEvent,
     ACTION_HOVER_MOVE,
@@ -28,59 +40,13 @@ from server.protocol import (
 
 logger = logging.getLogger("SPenTablet")
 
-ABS_MAX_COORDINATE = 65535
-ABS_MAX_PRESSURE = 4095
-TILT_MIN = -90
-TILT_MAX = 90
 
-
-class VirtualTablet:
+class LinuxUinputTablet(TabletBackendBase):
     """Emulates a drawing tablet / pointer via /dev/uinput."""
 
-    def __init__(
-        self,
-        name: str = "Samsung S Pen Virtual Tablet",
-        mode: str = "pointer",
-        direct_mode: bool = False,
-        screen_bounds: Optional[Tuple[int, int, int, int]] = None,
-        desktop_size: Optional[Tuple[int, int]] = None,
-        pressure_curve_type: str = "linear",
-        pressure_gamma: float = 1.0,
-        pressure_min: float = 0.0,
-        pressure_max: float = 1.0,
-        stroke_smoothing: float = 0.0,
-        button_primary: str = "right_click",
-        button_secondary: str = "middle_click",
-        click_on_touch: bool = True,
-        aspect_ratio_lock: bool = False,
-        tablet_aspect_ratio: str = "16:10",
-        on_event_processed: Optional[Callable] = None,
-    ):
-        self.name = name
-        self.mode = mode
-        self.direct_mode = direct_mode
-        self.screen_bounds = screen_bounds
-        self.desktop_size = desktop_size
-
-        # Pressure settings
-        self.pressure_curve_type = pressure_curve_type
-        self.pressure_gamma = pressure_gamma
-        self.pressure_min = max(0.0, min(0.5, pressure_min))
-        self.pressure_max = max(0.5, min(1.0, pressure_max))
-
-        # Smoothing & actions
-        self.stroke_smoothing = max(0.0, min(0.9, stroke_smoothing))
-        self.button_primary = button_primary
-        self.button_secondary = button_secondary
-        self.click_on_touch = click_on_touch
-
-        # Live callback
-        self.on_event_processed = on_event_processed
-
-        # Internal state
+    def __init__(self, **kwargs):
         self.uinput: Optional[evdev.UInput] = None
         self._is_in_proximity = False
-        self._is_down = False
         self._active_tool = TOOL_STYLUS
         self._button_stylus_pressed = False
         self._button_stylus2_pressed = False
@@ -89,48 +55,7 @@ class VirtualTablet:
         self._smooth_x: Optional[float] = None
         self._smooth_y: Optional[float] = None
 
-        self._setup_device()
-
-    def update_settings(
-        self,
-        screen_bounds: Optional[Tuple[int, int, int, int]] = None,
-        desktop_size: Optional[Tuple[int, int]] = None,
-        pressure_curve_type: Optional[str] = None,
-        pressure_gamma: Optional[float] = None,
-        pressure_min: Optional[float] = None,
-        pressure_max: Optional[float] = None,
-        stroke_smoothing: Optional[float] = None,
-        button_primary: Optional[str] = None,
-        button_secondary: Optional[str] = None,
-        click_on_touch: Optional[bool] = None,
-        **kwargs,
-    ):
-        """Update runtime settings without re-creating uinput device."""
-        if screen_bounds is not None:
-            self.screen_bounds = screen_bounds
-        if desktop_size is not None:
-            self.desktop_size = desktop_size
-        if pressure_curve_type is not None:
-            self.pressure_curve_type = pressure_curve_type
-        if pressure_gamma is not None:
-            self.pressure_gamma = pressure_gamma
-        if pressure_min is not None:
-            self.pressure_min = max(0.0, min(0.5, pressure_min))
-        if pressure_max is not None:
-            self.pressure_max = max(0.5, min(1.0, pressure_max))
-        if stroke_smoothing is not None:
-            self.stroke_smoothing = max(0.0, min(0.9, stroke_smoothing))
-        if button_primary is not None:
-            self.button_primary = button_primary
-        if button_secondary is not None:
-            self.button_secondary = button_secondary
-        if click_on_touch is not None:
-            if not click_on_touch and self._is_down and self.uinput:
-                self.uinput.write(e.EV_KEY, e.BTN_TOUCH, 0)
-                if self.mode != "tablet":
-                    self.uinput.write(e.EV_KEY, e.BTN_LEFT, 0)
-                self.uinput.syn()
-            self.click_on_touch = click_on_touch
+        super().__init__(**kwargs)
 
     def _setup_device(self):
         """Register device capabilities with the Linux uinput kernel driver."""
@@ -225,58 +150,6 @@ class VirtualTablet:
         )
         logger.info(f"Device created: {self.uinput.device.path}")
         time.sleep(0.3)
-
-    def calibrate_pressure(self, raw_p: float) -> int:
-        """Apply deadzone, ceiling, and calibrated response curve to raw pressure."""
-        if raw_p <= self.pressure_min:
-            return 0
-        if raw_p >= self.pressure_max:
-            norm = 1.0
-        else:
-            denom = max(0.001, self.pressure_max - self.pressure_min)
-            norm = (raw_p - self.pressure_min) / denom
-
-        norm = max(0.0, min(1.0, norm))
-
-        if self.pressure_curve_type == "soft":
-            curved = math.pow(norm, 0.65)
-        elif self.pressure_curve_type == "firm":
-            curved = math.pow(norm, 1.6)
-        elif self.pressure_curve_type == "sigmoid":
-            curved = norm * norm * (3.0 - 2.0 * norm)
-        elif self.pressure_curve_type == "custom":
-            gamma = max(0.1, min(5.0, self.pressure_gamma))
-            curved = math.pow(norm, gamma)
-        else:
-            curved = norm
-
-        return int(max(0.0, min(1.0, curved)) * ABS_MAX_PRESSURE)
-
-    def _map_coordinates(self, norm_x: float, norm_y: float) -> Tuple[int, int]:
-        """
-        Map normalized [0.0, 1.0] coordinates to tablet integer range [0, 65535].
-        If screen_bounds and desktop_size are configured, maps to that specific monitor.
-        Otherwise maps directly across the full range.
-        """
-        clamped_x = max(0.0, min(1.0, norm_x))
-        clamped_y = max(0.0, min(1.0, norm_y))
-
-        if self.screen_bounds and self.desktop_size:
-            sx, sy, sw, sh = self.screen_bounds
-            dw, dh = self.desktop_size
-            pixel_x = sx + clamped_x * sw
-            pixel_y = sy + clamped_y * sh
-            mapped_x = int((pixel_x / dw) * ABS_MAX_COORDINATE)
-            mapped_y = int((pixel_y / dh) * ABS_MAX_COORDINATE)
-            return (
-                max(0, min(ABS_MAX_COORDINATE, mapped_x)),
-                max(0, min(ABS_MAX_COORDINATE, mapped_y)),
-            )
-
-        return (
-            int(clamped_x * ABS_MAX_COORDINATE),
-            int(clamped_y * ABS_MAX_COORDINATE),
-        )
 
     @staticmethod
     def _get_button_code(action: str) -> Optional[int]:
@@ -427,6 +300,17 @@ class VirtualTablet:
                 self.on_event_processed(ev, pressure_val, abs_x, abs_y)
             except Exception:
                 pass
+
+    def _release_touch(self):
+        """Release BTN_TOUCH/BTN_LEFT without touching self._is_down (matches
+        the original VirtualTablet.update_settings behavior exactly - the
+        caller in TabletBackendBase.update_settings is responsible for that)."""
+        if not self.uinput:
+            return
+        self.uinput.write(e.EV_KEY, e.BTN_TOUCH, 0)
+        if self.mode != "tablet":
+            self.uinput.write(e.EV_KEY, e.BTN_LEFT, 0)
+        self.uinput.syn()
 
     def close(self):
         """Safely release all buttons and close the uinput device."""

@@ -11,11 +11,12 @@ from typing import Optional
 
 from PySide6.QtCore import QObject, Signal
 
+from server.backends.base import TabletBackendBase
+from server.backends.factory import create_tablet_backend
 from server.config import TabletConfig
 from server.monitors import detect_monitors
 from server.protocol import PenEvent
 from server.server import SPenServer
-from server.virtual_tablet import VirtualTablet
 
 logger = logging.getLogger("SPenGUI")
 
@@ -31,7 +32,7 @@ class ServerWorker(QObject):
     def __init__(self, config: TabletConfig):
         super().__init__()
         self.config = config
-        self.tablet: Optional[VirtualTablet] = None
+        self.tablet: Optional[TabletBackendBase] = None
         self.server: Optional[SPenServer] = None
         self._loop: Optional[asyncio.AbstractEventLoop] = None
         self._thread: Optional[threading.Thread] = None
@@ -58,7 +59,7 @@ class ServerWorker(QObject):
         sb, desk = self.config.get_screen_bounds_and_desktop(monitors, desk_size)
 
         try:
-            self.tablet = VirtualTablet(
+            self.tablet = create_tablet_backend(
                 name=self.config.device_name,
                 mode=self.config.device_mode,
                 direct_mode=self.config.direct_mode,
@@ -145,7 +146,7 @@ class ServerWorker(QObject):
         sb, desk = self.config.get_screen_bounds_and_desktop(monitors, desk_size)
 
         try:
-            new_tablet = VirtualTablet(
+            new_tablet = create_tablet_backend(
                 name=target_name,
                 mode=target_mode,
                 direct_mode=target_direct,

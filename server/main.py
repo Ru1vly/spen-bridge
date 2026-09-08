@@ -13,9 +13,9 @@ import sys
 # Ensure repository root is in sys.path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+from server.backends.factory import create_tablet_backend
 from server.config import load_config
 from server.monitors import detect_monitors
-from server.virtual_tablet import VirtualTablet
 from server.server import SPenServer
 
 
@@ -120,7 +120,7 @@ async def run_cli(args):
         _, detected_desktop_size = detect_monitors()
         desktop_size = detected_desktop_size
 
-    tablet = VirtualTablet(
+    tablet = create_tablet_backend(
         name=name,
         mode=mode,
         direct_mode=direct,
@@ -173,7 +173,9 @@ async def run_cli(args):
 
 def main():
     args = parse_args()
-    has_display = bool(os.environ.get("DISPLAY") or os.environ.get("WAYLAND_DISPLAY"))
+    has_display = sys.platform == "win32" or bool(
+        os.environ.get("DISPLAY") or os.environ.get("WAYLAND_DISPLAY")
+    )
 
     if args.gui or (not args.cli and has_display and len(sys.argv) == 1):
         from server.gui import launch_gui

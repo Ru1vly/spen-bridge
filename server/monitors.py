@@ -8,6 +8,7 @@ import json
 import logging
 import re
 import subprocess
+import sys
 from typing import List, Dict, Any, Tuple
 
 logger = logging.getLogger("SPenMonitors")
@@ -84,6 +85,73 @@ def get_monitors_from_sway() -> List[Dict[str, Any]]:
     return monitors
 
 
+def get_monitors_from_windows() -> List[Dict[str, Any]]:
+    """Enumerate monitors on Windows via ctypes EnumDisplayMonitors.
+
+    Used as a headless fallback when no QApplication is running yet (e.g.
+    CLI mode) - get_monitors_from_qt() already covers the GUI case since Qt
+    is cross-platform, but there's nothing after it today on a headless
+    Windows process.
+    """
+    monitors: List[Dict[str, Any]] = []
+    try:
+        import ctypes
+        from ctypes import wintypes
+
+        user32 = ctypes.WinDLL("user32", use_last_error=True)
+        MONITORINFOF_PRIMARY = 0x1
+
+        class RECT(ctypes.Structure):
+            _fields_ = [
+                ("left", wintypes.LONG),
+                ("top", wintypes.LONG),
+                ("right", wintypes.LONG),
+                ("bottom", wintypes.LONG),
+            ]
+
+        class MONITORINFOEXW(ctypes.Structure):
+            _fields_ = [
+                ("cbSize", wintypes.DWORD),
+                ("rcMonitor", RECT),
+                ("rcWork", RECT),
+                ("dwFlags", wintypes.DWORD),
+                ("szDevice", wintypes.WCHAR * 32),
+            ]
+
+        MONITORENUMPROC = ctypes.WINFUNCTYPE(
+            wintypes.BOOL,
+            wintypes.HMONITOR,
+            wintypes.HDC,
+            ctypes.POINTER(RECT),
+            wintypes.LPARAM,
+        )
+
+        results: List[Dict[str, Any]] = []
+
+        def _callback(hmonitor, hdc, rect_ptr, lparam):
+            info = MONITORINFOEXW()
+            info.cbSize = ctypes.sizeof(MONITORINFOEXW)
+            if user32.GetMonitorInfoW(hmonitor, ctypes.byref(info)):
+                r = info.rcMonitor
+                results.append({
+                    "name": info.szDevice,
+                    "x": r.left,
+                    "y": r.top,
+                    "width": r.right - r.left,
+                    "height": r.bottom - r.top,
+                    "primary": bool(info.dwFlags & MONITORINFOF_PRIMARY),
+                })
+            return True
+
+        callback = MONITORENUMPROC(_callback)
+        user32.EnumDisplayMonitors(None, None, callback, 0)
+        monitors = results
+    except Exception as e:
+        logger.debug(f"Windows monitor enumeration failed: {e}")
+
+    return monitors
+
+
 def get_monitors_from_qt() -> List[Dict[str, Any]]:
     """Query PySide6 QGuiApplication screens."""
     monitors = []
@@ -113,12 +181,17 @@ def detect_monitors() -> Tuple[List[Dict[str, Any]], Tuple[int, int]]:
     Detect all active monitors and total desktop bounding size.
     Returns (list_of_monitors, (desktop_width, desktop_height)).
     """
-    # Prefer Qt if available and populated, then xrandr, then sway
+    # Prefer Qt if available and populated (cross-platform), then fall back to
+    # OS-specific headless-mode sources: xrandr/sway on Linux, EnumDisplayMonitors
+    # on Windows.
     monitors = get_monitors_from_qt()
     if not monitors:
-        monitors = get_monitors_from_xrandr()
-    if not monitors:
-        monitors = get_monitors_from_sway()
+        if sys.platform == "win32":
+            monitors = get_monitors_from_windows()
+        else:
+            monitors = get_monitors_from_xrandr()
+            if not monitors:
+                monitors = get_monitors_from_sway()
 
     if not monitors:
         # Fallback default single screen

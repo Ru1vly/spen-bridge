@@ -7,6 +7,7 @@ global reset-to-defaults action.
 import os
 from pathlib import Path
 import subprocess
+import sys
 
 from PySide6.QtCore import Signal
 from PySide6.QtWidgets import (
@@ -70,13 +71,19 @@ class StartupPanel(QGroupBox):
         self.lbl_desktop_size.setStyleSheet("color: #a6adc8; font-size: 11px;")
         layout.addWidget(self.lbl_desktop_size)
 
-        btn_uinput = QPushButton("Check / Setup uinput Permissions")
-        btn_uinput.clicked.connect(self._check_uinput_perms)
-        layout.addWidget(btn_uinput)
+        # uinput permissions and the .desktop launcher are Linux-only concerns:
+        # on Windows the driver is installed once by the installer (an elevated
+        # step, not a per-launch check) and the Start Menu shortcut is created
+        # by the installer too, so surfacing either button there would just be
+        # confusing (or create a duplicate/conflicting launcher entry).
+        if sys.platform != "win32":
+            btn_uinput = QPushButton("Check / Setup uinput Permissions")
+            btn_uinput.clicked.connect(self._check_uinput_perms)
+            layout.addWidget(btn_uinput)
 
-        btn_desktop_entry = QPushButton("Install Desktop Launcher (.desktop)")
-        btn_desktop_entry.clicked.connect(self._install_desktop_entry)
-        layout.addWidget(btn_desktop_entry)
+            btn_desktop_entry = QPushButton("Install Desktop Launcher (.desktop)")
+            btn_desktop_entry.clicked.connect(self._install_desktop_entry)
+            layout.addWidget(btn_desktop_entry)
 
         btn_reset = QPushButton("Reset All to Defaults")
         btn_reset.setObjectName("dangerBtn")

@@ -8,11 +8,15 @@ import json
 import logging
 import os
 from pathlib import Path
+import sys
 from typing import Optional, List, Dict, Tuple, Any
 
 logger = logging.getLogger("SPenConfig")
 
-DEFAULT_CONFIG_DIR = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config")) / "spen-bridge"
+if sys.platform == "win32":
+    DEFAULT_CONFIG_DIR = Path(os.environ.get("APPDATA", str(Path.home() / "AppData" / "Roaming"))) / "spen-bridge"
+else:
+    DEFAULT_CONFIG_DIR = Path(os.environ.get("XDG_CONFIG_HOME", str(Path.home() / ".config"))) / "spen-bridge"
 CONFIG_FILE_PATH = DEFAULT_CONFIG_DIR / "config.json"
 
 
