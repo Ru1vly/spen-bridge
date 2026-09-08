@@ -70,6 +70,22 @@
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings" />
+  <!--
+    Real Phase 2a CI run (windows-2025, this exact package version) hit
+    TRK0005: Failed to locate "stampinf.exe" during the StampInf build
+    step. Confirmed by extracting the real package: stampinf.exe lives at
+    c\bin\10.0.28000.0\x64\stampinf.exe, NOT under the x86 tools folder
+    (c\bin\10.0.28000.0\x86\ only has Inf2Cat.exe/aitstatic.exe/DLLs) that
+    WindowsDriver.Common.targets' StampInf target defaults InfToolPath to
+    ($(WDKBinRoot_x86)) - a real packaging difference from the classic
+    MSI-installed WDK, where stampinf.exe was x86-hosted. Overriding
+    InfToolPath directly to the x64 folder this package actually ships it
+    in; guarded by Exists() so this fails loudly instead of silently if a
+    future WDK version moves it again.
+  -->
+  <PropertyGroup Condition="Exists('$(WdkContentRoot)bin\$(TargetPlatformVersion)\x64\stampinf.exe')">
+    <InfToolPath>$(WdkContentRoot)bin\$(TargetPlatformVersion)\x64\</InfToolPath>
+  </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile>
       <WarningLevel>Level4</WarningLevel>
