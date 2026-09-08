@@ -1,0 +1,69 @@
+name: Windows Driver Build
+
+# Phase 2a compilation spike: prove the KMDF + VHF toolchain actually
+# compiles and links on a real windows-2025/VS2026 runner before any real
+# driver logic is written. See windows/driver/spenvhid/README.md for the
+# open risk this is checking and what to do with a red/green result.
+
+on:
+  push:
+    paths:
+      - 'windows/driver/spenvhid/**'
+      - '.github/workflows/windows-driver-build.yml'
+  pull_request:
+    paths:
+      - 'windows/driver/spenvhid/**'
+  workflow_dispatch: {}
+
+jobs:
+  build:
+    # Pinned, not "windows-latest": the WDK NuGet version <-> required VS
+    # version <-> runner image version chain is demonstrably fast-moving
+    # (see README.md) - a floating alias would make a currently-green
+    # workflow silently break on GitHub's next runner rotation.
+    runs-on: windows-2025
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Set up NuGet CLI
+        uses: nuget/setup-nuget@v2
+        with:
+          nuget-version: latest
+
+      - name: Restore WDK/SDK NuGet packages
+        # `dotnet restore` explicitly does not work with the WDK NuGet
+        # package per Microsoft's own docs - must use nuget.exe against the
+        # project-local packages.config, not the .sln.
+        run: nuget restore windows\driver\spenvhid\packages.config -PackagesDirectory windows\driver\spenvhid\packages
+
+      - name: Build spenvhid driver (Phase 2a minimal skeleton)
+        run: msbuild windows\driver\spenvhid\spenvhid.sln /p:Configuration=Debug /p:Platform=x64 /m /warnaserror
+
+      # infverif needs a real driver + real device interface to be
+      # meaningful (Phase 2b territory) and its exact path inside the
+      # NuGet-restored WDK is unconfirmed - see README.md. Left commented
+      # out so it doesn't block the very first green run; uncomment once
+      # 2b's device.c/spenvhid.inf are final.
+      # - name: Verify INF (infverif)
+      #   run: |
+      #     $infverif = Get-ChildItem -Recurse -Filter infverif.exe windows\driver\spenvhid\packages | Select-Object -First 1
+      #     & $infverif.FullName /v /w windows\driver\spenvhid\spenvhid.inf
+
+      - name: Upload built driver
+        # ConfigurationType=Driver's default OutDir ($(Platform)\$(Configuration)\
+        # $(TargetName)\) is unconfirmed against a real build - see
+        # README.md's open risks - so this globs broadly under x64\Debug\
+        # rather than assuming the exact nested path, to avoid a false
+        # "no files found" failure on an otherwise-correct build.
+        uses: actions/upload-artifact@v4
+        with:
+          name: spenvhid-driver
+          path: |
+            windows/driver/spenvhid/x64/Debug/**/spenvhid.sys
+            windows/driver/spenvhid/x64/Debug/**/spenvhid.inf
+            windows/driver/spenvhid/x64/Debug/**/*.pdb
+          if-no-files-found: error

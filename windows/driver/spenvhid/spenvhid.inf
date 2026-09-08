@@ -1,0 +1,39 @@
+; spenvhid.inf - root-enumerated software device, no bus, no hardware.
+; DriverVer is intentionally left for the build to stamp (stampinf).
+[Version]
+Signature   = "$WINDOWS NT$"
+Class       = HIDClass
+ClassGuid   = {745a17a0-74d3-11d0-b6fe-00a0c90f57da}   ; standard HIDClass GUID
+Provider    = %ManufacturerName%
+DriverVer   = ; filled by build (stampinf)
+CatalogFile = spenvhid.cat
+
+[Manufacturer]
+%ManufacturerName% = SpenVhid, NT$ARCH$
+
+[SpenVhid.NT$ARCH$]
+%SpenVhid.DeviceDesc% = SpenVhid_Device, root\spenvhid   ; root-enumerated
+
+[SpenVhid_Device.NT]
+; No AddReg/resources needed -- pure software device.
+
+[SpenVhid_Device.NT.Services]
+AddService = spenvhid, 0x00000002, SpenVhid_Service_Inst   ; 0x2 = SPSVCINST_ASSOCSERVICE
+
+[SpenVhid_Service_Inst]
+DisplayName    = %SpenVhid.SvcDesc%
+ServiceType    = 1        ; SERVICE_KERNEL_DRIVER
+StartType      = 3        ; SERVICE_DEMAND_START
+ErrorControl   = 1        ; SERVICE_ERROR_NORMAL
+ServiceBinary  = %13%\spenvhid.sys
+
+[SpenVhid_Device.NT.CoInstallers]
+; MODERATE CONFIDENCE: whether a modern KMDF INF targeting Windows 10/11
+; only still needs the classic WdfCoInstallerNNNNN.dll section should be
+; confirmed against a freshly-generated "Empty KMDF Driver" VS2026 project
+; template once available, rather than hand-authored from memory.
+
+[Strings]
+ManufacturerName     = "S Pen Bridge"
+SpenVhid.DeviceDesc  = "S Pen Bridge Virtual HID Tablet"
+SpenVhid.SvcDesc     = "S Pen Bridge Virtual HID Driver"
