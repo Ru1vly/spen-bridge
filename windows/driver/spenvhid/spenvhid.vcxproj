@@ -90,20 +90,25 @@
     overwritten back to true by the toolset's own props. Placing overrides
     here, after the toolset chain has already run, guarantees they win.
 
-    1) Root-cause fix for a whole family of TRK0005 "failed to locate"
-       errors real CI hit one at a time (stampinf.exe, then
-       apivalidator.exe, then drvcat.exe): this WDK NuGet package version
-       (10.0.28000.2526) only ships several classic "x86-hosted" driver
-       tools under its x64/ARM64 native folders instead
-       (c\bin\10.0.28000.0\x86\ has just Inf2Cat.exe/aitstatic.exe/DLLs -
-       confirmed by extracting the real package). WindowsDriver.Common.targets
-       derives InfToolPath/Inf2CatToolPath/BinplaceToolPath/etc., AND the
-       ExecutablePath search path that tool-path-less tasks like DrvCat
-       fall back to, all from $(WDKBinRoot_x86) - so overriding that one
-       property to the x64 folder fixes the whole family at once instead
-       of chasing each tool as it surfaces. Guarded by Exists() so this
+    1) This WDK NuGet package version (10.0.28000.2526) splits its
+       classic "x86-hosted" driver tools inconsistently across two
+       folders, confirmed by extracting the real package:
+       c\bin\10.0.28000.0\x64\ has stampinf.exe/apivalidator.exe/
+       drvcat.exe, while c\bin\10.0.28000.0\x86\ has only Inf2Cat.exe/
+       aitstatic.exe/DLLs - real CI hit TRK0005 for the first three, one
+       at a time, before this was understood. An earlier draft tried
+       blanket-redirecting $(WDKBinRoot_x86) (the property
+       InfToolPath/Inf2CatToolPath/etc. all derive from) entirely to the
+       x64 folder - that broke Inf2Cat.exe, which genuinely only exists
+       under x86. So this keeps WDKBinRoot_x86 at its real default and
+       instead: overrides InfToolPath directly (stampinf.exe needs it),
+       and appends the x64 folder to ExecutablePath alongside the
+       existing x86 entry rather than replacing it (drvcat.exe has no
+       explicit ToolPath property - TRACKER resolves it purely via
+       ExecutablePath search, and Inf2Cat.exe still needs the x86 entry
+       to stay in that same search path). Guarded by Exists() so this
        fails loudly instead of silently if a future WDK version moves
-       these tools again (or actually ships an x86 build).
+       these tools again.
 
     2) Phase 2a's only goal is proving driver.c/device.c compile and link
        against vhf.h/Vhfkm.lib - INF package verification and driver
@@ -117,14 +122,8 @@
        algorithm this project never configured).
   -->
   <PropertyGroup Condition="Exists('$(WdkContentRoot)bin\$(TargetPlatformVersion)\x64\stampinf.exe')">
-    <WDKBinRoot_x86>$(WdkContentRoot)bin\$(TargetPlatformVersion)\x64\</WDKBinRoot_x86>
-    <!-- WindowsDriver.x64.props already baked the OLD (x86-folder) value
-         of WDKBinRoot_x86 into ExecutablePath earlier in the toolset
-         import chain, before this override runs - that string concat
-         isn't retroactive, so tools with no explicit ToolPath property
-         (e.g. DrvCat, which TRACKER resolves purely via ExecutablePath)
-         need the corrected folder appended here too. -->
-    <ExecutablePath>$(WDKBinRoot_x86);$(ExecutablePath)</ExecutablePath>
+    <InfToolPath>$(WdkContentRoot)bin\$(TargetPlatformVersion)\x64\</InfToolPath>
+    <ExecutablePath>$(WdkContentRoot)bin\$(TargetPlatformVersion)\x64;$(ExecutablePath)</ExecutablePath>
   </PropertyGroup>
   <PropertyGroup>
     <SkipPackageVerification>true</SkipPackageVerification>
