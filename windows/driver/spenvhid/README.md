@@ -72,9 +72,12 @@ were open questions in an earlier draft:
 - The `packages\Microsoft.Windows.WDK.x64.<version>\build\native\...props`
   path itself - **confirmed correct**, byte-for-byte against the real
   package and against Microsoft's own `Directory.Build.props`.
-- `ConfigurationType=Driver` / `DriverType=KMDF` / `DriverTargetPlatform=Universal`
-  - **confirmed correct** against the WDK package's own
-    `WindowsDriver.KernelMode.props`.
+- `ConfigurationType=Driver` / `DriverType=KMDF` - **confirmed correct**
+  against the WDK package's own `WindowsDriver.KernelMode.props`.
+  `DriverTargetPlatform` was originally `Universal` but switched to
+  `Desktop` after a real CI run (see below) - this driver only ever
+  targets desktop Windows 10/11, so `Universal`'s extra DDI-compliance
+  validation was never the right target anyway.
 - Identical-version pinning across all three `packages.config` entries -
   **confirmed required** by the real dependency graph, not just conventional
   (see above).

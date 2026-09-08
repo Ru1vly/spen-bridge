@@ -81,25 +81,29 @@
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings" />
   <!--
-    Both overrides below must come AFTER the Microsoft.Cpp.props import
+    All overrides below must come AFTER the Microsoft.Cpp.props import
     above, not before it: that import is what pulls in the
     WindowsKernelModeDriver10.0 toolset chain (WindowsDriver.*.props),
-    which sets its own defaults for InfToolPath/EnableTestSign along the
-    way - some unconditionally, discovered the hard way when an earlier
-    draft set EnableTestSign=false BEFORE this import and it was silently
+    which sets its own defaults for these properties along the way - some
+    unconditionally, discovered the hard way when an earlier draft set
+    EnableTestSign=false BEFORE this import and it was silently
     overwritten back to true by the toolset's own props. Placing overrides
     here, after the toolset chain has already run, guarantees they win.
 
-    1) Real Phase 2a CI run (windows-2025, this exact package version) hit
-       TRK0005: Failed to locate "stampinf.exe" during the StampInf build
-       step. Confirmed by extracting the real package: stampinf.exe lives
-       at c\bin\10.0.28000.0\x64\stampinf.exe, NOT under the x86 tools
-       folder (c\bin\10.0.28000.0\x86\ only has Inf2Cat.exe/aitstatic.exe/
-       DLLs) that WindowsDriver.Common.targets' StampInf target defaults
-       InfToolPath to ($(WDKBinRoot_x86)) - a real packaging difference
-       from the classic MSI-installed WDK, where stampinf.exe was
-       x86-hosted. Guarded by Exists() so this fails loudly instead of
-       silently if a future WDK version moves it again.
+    1) Root-cause fix for a whole family of TRK0005 "failed to locate"
+       errors real CI hit one at a time (stampinf.exe, then
+       apivalidator.exe, then drvcat.exe): this WDK NuGet package version
+       (10.0.28000.2526) only ships several classic "x86-hosted" driver
+       tools under its x64/ARM64 native folders instead
+       (c\bin\10.0.28000.0\x86\ has just Inf2Cat.exe/aitstatic.exe/DLLs -
+       confirmed by extracting the real package). WindowsDriver.Common.targets
+       derives InfToolPath/Inf2CatToolPath/BinplaceToolPath/etc., AND the
+       ExecutablePath search path that tool-path-less tasks like DrvCat
+       fall back to, all from $(WDKBinRoot_x86) - so overriding that one
+       property to the x64 folder fixes the whole family at once instead
+       of chasing each tool as it surfaces. Guarded by Exists() so this
+       fails loudly instead of silently if a future WDK version moves
+       these tools again (or actually ships an x86 build).
 
     2) Phase 2a's only goal is proving driver.c/device.c compile and link
        against vhf.h/Vhfkm.lib - INF package verification and driver
@@ -108,12 +112,19 @@
        README.md's "human + real Windows hardware only" gate, Phase
        2b/4b). Disabled explicitly rather than left to fail: a real CI run
        hit both a DPVerifierTask DLL-load failure (x86\InfVerif.dll not
-       found - the same x86-vs-x64 tools-folder mismatch as stampinf.exe)
-       and a SignTool error (newer signtool requires an explicit /fd
-       digest algorithm this project never configured).
+       found - the same x86-vs-x64 tools-folder mismatch as above) and a
+       SignTool error (newer signtool requires an explicit /fd digest
+       algorithm this project never configured).
   -->
   <PropertyGroup Condition="Exists('$(WdkContentRoot)bin\$(TargetPlatformVersion)\x64\stampinf.exe')">
-    <InfToolPath>$(WdkContentRoot)bin\$(TargetPlatformVersion)\x64\</InfToolPath>
+    <WDKBinRoot_x86>$(WdkContentRoot)bin\$(TargetPlatformVersion)\x64\</WDKBinRoot_x86>
+    <!-- WindowsDriver.x64.props already baked the OLD (x86-folder) value
+         of WDKBinRoot_x86 into ExecutablePath earlier in the toolset
+         import chain, before this override runs - that string concat
+         isn't retroactive, so tools with no explicit ToolPath property
+         (e.g. DrvCat, which TRACKER resolves purely via ExecutablePath)
+         need the corrected folder appended here too. -->
+    <ExecutablePath>$(WDKBinRoot_x86);$(ExecutablePath)</ExecutablePath>
   </PropertyGroup>
   <PropertyGroup>
     <SkipPackageVerification>true</SkipPackageVerification>
