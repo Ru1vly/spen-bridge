@@ -126,14 +126,14 @@ class PenSurfaceView @JvmOverloads constructor(
         val h = height.toFloat().coerceAtLeast(1f)
 
         val (baseW, baseH) = when (areaMode) {
-            AreaMode.FULL -> Pair(w, h)
+            AreaMode.FULL -> FloatPair(w, h)
             AreaMode.ASPECT_16_9 -> computeAspectFit(w, h, 16f / 9f)
             AreaMode.ASPECT_16_10 -> computeAspectFit(w, h, 16f / 10f)
             AreaMode.ASPECT_21_9 -> computeAspectFit(w, h, 21f / 9f)
             AreaMode.CUSTOM -> {
                 val cw = w * (customWidthPercent.coerceIn(10, 100) / 100f)
                 val ch = h * (customHeightPercent.coerceIn(10, 100) / 100f)
-                Pair(cw, ch)
+                FloatPair(cw, ch)
             }
         }
 
@@ -158,22 +158,41 @@ class PenSurfaceView @JvmOverloads constructor(
         return RectF(left, top, left + activeW, top + activeH)
     }
 
-    private fun computeAspectFit(w: Float, h: Float, targetAspect: Float): Pair<Float, Float> {
+    /**
+     * Zero-boxing stand-in for Pair<Float, Float>. A generic Pair stores its
+     * fields as boxed Any?, allocating on every call; this packs both floats'
+     * raw bits into one Long so the JVM inline-class erases to a bare long
+     * with no allocation, matching a normal function return.
+     */
+    @JvmInline
+    value class FloatPair(private val packed: Long) {
+        constructor(x: Float, y: Float) : this(
+            (x.toRawBits().toLong() shl 32) or (y.toRawBits().toLong() and 0xFFFFFFFFL)
+        )
+
+        val x: Float get() = Float.fromBits((packed ushr 32).toInt())
+        val y: Float get() = Float.fromBits(packed.toInt())
+
+        operator fun component1(): Float = x
+        operator fun component2(): Float = y
+    }
+
+    private fun computeAspectFit(w: Float, h: Float, targetAspect: Float): FloatPair {
         val currentAspect = w / h
         return if (currentAspect > targetAspect) {
-            Pair(h * targetAspect, h)
+            FloatPair(h * targetAspect, h)
         } else {
-            Pair(w, w / targetAspect)
+            FloatPair(w, w / targetAspect)
         }
     }
 
-    fun normalizeCoords(rawX: Float, rawY: Float): Pair<Float, Float> {
+    fun normalizeCoords(rawX: Float, rawY: Float): FloatPair {
         val rect = getActiveRect()
         val rw = rect.width().coerceAtLeast(1f)
         val rh = rect.height().coerceAtLeast(1f)
         val nx = ((rawX - rect.left) / rw).coerceIn(0f, 1f)
         val ny = ((rawY - rect.top) / rh).coerceIn(0f, 1f)
-        return Pair(nx, ny)
+        return FloatPair(nx, ny)
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
@@ -328,20 +347,48 @@ class PenSurfaceView @JvmOverloads constructor(
                 hoverX = event.x
                 hoverY = event.y
                 invalidate()
-                sender?.enqueueEvents(
-                    listOf(
+
+                // Drain batched historical samples the same way ACTION_MOVE
+                // does above - Android exposes event.historySize for
+                // hover-generated MotionEvents too. Without this, the
+                // cursor-preview position sent while hovering (before
+                // touchdown) was silently capped to the UI thread's
+                // callback/batching cadence (~60-120Hz) instead of the full
+                // digitizer sampling rate the touch path already carries
+                // through.
+                val historySize = event.historySize
+                val events = ArrayList<Protocol.Event>(historySize + 1)
+
+                for (i in 0 until historySize) {
+                    val (histX, histY) = normalizeCoords(event.getHistoricalX(0, i), event.getHistoricalY(0, i))
+                    events.add(
                         Protocol.Event(
                             action = Protocol.ACTION_HOVER_MOVE,
                             toolType = toolType,
                             buttons = buttons,
-                            x = normX,
-                            y = normY,
+                            x = histX,
+                            y = histY,
                             pressure = 0f,
                             tiltX = tiltX,
                             tiltY = tiltY
                         )
                     )
+                }
+
+                events.add(
+                    Protocol.Event(
+                        action = Protocol.ACTION_HOVER_MOVE,
+                        toolType = toolType,
+                        buttons = buttons,
+                        x = normX,
+                        y = normY,
+                        pressure = 0f,
+                        tiltX = tiltX,
+                        tiltY = tiltY
+                    )
                 )
+
+                sender?.enqueueEvents(events)
             }
 
             MotionEvent.ACTION_HOVER_EXIT -> {
@@ -457,7 +504,7 @@ class PenSurfaceView @JvmOverloads constructor(
         return buttons
     }
 
-    private fun getTiltDegrees(event: MotionEvent): Pair<Float, Float> {
+    private fun getTiltDegrees(event: MotionEvent): FloatPair {
         val tiltRad = event.getAxisValue(MotionEvent.AXIS_TILT)
         val orientRad = event.getAxisValue(MotionEvent.AXIS_ORIENTATION)
         var tx = 0f
@@ -467,6 +514,6 @@ class PenSurfaceView @JvmOverloads constructor(
             tx = (tiltDeg * Math.sin(orientRad.toDouble())).toFloat()
             ty = (-tiltDeg * Math.cos(orientRad.toDouble())).toFloat()
         }
-        return Pair(tx.coerceIn(-90f, 90f), ty.coerceIn(-90f, 90f))
+        return FloatPair(tx.coerceIn(-90f, 90f), ty.coerceIn(-90f, 90f))
     }
 }

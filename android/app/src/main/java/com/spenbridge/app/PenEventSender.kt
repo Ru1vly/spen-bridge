@@ -33,7 +33,15 @@ class PenEventSender(
     }
 
     private val isRunning = AtomicBoolean(false)
-    private val queue = LinkedBlockingQueue<ByteArray>(2000)
+    // Holds un-serialized event batches, not packed bytes: packing
+    // (Protocol.packEvents(), which allocates a ByteBuffer) happens on
+    // PenEventSenderThread in runNetworkLoop() below, not on the calling
+    // thread - enqueueEvents() is always called from the UI/input-dispatch
+    // thread (PenSurfaceView.onTouchEvent/onHoverEvent), which also owns
+    // onDraw(); doing allocation-heavy work there right before a frame has
+    // to be drawn is exactly the kind of thing that shows up as dropped
+    // frames / stroke jitter under GC pressure at high sampling rates.
+    private val queue = LinkedBlockingQueue<List<Protocol.Event>>(2000)
     private var networkThread: Thread? = null
     private var socket: Socket? = null
     private var outputStream: OutputStream? = null
@@ -105,10 +113,11 @@ class PenEventSender(
 
     fun enqueueEvents(events: List<Protocol.Event>) {
         if (!isRunning.get() || events.isEmpty()) return
-        seq = ((seq + 1) and 0x7FFF).toShort()
-        val packet = Protocol.packEvents(events, seq)
-        // Discard oldest packets if queue is full to avoid lag buildup
-        while (!queue.offer(packet)) {
+        // events is already a fresh, fully-copied-out-of-MotionEvent list
+        // (PenSurfaceView never reuses/mutates it afterward) - safe to hand
+        // the reference straight to the network thread with no copy here.
+        // Discard oldest batches if queue is full to avoid lag buildup.
+        while (!queue.offer(events)) {
             queue.poll()
         }
     }
@@ -143,18 +152,41 @@ class PenEventSender(
                 listener?.onStatusChanged(Status.CONNECTED, "Connected to $host:$port")
                 Log.i(TAG, "Connected to $host:$port with TCP_NODELAY")
 
-                // Main send loop
+                // Main send loop. Serialization (Protocol.packEvents(), which
+                // allocates a ByteBuffer) happens here on the network thread,
+                // not at enqueue time on the UI thread - see enqueueEvents().
                 while (isRunning.get() && s.isConnected && !s.isClosed) {
-                    val packet = queue.poll(500, java.util.concurrent.TimeUnit.MILLISECONDS)
-                    if (packet != null) {
-                        outputStream?.write(packet)
-                        // Batch multiple pending packets before flushing to minimize overhead
-                        while (true) {
-                            val next = queue.poll() ?: break
-                            outputStream?.write(next)
-                        }
-                        outputStream?.flush()
+                    val first = queue.poll(500, java.util.concurrent.TimeUnit.MILLISECONDS) ?: continue
+
+                    // Drain any already-queued backlog too (a GC pause,
+                    // scheduler hiccup, or Wi-Fi stall can let several
+                    // batches pile up) so the whole burst goes out as ONE
+                    // write() call instead of one write()/TCP segment per
+                    // batch - tcpNoDelay=true means Nagle isn't there to
+                    // coalesce separate write()s for us.
+                    var totalLen = 0
+                    val packed = ArrayList<ByteArray>(4)
+                    for (batch in sequenceOf(first) + generateSequence { queue.poll() }) {
+                        seq = ((seq + 1) and 0x7FFF).toShort()
+                        val p = Protocol.packEvents(batch, seq)
+                        packed.add(p)
+                        totalLen += p.size
                     }
+
+                    val combined = if (packed.size == 1) {
+                        packed[0]
+                    } else {
+                        val dst = ByteArray(totalLen)
+                        var offset = 0
+                        for (p in packed) {
+                            System.arraycopy(p, 0, dst, offset, p.size)
+                            offset += p.size
+                        }
+                        dst
+                    }
+
+                    outputStream?.write(combined)
+                    outputStream?.flush()
                 }
             } catch (e: InterruptedException) {
                 break
