@@ -12,13 +12,13 @@ import threading
 from pathlib import Path
 from typing import Optional, Tuple
 
-from PySide6.QtCore import Qt, QTimer
+from PySide6.QtCore import Qt, QTimer, Signal
 from PySide6.QtGui import QIcon, QKeySequence, QAction
 from PySide6.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QTabWidget, QMessageBox, QDialog
 
 from server.config import AppProfile, TabletConfig, load_config, save_config, CONFIG_FILE_PATH
 from server.protocol import PenEvent
-from server.window_watcher import get_active_window
+from server.window_watcher import WindowWatcher
 
 from server.gui import theme
 from server.gui.state import GuiState
@@ -39,6 +39,12 @@ WINDOW_POLL_INTERVAL_MS = 300
 
 
 class MainWindow(QMainWindow):
+    # Marshals WindowWatcher's background-thread callback onto the GUI
+    # thread - Qt auto-detects the emitting thread differs from this
+    # QObject's thread affinity and queues the delivery, same pattern as
+    # ServerWorker.sig_pen_event.
+    sig_active_window_changed = Signal(str, str)
+
     def __init__(self):
         super().__init__()
         self.setWindowTitle("S Pen Bridge: Tablet Controller")
@@ -73,11 +79,16 @@ class MainWindow(QMainWindow):
         self.diag_timer.timeout.connect(self.update_live_diagnostics)
         self.diag_timer.start()
 
-        # Active window auto-switch watcher
-        self.window_timer = QTimer(self)
-        self.window_timer.setInterval(WINDOW_POLL_INTERVAL_MS)
-        self.window_timer.timeout.connect(self._check_active_window)
-        self.window_timer.start()
+        # Active window auto-switch watcher. Polls (and spawns per-poll
+        # subprocesses like xprop/swaymsg/hyprctl on Linux) on a background
+        # thread via WindowWatcher - NOT a GUI-thread QTimer - so a slow
+        # poll can never block repaints or input for the whole app.
+        self.sig_active_window_changed.connect(self._check_active_window)
+        self.window_watcher = WindowWatcher(
+            callback=lambda app_id, title: self.sig_active_window_changed.emit(app_id, title),
+            poll_interval=WINDOW_POLL_INTERVAL_MS / 1000.0,
+        )
+        self.window_watcher.start()
 
         self.setStyleSheet(theme.build_stylesheet())
         self._init_ui()
@@ -91,7 +102,7 @@ class MainWindow(QMainWindow):
         if self.config.auto_start_server:
             QTimer.singleShot(400, self.start_server)
         if self.config.auto_adb_forward:
-            QTimer.singleShot(600, self.system_tab.connection_panel.run_adb_forward)
+            QTimer.singleShot(600, self.system_tab.connection_panel.run_adb_reverse)
 
     # ------------------------------------------------------------------
     # UI Setup
@@ -221,12 +232,7 @@ class MainWindow(QMainWindow):
     def _on_tab_changed(self, index: int):
         self.gui_state.last_tab_index = index
 
-    def _check_active_window(self):
-        try:
-            app_id, title = get_active_window()
-        except Exception:
-            return
-
+    def _check_active_window(self, app_id: str, title: str):
         if (app_id, title) == self._last_detected_app:
             return
         self._last_detected_app = (app_id, title)
@@ -430,11 +436,18 @@ class MainWindow(QMainWindow):
         self.system_tab.diagnostics_panel.update_traffic(rate, packets)
 
     def on_pen_event(self, ev: PenEvent, cal_p: int, abs_x: int, abs_y: int):
+        # Cache only - rendering (both the diagnostics readout below and the
+        # scratchpad preview) is throttled to diag_timer's ~30Hz cadence in
+        # update_live_diagnostics(), not done here at the full hardware
+        # sample rate (up to 240Hz+). This mirrors how the diagnostics
+        # readout already worked; the scratchpad's add_tablet_point() used
+        # to run unconditionally on every single call to this method,
+        # constructing a fresh QPainter pass per sample regardless of which
+        # tab was even visible.
         self._latest_pen_event = ev
         self._latest_cal_p = cal_p
         self._latest_abs_x = abs_x
         self._latest_abs_y = abs_y
-        self.system_tab.scratchpad_panel.scratchpad.add_tablet_point(ev.x, ev.y, cal_p / 4095.0, ev.action)
 
     def update_live_diagnostics(self):
         if self._latest_pen_event is None:
@@ -451,6 +464,12 @@ class MainWindow(QMainWindow):
         pressure_section.curve_widget.set_current_pressure(ev.pressure, cal_p / 4095.0)
         pressure_section.bar_raw.setValue(int(ev.pressure * 100))
         pressure_section.bar_cal.setValue(int((cal_p / 4095.0) * 100))
+
+        # Same visibility-gate pattern _check_active_window already uses for
+        # the profile editor's live-match label: only pay for the scratchpad
+        # repaint while its tab is actually on screen.
+        if self.tabs.currentWidget() is self.system_tab:
+            self.system_tab.scratchpad_panel.scratchpad.add_tablet_point(ev.x, ev.y, cal_p / 4095.0, ev.action)
 
     # ------------------------------------------------------------------
     # Window lifecycle
@@ -479,5 +498,6 @@ class MainWindow(QMainWindow):
         self.force_quit()
 
     def force_quit(self):
+        self.window_watcher.stop()
         self.worker.stop_server()
         QApplication.quit()
