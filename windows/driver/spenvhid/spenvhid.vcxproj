@@ -68,6 +68,23 @@
   <PropertyGroup Label="Configuration" Condition="'$(Configuration)'=='Release'">
     <UseDebugLibraries>false</UseDebugLibraries>
   </PropertyGroup>
+  <!--
+    Phase 2a's only goal is proving driver.c/device.c compile and link
+    against vhf.h/Vhfkm.lib - INF package verification and driver
+    test-signing are separate, later concerns (test-signing specifically
+    needs a real Windows machine with testsigning mode enabled - see
+    README.md's "human + real Windows hardware only" gate, Phase 2b/4b).
+    Disabled explicitly here rather than left to fail: a real CI run hit
+    both a DPVerifierTask DLL-load failure (x86\InfVerif.dll not found -
+    the same x86-vs-x64 tools-folder mismatch as stampinf.exe above) and a
+    SignTool error (newer signtool requires an explicit /fd digest
+    algorithm this project never configured, since it was never trying to
+    sign anything yet).
+  -->
+  <PropertyGroup>
+    <SkipPackageVerification>true</SkipPackageVerification>
+    <EnableTestSign>false</EnableTestSign>
+  </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings" />
   <!--
