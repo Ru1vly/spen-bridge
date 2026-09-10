@@ -126,6 +126,11 @@ def get_monitors_from_windows() -> List[Dict[str, Any]]:
             wintypes.LPARAM,
         )
 
+        user32.GetMonitorInfoW.argtypes = [wintypes.HMONITOR, ctypes.POINTER(MONITORINFOEXW)]
+        user32.GetMonitorInfoW.restype = wintypes.BOOL
+        user32.EnumDisplayMonitors.argtypes = [wintypes.HDC, ctypes.POINTER(RECT),
+                                               MONITORENUMPROC, wintypes.LPARAM]
+        user32.EnumDisplayMonitors.restype = wintypes.BOOL
         results: List[Dict[str, Any]] = []
 
         def _callback(hmonitor, hdc, rect_ptr, lparam):
@@ -209,6 +214,12 @@ def detect_monitors() -> Tuple[List[Dict[str, Any]], Tuple[int, int]]:
     max_y = max(m["y"] + m["height"] for m in monitors)
     min_x = min(m["x"] for m in monitors)
     min_y = min(m["y"] for m in monitors)
+
+    if sys.platform == "win32":
+        # HID coordinates start at the bounding desktop's top-left, even
+        # when Windows positions a display left/above the primary display.
+        monitors = [dict(m, x=m["x"] - min_x, y=m["y"] - min_y) for m in monitors]
+        return monitors, (max_x - min_x, max_y - min_y)
 
     desktop_width = max(1920, max_x - min(0, min_x))
     desktop_height = max(1080, max_y - min(0, min_y))

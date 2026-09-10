@@ -1,3 +1,5 @@
+> Windows users: see [Windows setup](WINDOWS.md) for the application and driver installation. The instructions below cover Linux.
+
 # S Pen Bridge: Complete Setup Guide
 
 Follow this guide to get your Samsung S Pen and tablet working as a professional graphics tablet on Linux.

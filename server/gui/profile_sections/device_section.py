@@ -3,6 +3,7 @@ Device Behavior profile section: pointer vs tablet device mode, click-on-touch,
 and (advanced) INPUT_PROP_DIRECT mode: all per-profile.
 """
 
+import sys
 from typing import Optional
 
 from PySide6.QtCore import Signal
@@ -28,6 +29,10 @@ class DeviceSection(QGroupBox):
         self.combo_dev_mode = QComboBox()
         self.combo_dev_mode.addItem("Pointer Mode (Absolute Cursor - Wayland & X11)", "pointer")
         self.combo_dev_mode.addItem("Tablet Mode (Wacom Tablet-v2 for Krita/GIMP)", "tablet")
+        if sys.platform == "win32":
+            self.combo_dev_mode.setItemText(0, "Windows Ink Pen")
+            self.combo_dev_mode.setItemText(1, "Windows Ink Pen")
+            self.combo_dev_mode.setEnabled(False)
         self.combo_dev_mode.currentIndexChanged.connect(self._on_dev_mode_changed)
         mode_row.addWidget(self.combo_dev_mode, stretch=1)
         layout.addLayout(mode_row)
@@ -52,6 +57,8 @@ class DeviceSection(QGroupBox):
         self.chk_direct_mode.toggled.connect(self._on_direct_mode_toggled)
         self.advanced_box.body_layout().addWidget(self.chk_direct_mode)
         layout.addWidget(self.advanced_box)
+        if sys.platform == "win32":
+            self.advanced_box.hide()
 
     def set_profile(self, profile: AppProfile):
         self._updating = True

@@ -179,6 +179,12 @@ class SPenServer:
         finally:
             logger.info(f"Closing client connection {peer_str}")
             self.active_clients.discard(peer_str)
+            reset = getattr(self.tablet, "reset", None)
+            if not self.active_clients and reset is not None:
+                try:
+                    reset()
+                except OSError:
+                    logger.warning("Failed to release tablet after disconnect", exc_info=True)
             if self.on_client_disconnected:
                 try:
                     self.on_client_disconnected(peer_str)

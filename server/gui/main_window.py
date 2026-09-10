@@ -7,6 +7,7 @@ live, dirty tracking, save/quit flows).
 """
 
 import copy
+import sys
 import logging
 import threading
 from pathlib import Path
@@ -461,15 +462,15 @@ class MainWindow(QMainWindow):
         self.system_tab.diagnostics_panel.update_pen_event(ev, cal_p, abs_x, abs_y)
 
         pressure_section = self.profiles_tab.editor_panel.pressure_section
-        pressure_section.curve_widget.set_current_pressure(ev.pressure, cal_p / 4095.0)
+        pressure_section.curve_widget.set_current_pressure(ev.pressure, cal_p / (32767.0 if sys.platform == "win32" else 4095.0))
         pressure_section.bar_raw.setValue(int(ev.pressure * 100))
-        pressure_section.bar_cal.setValue(int((cal_p / 4095.0) * 100))
+        pressure_section.bar_cal.setValue(int((cal_p / (32767.0 if sys.platform == "win32" else 4095.0)) * 100))
 
         # Same visibility-gate pattern _check_active_window already uses for
         # the profile editor's live-match label: only pay for the scratchpad
         # repaint while its tab is actually on screen.
         if self.tabs.currentWidget() is self.system_tab:
-            self.system_tab.scratchpad_panel.scratchpad.add_tablet_point(ev.x, ev.y, cal_p / 4095.0, ev.action)
+            self.system_tab.scratchpad_panel.scratchpad.add_tablet_point(ev.x, ev.y, cal_p / (32767.0 if sys.platform == "win32" else 4095.0), ev.action)
 
     # ------------------------------------------------------------------
     # Window lifecycle

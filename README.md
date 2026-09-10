@@ -2,9 +2,9 @@
 
 ![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Platform: Linux](https://img.shields.io/badge/platform-Linux-informational.svg)
-![Windows: planned](https://img.shields.io/badge/Windows-planned-lightgrey.svg)
+![Windows: experimental](https://img.shields.io/badge/Windows-experimental-orange.svg)
 
-Turn your Samsung Galaxy Tab and S Pen into a low latency, pressure sensitive graphics tablet for Linux (Krita, GIMP, Blender, Inkscape, Xournal++, and more). Windows support is planned for an upcoming release.
+Turn your Samsung Galaxy Tab and S Pen into a low latency, pressure sensitive graphics tablet for Linux (Krita, GIMP, Blender, Inkscape, Xournal++, and more). Experimental Windows Ink support is available from source; see [Windows setup](docs/WINDOWS.md) for driver requirements and validation status.
 
 ## Table of Contents
 
@@ -48,7 +48,7 @@ Your Linux apps recognize the result as a real physical graphics tablet.
 | Platform | Status |
 | --- | --- |
 | Linux | Supported |
-| Windows | Planned for an upcoming release |
+| Windows 10/11 x64 | Experimental Windows Ink backend and VHF driver; Windows build/runtime validation pending |
 
 ## Architecture
 
@@ -135,6 +135,10 @@ adb reverse tcp:40118 tcp:40118
 ```
 
 See [docs/SETUP.md](docs/SETUP.md) for detailed instructions.
+
+## Windows Quick Start
+
+See [Windows setup and validation](docs/WINDOWS.md). Run `install.ps1` to install the desktop application and `start.ps1` to launch it. Windows also requires the separately built and signed virtual HID driver.
 
 ## Documentation
 

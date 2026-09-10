@@ -6,6 +6,7 @@ cross-platform seam these tests exercise the Linux side of.
 """
 
 import sys
+import os
 import unittest
 
 from PySide6.QtWidgets import QApplication
@@ -16,7 +17,8 @@ app = QApplication.instance() or QApplication(sys.argv)
 from server.config import TabletConfig
 
 
-@unittest.skipUnless(sys.platform.startswith("linux"), "requires /dev/uinput")
+@unittest.skipUnless(sys.platform.startswith("linux") and os.access("/dev/uinput", os.W_OK),
+                         "requires writable /dev/uinput")
 class TestLinuxUinputBackend(unittest.TestCase):
     def test_pressure_calibration_curves(self):
         from server.backends.linux_uinput import LinuxUinputTablet, ABS_MAX_PRESSURE

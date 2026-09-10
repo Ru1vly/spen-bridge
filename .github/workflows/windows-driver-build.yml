@@ -1,18 +1,21 @@
 name: Windows Driver Build
 
-# Phase 2a compilation spike: prove the KMDF + VHF toolchain actually
-# compiles and links on a real windows-2025/VS2026 runner before any real
-# driver logic is written. See windows/driver/spenvhid/README.md for the
-# open risk this is checking and what to do with a red/green result.
-
 on:
   push:
     paths:
       - 'windows/driver/spenvhid/**'
+      - 'server/**'
+      - 'tests/**'
+      - '*.ps1'
+      - 'windows/*.ps1'
       - '.github/workflows/windows-driver-build.yml'
   pull_request:
     paths:
       - 'windows/driver/spenvhid/**'
+      - 'server/**'
+      - 'tests/**'
+      - '*.ps1'
+      - 'windows/*.ps1'
   workflow_dispatch: {}
 
 jobs:
@@ -22,6 +25,9 @@ jobs:
     # (see README.md) - a floating alias would make a currently-green
     # workflow silently break on GitHub's next runner rotation.
     runs-on: windows-2025
+    strategy:
+      matrix:
+        configuration: [Debug, Release]
 
     steps:
       - uses: actions/checkout@v4
@@ -40,30 +46,57 @@ jobs:
         # project-local packages.config, not the .sln.
         run: nuget restore windows\driver\spenvhid\packages.config -PackagesDirectory windows\driver\spenvhid\packages
 
-      - name: Build spenvhid driver (Phase 2a minimal skeleton)
-        run: msbuild windows\driver\spenvhid\spenvhid.sln /p:Configuration=Debug /p:Platform=x64 /m /warnaserror
+      - name: Build spenvhid driver
+        run: msbuild windows\driver\spenvhid\spenvhid.sln /p:Configuration=${{ matrix.configuration }} /p:Platform=x64 /m /warnaserror
 
-      # infverif needs a real driver + real device interface to be
-      # meaningful (Phase 2b territory) and its exact path inside the
-      # NuGet-restored WDK is unconfirmed - see README.md. Left commented
-      # out so it doesn't block the very first green run; uncomment once
-      # 2b's device.c/spenvhid.inf are final.
-      # - name: Verify INF (infverif)
-      #   run: |
-      #     $infverif = Get-ChildItem -Recurse -Filter infverif.exe windows\driver\spenvhid\packages | Select-Object -First 1
-      #     & $infverif.FullName /v /w windows\driver\spenvhid\spenvhid.inf
+      - name: Assemble unsigned driver package
+        shell: pwsh
+        run: |
+          $inf2cat = Get-ChildItem windows/driver/spenvhid/packages -Recurse -Filter Inf2Cat.exe | Select-Object -First 1
+          if (-not $inf2cat) { throw 'WDK Inf2Cat.exe not found' }
+          .\windows\package-driver.ps1 `
+            -BuildRoot "windows/driver/spenvhid/x64/${{ matrix.configuration }}" `
+            -OutputDirectory "windows/driver/package/${{ matrix.configuration }}" `
+            -Inf2CatPath $inf2cat.FullName
+
+      - name: Verify stamped INF
+        run: |
+          $tool = Get-ChildItem windows/driver/spenvhid/packages -Recurse -Filter infverif.exe | Where-Object { $_.Directory.Name -eq 'x64' } | Select-Object -First 1
+          if (-not $tool) { throw 'WDK infverif.exe not found' }
+          $inf = Get-ChildItem 'windows/driver/spenvhid/x64/${{ matrix.configuration }}' -Recurse -Filter spenvhid.inf | Select-Object -First 1
+          if (-not $inf) { throw 'Stamped driver INF not found' }
+          & $tool.FullName /w $inf.FullName
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Test Windows application and report contract
+        run: |
+          python -m pip install -r server/requirements.txt
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python -m unittest discover -s tests -v
+
+      - name: Parse PowerShell entry points
+        run: |
+          $scripts = @('install.ps1', 'start.ps1', 'windows/install-driver.ps1', 'windows/package-driver.ps1', 'windows/validate-driver.ps1')
+          foreach ($script in $scripts) {
+            $parseErrors = $null
+            $tokens = $null
+            [System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path $script), [ref]$tokens, [ref]$parseErrors) | Out-Null
+            if ($parseErrors.Count) { throw ($parseErrors | Out-String) }
+          }
 
       - name: Upload built driver
-        # ConfigurationType=Driver's default OutDir ($(Platform)\$(Configuration)\
-        # $(TargetName)\) is unconfirmed against a real build - see
-        # README.md's open risks - so this globs broadly under x64\Debug\
-        # rather than assuming the exact nested path, to avoid a false
-        # "no files found" failure on an otherwise-correct build.
         uses: actions/upload-artifact@v4
         with:
-          name: spenvhid-driver
+          name: spenvhid-driver-${{ matrix.configuration }}
           path: |
-            windows/driver/spenvhid/x64/Debug/**/spenvhid.sys
-            windows/driver/spenvhid/x64/Debug/**/spenvhid.inf
-            windows/driver/spenvhid/x64/Debug/**/*.pdb
+            windows/driver/spenvhid/x64/${{ matrix.configuration }}/**/spenvhid.sys
+            windows/driver/spenvhid/x64/${{ matrix.configuration }}/**/spenvhid.inf
+            windows/driver/spenvhid/x64/${{ matrix.configuration }}/**/*.pdb
+            windows/driver/spenvhid/x64/${{ matrix.configuration }}/**/*.cat
+            windows/driver/package/${{ matrix.configuration }}/*
           if-no-files-found: error

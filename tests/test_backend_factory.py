@@ -15,29 +15,22 @@ from server.backends.factory import create_tablet_backend
 
 class TestBackendFactory(unittest.TestCase):
     def test_linux_dispatches_to_uinput_backend(self):
-        with patch.object(platform, "system", return_value="Linux"):
-            if sys.platform.startswith("linux"):
-                tablet = create_tablet_backend()
-                try:
-                    from server.backends.linux_uinput import LinuxUinputTablet
-                    self.assertIsInstance(tablet, LinuxUinputTablet)
-                finally:
-                    tablet.close()
-            else:
-                # Can't actually open /dev/uinput on a non-Linux test runner,
-                # but the dispatch itself (picking the right module) is still
-                # checkable via the resulting exception type.
-                with self.assertRaises(Exception):
-                    create_tablet_backend()
+        from types import SimpleNamespace
+        from unittest.mock import Mock
+        backend = Mock()
+        module = SimpleNamespace(LinuxUinputTablet=backend)
+        with patch.object(platform, "system", return_value="Linux"), patch.dict(
+                sys.modules, {"server.backends.linux_uinput": module}):
+            self.assertIs(create_tablet_backend(mode="tablet"), backend.return_value)
+            backend.assert_called_once_with(mode="tablet")
 
-    def test_windows_dispatches_to_windows_stub_cleanly(self):
-        """The Phase-1 Windows backend is a stub: construction must fail with
-        a clear NotImplementedError, never a raw ImportError on a missing
-        evdev module (which would happen if the factory eagerly imported the
-        Linux backend at module scope instead of lazily inside the branch)."""
-        with patch.object(platform, "system", return_value="Windows"):
-            with self.assertRaises(NotImplementedError):
-                create_tablet_backend()
+    def test_windows_dispatches_without_loading_evdev(self):
+        with patch.object(platform, "system", return_value="Windows"), patch(
+                "server.backends.windows_hid.DriverConnection"):
+            from server.backends.windows_hid import WindowsHidTablet
+            tablet = create_tablet_backend()
+            self.assertIsInstance(tablet, WindowsHidTablet)
+            tablet.close()
 
     def test_unsupported_platform_raises_runtime_error(self):
         with patch.object(platform, "system", return_value="Plan9"):

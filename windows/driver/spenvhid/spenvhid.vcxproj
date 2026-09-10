@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  spenvhid.vcxproj - Phase 2a minimal KMDF driver project.
+  spenvhid.vcxproj - KMDF/VHF virtual pen driver project.
 
   Wiring for the NuGet-restored WDK follows the standard MSBuild "native
   package" import idiom (packages.<id>.props near the top, guarded by
   Exists() + an EnsureNuGetPackageBuildImports error target). Verified
   against the real, live-downloaded Microsoft.Windows.WDK.x64,
   Microsoft.Windows.SDK.CPP, and Microsoft.Windows.SDK.CPP.x64 NuGet
-  packages during Phase 2a review: vhf.h (which device.c includes) lives
+  packages during the WDK integration review: vhf.h (which device.c includes) lives
   in the SDK.CPP package, NOT the WDK.x64 package - Vhfkm.lib is the only
   VHF piece the WDK.x64 package actually contains - so all three packages'
   props must be imported, matching Microsoft's own Windows-driver-samples
@@ -110,12 +110,11 @@
        fails loudly instead of silently if a future WDK version moves
        these tools again.
 
-    2) Phase 2a's only goal is proving driver.c/device.c compile and link
-       against vhf.h/Vhfkm.lib - INF package verification and driver
-       test-signing are separate, later concerns (test-signing needs a
-       real Windows machine with testsigning mode enabled - see
-       README.md's "human + real Windows hardware only" gate, Phase
-       2b/4b). Disabled explicitly rather than left to fail: a real CI run
+    2) Package verification and driver test-signing are deliberately kept
+       outside the normal source build. Test-signing needs a real Windows
+       machine with testsigning mode enabled. The packaging script and the
+       Windows setup guide provide that explicit release step. Disabled here
+       rather than left to fail: a real CI run
        hit both a DPVerifierTask DLL-load failure (x86\InfVerif.dll not
        found - the same x86-vs-x64 tools-folder mismatch as above) and a
        SignTool error (newer signtool requires an explicit /fd digest
@@ -134,11 +133,10 @@
     <ClCompile>
       <WarningLevel>Level4</WarningLevel>
       <TreatWarningAsError>true</TreatWarningAsError>
-      <PreprocessorDefinitions>%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_KERNEL_MODE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
-      <!-- Presence of Vhfkm.lib at link time is Phase 2a's real open-risk
-           check - see device.c's SpenVhidProbeVhfConfigCompiles. -->
+      <!-- VHF is the input-report transport used by device.c. -->
       <AdditionalDependencies>Vhfkm.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <Inf>
@@ -151,6 +149,8 @@
   </ItemGroup>
   <ItemGroup>
     <Inf Include="spenvhid.inf" />
+    <ClInclude Include="ioctl.h" />
+    <ClInclude Include="report_descriptor.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

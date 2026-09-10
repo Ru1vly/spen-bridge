@@ -7,6 +7,7 @@ ClassGuid   = {745a17a0-74d3-11d0-b6fe-00a0c90f57da}   ; standard HIDClass GUID
 Provider    = %ManufacturerName%
 DriverVer   = ; filled by build (stampinf)
 CatalogFile = spenvhid.cat
+PnpLockdown = 1
 
 [Manufacturer]
 %ManufacturerName% = SpenVhid, NT$ARCH$
@@ -15,7 +16,33 @@ CatalogFile = spenvhid.cat
 %SpenVhid.DeviceDesc% = SpenVhid_Device, root\spenvhid   ; root-enumerated
 
 [SpenVhid_Device.NT]
-; No AddReg/resources needed -- pure software device.
+CopyFiles = SpenVhid_CopyFiles
+
+[DestinationDirs]
+SpenVhid_CopyFiles = 13
+
+[SourceDisksNames]
+1 = %DiskName%
+
+[SourceDisksFiles]
+spenvhid.sys = 1
+
+[SpenVhid_CopyFiles]
+spenvhid.sys
+
+[SpenVhid_Device.NT.HW]
+AddReg = SpenVhid_Hardware
+
+[SpenVhid_Hardware]
+HKR,,LowerFilters,0x00010000,"vhf"
+; Local interactive users can submit input; remote/network users cannot.
+HKR,,Security,0x00000000,"D:P(A;;GA;;;SY)(A;;GA;;;BA)(A;;GRGW;;;IU)"
+
+[SpenVhid_Device.NT.Wdf]
+KmdfService = spenvhid, SpenVhid_Wdf
+
+[SpenVhid_Wdf]
+KmdfLibraryVersion = $KMDFVERSION$
 
 [SpenVhid_Device.NT.Services]
 AddService = spenvhid, 0x00000002, SpenVhid_Service_Inst   ; 0x2 = SPSVCINST_ASSOCSERVICE
@@ -27,13 +54,9 @@ StartType      = 3        ; SERVICE_DEMAND_START
 ErrorControl   = 1        ; SERVICE_ERROR_NORMAL
 ServiceBinary  = %13%\spenvhid.sys
 
-[SpenVhid_Device.NT.CoInstallers]
-; MODERATE CONFIDENCE: whether a modern KMDF INF targeting Windows 10/11
-; only still needs the classic WdfCoInstallerNNNNN.dll section should be
-; confirmed against a freshly-generated "Empty KMDF Driver" VS2026 project
-; template once available, rather than hand-authored from memory.
-
 [Strings]
 ManufacturerName     = "S Pen Bridge"
 SpenVhid.DeviceDesc  = "S Pen Bridge Virtual HID Tablet"
 SpenVhid.SvcDesc     = "S Pen Bridge Virtual HID Driver"
+
+DiskName = "S Pen Bridge Driver"

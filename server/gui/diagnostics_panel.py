@@ -3,6 +3,8 @@ Live S Pen input diagnostics card: pressure/position/tilt readouts, traffic
 rate, and hover/touch/barrel/eraser/click status badges.
 """
 
+import sys
+
 from PySide6.QtWidgets import QGroupBox, QVBoxLayout, QHBoxLayout, QGridLayout, QLabel, QProgressBar
 
 from server.gui.widgets.pill_badge import PillBadge
@@ -15,11 +17,12 @@ class DiagnosticsCard(QGroupBox):
         layout = QVBoxLayout(self)
         layout.setSpacing(6)
 
-        self.lbl_pressure_diag = QLabel("Pressure: 0 / 4095 (0%)")
+        self.pressure_max = 32767 if sys.platform == "win32" else 4095
+        self.lbl_pressure_diag = QLabel(f"Pressure: 0 / {self.pressure_max} (0%)")
         layout.addWidget(self.lbl_pressure_diag)
 
         self.bar_pressure = QProgressBar()
-        self.bar_pressure.setRange(0, 4095)
+        self.bar_pressure.setRange(0, self.pressure_max)
         layout.addWidget(self.bar_pressure)
 
         coords_layout = QGridLayout()
@@ -48,9 +51,9 @@ class DiagnosticsCard(QGroupBox):
         layout.addLayout(badges_layout)
 
     def update_pen_event(self, ev, cal_p: int, abs_x: int, abs_y: int):
-        pct = int((cal_p / 4095.0) * 100)
+        pct = int((cal_p / self.pressure_max) * 100)
         self.bar_pressure.setValue(cal_p)
-        self.lbl_pressure_diag.setText(f"Pressure: {cal_p} / 4095 ({pct}%)")
+        self.lbl_pressure_diag.setText(f"Pressure: {cal_p} / {self.pressure_max} ({pct}%)")
         self.lbl_pos_val.setText(f"{ev.x:.3f}, {ev.y:.3f}  ({abs_x}, {abs_y})")
         self.lbl_tilt_val.setText(f"{ev.tilt_x:.1f}°, {ev.tilt_y:.1f}°")
 

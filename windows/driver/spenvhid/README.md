@@ -1,34 +1,36 @@
-# spenvhid - Phase 2a compilation spike
+# spenvhid — Windows Ink virtual pen
+
+The compilation spike has been replaced by a VHF device, validated report IOCTL,
+exclusive private interface, and cleanup on process exit. See
+[the wire contract](../../../docs/WINDOWS_DRIVER_PROTOCOL.md) and
+[build/install/validation instructions](../../../docs/WINDOWS.md).
+The new C sources compile and link with Clang/LLD against the pinned WDK
+headers and libraries on Linux. The GitHub workflow builds the same project
+with MSBuild on Windows. Installation, signing, and live Windows Ink behavior
+still require a Windows test machine.
+
+## Historical toolchain findings
+
+### Phase 2a compilation spike
 
 **Status: CI-green as of 2026-09-08** (GitHub Actions run
 `windows-2025`/VS2026, workflow run id `34205142253`, branch
-`windows-phase2a-driver-spike`). This is **not** a working driver yet -
-it exists to answer one question before any real device logic gets
-written: does a KMDF driver linking against Microsoft's Virtual HID
-Framework (VHF) actually compile and link using the
-`Microsoft.Windows.WDK.x64` NuGet package on a GitHub Actions runner?
-**Yes** - confirmed by a real, successful build producing a genuine
-`spenvhid.sys` artifact (178,749 bytes), not just a green checkmark. See
-the Windows Support plan's Phase 2 section for the full design; this
-directory covers Phase 2a only. Getting there took 6 real CI iterations
-after the first, naive draft - the failures and fixes are documented
-below because they're load-bearing knowledge for Phase 2b, not just
-history.
+`windows-phase2a-driver-spike`). That historical run proved the pinned
+NuGet/WDK toolchain could produce a genuine `spenvhid.sys` artifact. The
+driver has since been extended with the VHF device, report descriptor, IOCTL
+queue, and cleanup path. The old build investigation is retained below as
+reference for future WDK upgrades.
 
-## What's here (Phase 2a scope)
+## Current driver contents
 
-- `driver.c` - `DriverEntry` only.
-- `device.c` - `SpenVhidEvtDeviceAdd` that does nothing but `WdfDeviceCreate`,
-  plus `SpenVhidProbeVhfConfigCompiles`: a function invoked once from
-  `EvtDeviceAdd` but otherwise unused at runtime, whose only job is forcing
-  the compiler/linker to touch `vhf.h`'s types and `Vhfkm.lib`'s exports. No
-  VHF instance is actually created, no IOCTL queue exists, no device
-  interface is exposed - that's all Phase 2b.
-- `spenvhid.inf` - root-enumerated software device INF (final version, since
-  it doesn't depend on the IOCTL contract).
-- `spenvhid.vcxproj` / `.sln` / `packages.config` - minimal KMDF driver
-  project wired to the NuGet-restored WDK via the standard MSBuild
-  "native package" import idiom.
+- `driver.c` - KMDF `DriverEntry` and device-add registration.
+- `device.c` - VHF creation/startup, report validation/submission, the
+  private IOCTL queue, device interface, and cleanup on handle/device removal.
+- `report_descriptor.h` - Windows Ink pen and auxiliary mouse collections.
+- `ioctl.h` - the private user-mode/kernel-mode report contract.
+- `spenvhid.inf` - root-enumerated software device package with the VHF lower
+  filter and restricted local-user security descriptor.
+- `spenvhid.vcxproj` / `.sln` / `packages.config` - NuGet-restored KMDF build.
 
 ## Resolved WDK NuGet version
 
@@ -154,32 +156,11 @@ have been settled by more reading:
    `nuget restore <path> -PackagesDirectory <dir>` - confirmed working
    exactly as documented.
 
-## Still genuinely open (not exercised by a compile-only spike)
+## Remaining validation
 
-1. Whether the classic `WdfCoInstallerNNNNN.dll` INF section is still
-   needed for a Windows 10/11-only KMDF driver (see `spenvhid.inf`'s own
-   comment) - only matters at real install time, not compile time.
-2. Whether `_KERNEL_MODE` is actually defined by this toolset/NuGet
-   combination - `VHF_CONFIG` has a different, ABI-incompatible member
-   selected by `#ifdef _KERNEL_MODE` (a `PDEVICE_OBJECT` vs. a user-mode
-   `HANDLE`). Both are pointer-sized so this wouldn't fail to *compile* if
-   wrong, only silently miscompile at runtime - worth a one-time check
-   (e.g. a `#pragma message`) before Phase 2b's real `VhfCreate` call
-   depends on the kernel-mode branch.
-3. Everything genuinely requiring real Windows hardware: does the driver
-   actually load (`pnputil /add-driver`, test-signing mode, Device
-   Manager showing no Code 52), does it show up to Windows Ink, does a
-   live Android -> server -> driver -> Krita stroke land correctly. None
-   of that is answerable from CI.
-
-## Next steps
-
-Phase 2a is done. Proceed to Phase 2b per the plan's task list: real VHF
-wiring (`VhfCreate`/`VhfStart`, replacing the never-invoked
-`SpenVhidProbeVhfConfigCompiles` probe), the IOCTL queue and device
-interface, `report_descriptor.h`, `ioctl.h`, `server/backends/
-windows_report.py`, `docs/WINDOWS_DRIVER_PROTOCOL.md`, and
-`tests/test_windows_report_format.py`. Re-enable `SkipPackageVerification`/
-`EnableTestSign` once a real device interface exists for INF verification
-to meaningfully check, and once test-signing is being deliberately
-exercised on real hardware (Phase 2b's own hard human-only gate).
+The source contract is implemented and `_KERNEL_MODE` is explicitly supplied
+by the project. The remaining work is machine-level validation: build and sign
+the package, install it on Windows 10/11 x64, verify the root device and VHF
+child have no Device Manager errors, and exercise Windows Ink with hover,
+pressure, tilt, eraser, buttons, disconnect cleanup, sleep/resume, and multiple
+displays. Use `docs/WINDOWS.md` and `windows/package-driver.ps1` for that gate.

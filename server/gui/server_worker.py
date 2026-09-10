@@ -7,6 +7,7 @@ react to status/traffic/pen events without blocking the UI thread.
 import asyncio
 import logging
 import threading
+import sys
 from typing import Optional
 
 from PySide6.QtCore import QObject, Signal
@@ -79,6 +80,7 @@ class ServerWorker(QObject):
             )
         except Exception as e:
             self.sig_status.emit("error", f"Failed to create VirtualTablet: {e}")
+            self._loop.close()
             return
 
         self.server = SPenServer(
@@ -104,6 +106,13 @@ class ServerWorker(QObject):
         except Exception as e:
             self.sig_status.emit("error", f"Server error: {e}")
         finally:
+            self.tablet.close()
+            pending = asyncio.all_tasks(self._loop)
+            for task in pending:
+                task.cancel()
+            if pending:
+                self._loop.run_until_complete(asyncio.gather(*pending, return_exceptions=True))
+            self._loop.close()
             self._is_running = False
             self.sig_status.emit("stopped", "Server stopped")
 
@@ -139,6 +148,14 @@ class ServerWorker(QObject):
             return
 
         if self.tablet is None:
+            return
+
+        # Windows exposes one installed pen device; Linux-only mode/name
+        # changes must not attempt a second exclusive open of that device.
+        if sys.platform == "win32":
+            self.tablet.mode = target_mode
+            self.tablet.direct_mode = target_direct
+            self.tablet.name = target_name
             return
 
         monitors, desk_size = detect_monitors()
