@@ -17,10 +17,14 @@ Install Python 3.10+ with the `py` launcher. In PowerShell at the repository roo
 .\start.ps1 --cli
 ```
 
-The installer creates a local virtual environment and a current-user Start Menu
-shortcut. Keep the checkout in place. If local script execution is blocked, use
+The installer (`install.ps1`) performs the following:
+1. Creates a local Python virtual environment (`server\.venv`) and installs required packages.
+2. Creates a current-user Start Menu shortcut (`S Pen Bridge`) with the application icon.
+3. Checks for administrative privileges to create an inbound Windows Firewall rule for port 40118 (`S Pen Bridge Server (TCP-In)`), ensuring Wi-Fi tablet connections work seamlessly.
+
+Keep the checkout in place. If local script execution is blocked, use
 `powershell -ExecutionPolicy Bypass -File .\install.ps1` for this invocation.
-The server will report a missing-driver error until the next step is complete.
+The server will report a missing-driver error until the driver installation step below is complete.
 
 ## Build and install the driver
 
@@ -144,8 +148,8 @@ Access denied/sharing violation: close other bridge instances and verify the
 installed package contains the current security descriptor. Driver removal while
 running produces an I/O error; reinstall/re-enable, then restart the server.
 
-To remove the driver, stop the bridge and run elevated
-`devcon remove "root\spenvhid"`. Find its exact `oemNN.inf` with
-`pnputil /enum-drivers`, then remove that package with
-`pnputil /delete-driver oemNN.inf`. Remove the Start Menu shortcut and checkout
-to uninstall the application; settings remain under `%APPDATA%\spen-bridge`.
+To remove the driver, stop the bridge and run elevated PowerShell:
+- If DevCon is installed: `devcon remove "root\spenvhid"`
+- To remove the staged driver package: locate its published name with `pnputil /enum-drivers` (e.g. `oemNN.inf`), then remove it with `pnputil /delete-driver oemNN.inf /uninstall /force`.
+
+Remove the Start Menu shortcut and checkout to uninstall the application; settings remain under `%APPDATA%\spen-bridge`.

@@ -1,6 +1,6 @@
 # S Pen Bridge: Network Wire Protocol (v1)
 
-This document defines the binary wire protocol used to transmit S Pen events between the Android tablet client and the Linux server over TCP.
+This document defines the binary wire protocol used to transmit S Pen events between the Android tablet client and the desktop server (Linux and Windows) over TCP.
 
 All integers and floating-point values are encoded in **little-endian** (`<` in Python `struct`).
 
