@@ -5,9 +5,12 @@ so they're skipped everywhere except Linux - see server/backends/ for the
 cross-platform seam these tests exercise the Linux side of.
 """
 
-import sys
 import os
+import sys
 import unittest
+
+# Ensure headless execution works in CI/headless environments without X11/Wayland
+os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from PySide6.QtWidgets import QApplication
 
@@ -17,8 +20,14 @@ app = QApplication.instance() or QApplication(sys.argv)
 from server.config import TabletConfig
 
 
-@unittest.skipUnless(sys.platform.startswith("linux") and os.access("/dev/uinput", os.W_OK),
-                         "requires writable /dev/uinput")
+try:
+    import evdev
+    HAS_EVDEV = True
+except ImportError:
+    HAS_EVDEV = False
+
+@unittest.skipUnless(sys.platform.startswith("linux") and os.access("/dev/uinput", os.W_OK) and HAS_EVDEV,
+                     "requires writable /dev/uinput and evdev module")
 class TestLinuxUinputBackend(unittest.TestCase):
     def test_pressure_calibration_curves(self):
         from server.backends.linux_uinput import LinuxUinputTablet, ABS_MAX_PRESSURE
@@ -206,7 +215,10 @@ class TestLinuxUinputBackend(unittest.TestCase):
         worker.start_server()
         try:
             import time
-            time.sleep(0.6)
+            for _ in range(30):
+                if worker.tablet is not None:
+                    break
+                time.sleep(0.1)
             self.assertIsNotNone(worker.tablet)
             self.assertEqual(worker.tablet.mode, "tablet")
 

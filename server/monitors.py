@@ -163,7 +163,7 @@ def get_monitors_from_qt() -> List[Dict[str, Any]]:
     try:
         from PySide6.QtGui import QGuiApplication
         app = QGuiApplication.instance()
-        if app is not None:
+        if app is not None and app.platformName() != "offscreen":
             primary = app.primaryScreen()
             for screen in app.screens():
                 geom = screen.geometry()
@@ -215,13 +215,8 @@ def detect_monitors() -> Tuple[List[Dict[str, Any]], Tuple[int, int]]:
     min_x = min(m["x"] for m in monitors)
     min_y = min(m["y"] for m in monitors)
 
-    if sys.platform == "win32":
-        # HID coordinates start at the bounding desktop's top-left, even
-        # when Windows positions a display left/above the primary display.
-        monitors = [dict(m, x=m["x"] - min_x, y=m["y"] - min_y) for m in monitors]
-        return monitors, (max_x - min_x, max_y - min_y)
-
-    desktop_width = max(1920, max_x - min(0, min_x))
-    desktop_height = max(1080, max_y - min(0, min_y))
-
-    return monitors, (desktop_width, desktop_height)
+    # Normalize coordinates so the bounding box origin is at (0, 0)
+    # on all platforms (both Linux evdev/libinput and Windows HID map
+    # [0, COORD_MAX] across the full desktop bounding box).
+    monitors = [dict(m, x=m["x"] - min_x, y=m["y"] - min_y) for m in monitors]
+    return monitors, (max_x - min_x, max_y - min_y)

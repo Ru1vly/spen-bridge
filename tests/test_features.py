@@ -1,5 +1,9 @@
+import os
 import sys
 import unittest
+
+# Ensure headless execution works in CI/headless environments without X11/Wayland
+os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from PySide6.QtWidgets import QApplication
 
@@ -144,6 +148,44 @@ class TestSPenSettingsAndFeatures(unittest.TestCase):
             # Toggling settings above legitimately dirties the in-memory config;
             # this test isn't exercising the unsaved-changes close prompt, so
             # skip it and close directly.
+            win._dirty = False
+            win.close()
+
+    def test_adb_reverse_silent_mode(self):
+        """When called with silent=True (e.g. startup auto_adb_forward), adb failure
+        must not pop up a blocking modal QMessageBox."""
+        from unittest.mock import patch, MagicMock
+        from server.gui.connection_panel import ConnectionPanel
+
+        cfg = TabletConfig()
+        panel = ConnectionPanel(local_ip="127.0.0.1", config=cfg)
+        with patch("subprocess.run", side_effect=FileNotFoundError), \
+             patch("PySide6.QtWidgets.QMessageBox.warning") as mock_box:
+            panel.run_adb_reverse(silent=True)
+            mock_box.assert_not_called()
+
+            panel.run_adb_reverse(silent=False)
+            mock_box.assert_called_once()
+
+    def test_close_event_respects_system_tray_availability(self):
+        """If system tray is not available on the OS (e.g. GNOME without AppIndicator),
+        window close must not minimize to an invisible tray."""
+        from unittest.mock import patch, MagicMock
+        from server.gui import MainWindow
+        from PySide6.QtGui import QCloseEvent
+
+        win = MainWindow()
+        try:
+            win.config.minimize_to_tray = True
+            with patch.object(win.tray.tray_icon, "isSystemTrayAvailable", return_value=False), \
+                 patch.object(win, "force_quit") as mock_quit:
+                event = QCloseEvent()
+                win._dirty = False
+                win.closeEvent(event)
+                # Must quit rather than ignore/hide
+                mock_quit.assert_called_once()
+        finally:
+            win.worker.stop_server()
             win._dirty = False
             win.close()
 

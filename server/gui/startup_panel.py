@@ -129,7 +129,49 @@ class StartupPanel(QGroupBox):
             )
             if ans == QMessageBox.Yes:
                 setup_script = REPO_ROOT / "server" / "setup_uinput.sh"
-                subprocess.Popen(["bash", str(setup_script)])
+                self._run_elevated_script(setup_script)
+
+    def _run_elevated_script(self, script_path: Path):
+        import shutil
+        if shutil.which("pkexec"):
+            try:
+                subprocess.Popen(["pkexec", "bash", str(script_path)])
+                QMessageBox.information(
+                    self,
+                    "uinput Setup",
+                    "Launched setup with pkexec. After authenticating, click 'Check / Setup uinput Permissions' again.",
+                )
+                return
+            except Exception as e:
+                pass
+
+        # Try launching in a terminal emulator
+        terminals = [
+            ("x-terminal-emulator", ["-e"]),
+            ("gnome-terminal", ["--"]),
+            ("konsole", ["-e"]),
+            ("xfce4-terminal", ["-e"]),
+            ("kitty", ["--"]),
+            ("alacritty", ["-e"]),
+            ("xterm", ["-e"]),
+        ]
+        for term, args in terminals:
+            if shutil.which(term):
+                try:
+                    cmd = [term] + args + ["bash", "-c", f"sudo '{script_path}'; echo 'Done. Press enter to exit.'; read line"]
+                    subprocess.Popen(cmd)
+                    return
+                except Exception:
+                    pass
+
+        # Fallback: display command to user
+        QMessageBox.information(
+            self,
+            "Run Setup Script",
+            f"Please run the setup script in your terminal to grant permissions:\n\n"
+            f"sudo '{script_path}'\n\n"
+            f"Then re-check permissions.",
+        )
 
     def _install_desktop_entry(self):
         """Create and install .desktop file for system application launcher."""
@@ -144,8 +186,9 @@ Exec={REPO_ROOT}/server/.venv/bin/python {REPO_ROOT}/server/main.py --gui
 Icon={REPO_ROOT}/spen_icon.png
 Terminal=false
 Type=Application
-Categories=Graphics;Utility;
+Categories=Graphics;2DGraphics;
 Keywords=spen;tablet;wacom;stylus;samsung;
+StartupNotify=true
 """
         try:
             with open(desktop_file, "w", encoding="utf-8") as f:

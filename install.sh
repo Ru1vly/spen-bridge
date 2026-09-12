@@ -11,6 +11,11 @@
 
 set -euo pipefail
 
+# If stdin is not a terminal (e.g. curl | bash), reconnect to /dev/tty for sudo password prompts
+if [ ! -t 0 ] && [ -r /dev/tty ]; then
+    exec </dev/tty
+fi
+
 REPO_URL="https://github.com/Ru1vly/spen-bridge.git"
 INSTALL_DIR="${SPEN_BRIDGE_DIR:-$HOME/spen-bridge}"
 
@@ -23,6 +28,13 @@ require() {
 
 require git
 require python3
+
+if ! command -v uv >/dev/null 2>&1; then
+    if ! python3 -c "import venv" >/dev/null 2>&1; then
+        echo "Error: Python 'venv' module is required. On Debian/Ubuntu install it with: sudo apt install python3-venv" >&2
+        exit 1
+    fi
+fi
 
 if [ -d "$INSTALL_DIR/.git" ]; then
     echo "[*] Existing install found at $INSTALL_DIR, updating..."
@@ -60,7 +72,7 @@ Exec=$INSTALL_DIR/start.sh
 Icon=$INSTALL_DIR/spen_icon.png
 Terminal=false
 Type=Application
-Categories=Graphics;Utility;
+Categories=Graphics;2DGraphics;
 Keywords=spen;tablet;wacom;stylus;samsung;krita;gimp;
 StartupNotify=true
 EOF
@@ -71,5 +83,5 @@ echo "Install complete."
 echo "Launch S Pen Bridge from your application menu, or run:"
 echo "  $INSTALL_DIR/start.sh"
 echo ""
-echo "If you were just added to the 'input' group, log out and log back in before first launch."
+echo "uinput permissions are configured with uaccess. If /dev/uinput is not accessible in this session, log out and log back in."
 echo "Next, install the Android app on your tablet: see docs/SETUP.md."

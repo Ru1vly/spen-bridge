@@ -14,6 +14,23 @@ $link = (New-Object -ComObject WScript.Shell).CreateShortcut((Join-Path $program
 $link.TargetPath = Join-Path $repo 'server\.venv\Scripts\pythonw.exe'
 $link.Arguments = '"' + (Join-Path $repo 'server\main.py') + '" --gui'
 $link.WorkingDirectory = $repo
+$icon = Join-Path $repo 'spen_icon.png'
+if (Test-Path $icon) {
+    $link.IconLocation = $icon
+}
 $link.Save()
+
+# Configure Windows Firewall rule for Wi-Fi tablet connection if elevated
+try {
+    $existingRule = Get-NetFirewallRule -DisplayName 'S Pen Bridge' -ErrorAction SilentlyContinue
+    if (-not $existingRule) {
+        New-NetFirewallRule -DisplayName 'S Pen Bridge' -Direction Inbound -LocalPort 40118 -Protocol TCP -Action Allow -Profile Private, Domain -ErrorAction SilentlyContinue | Out-Null
+        Write-Host 'Inbound firewall rule created for port 40118.'
+    }
+} catch {
+    # Non-elevated install: advise user
+    Write-Host 'Note: For Wi-Fi connection, ensure Windows Firewall allows incoming TCP port 40118.'
+}
+
 Write-Host 'Application installed. Launch S Pen Bridge from Start or run .\start.ps1.'
 Write-Host 'The signed virtual HID driver must also be installed; see docs/WINDOWS.md.'

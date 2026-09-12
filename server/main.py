@@ -155,7 +155,11 @@ async def run_cli(args):
         try:
             loop.add_signal_handler(sig, _sig_handler)
         except NotImplementedError:
-            pass
+            # Fallback for Windows where loop.add_signal_handler is not supported
+            try:
+                signal.signal(sig, lambda s, f: loop.call_soon_threadsafe(_sig_handler))
+            except (ValueError, AttributeError):
+                pass
 
     try:
         await server.start()
@@ -165,7 +169,11 @@ async def run_cli(args):
         print(" Ready for Android app connection.")
         print(" Press Ctrl+C to stop.")
         print("=" * 55 + "\n")
-        await stop_event.wait()
+        while not stop_event.is_set():
+            try:
+                await asyncio.wait_for(stop_event.wait(), timeout=0.5)
+            except asyncio.TimeoutError:
+                pass
     finally:
         await server.stop()
         tablet.close()

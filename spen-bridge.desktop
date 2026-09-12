@@ -1,11 +1,11 @@
 [Desktop Entry]
 Name=S Pen Bridge
 GenericName=Graphics Tablet Controller
-Comment=Turn Samsung Galaxy Tab & S Pen into a Linux graphics tablet
-Exec=/home/r1/Projects/spen-bridge/start.sh
-Icon=/home/r1/Projects/spen-bridge/spen_icon.png
+Comment=Turn Samsung Galaxy Tab and S Pen into a Linux graphics tablet
+Exec=start.sh
+Icon=spen_icon
 Terminal=false
 Type=Application
-Categories=Graphics;Utility;
+Categories=Graphics;2DGraphics;
 Keywords=spen;tablet;wacom;stylus;samsung;krita;gimp;
 StartupNotify=true

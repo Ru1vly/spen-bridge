@@ -67,7 +67,7 @@ class ConnectionPanel(QGroupBox):
         self.lbl_ip_info.setText(f"IP: <b>{self._local_ip}</b>  (Copied!)")
         QTimer.singleShot(1500, self.refresh_ip_label)
 
-    def run_adb_reverse(self):
+    def run_adb_reverse(self, silent: bool = False):
         # The Android app in USB mode is told to connect to 127.0.0.1:{port}
         # (i.e. "localhost" from the DEVICE's perspective), while the desktop
         # server listens on {port} on the HOST. `adb reverse` is what tunnels
@@ -91,17 +91,19 @@ class ConnectionPanel(QGroupBox):
             else:
                 err = res.stderr.strip() or "No device found"
                 self.log_message.emit(f"ADB reverse failed: {err}")
-                QMessageBox.warning(
-                    self,
-                    "ADB Reverse",
-                    f"ADB reverse returned error:\n{err}\n\nMake sure your tablet is connected via USB and USB Debugging is enabled.",
-                )
+                if not silent:
+                    QMessageBox.warning(
+                        self,
+                        "ADB Reverse",
+                        f"ADB reverse returned error:\n{err}\n\nMake sure your tablet is connected via USB and USB Debugging is enabled.",
+                    )
         except FileNotFoundError:
             self.log_message.emit("ADB command not found.")
-            if sys.platform == "win32":
-                hint = "adb is not on your PATH.\nInstall Android Studio (or just the platform-tools ZIP) and add it to PATH."
-            else:
-                hint = "adb is not installed on this system.\nInstall with: sudo pacman -S android-tools (or sudo apt install adb)"
-            QMessageBox.warning(self, "ADB Missing", hint)
+            if not silent:
+                if sys.platform == "win32":
+                    hint = "adb is not on your PATH.\nInstall Android Studio (or just the platform-tools ZIP) and add it to PATH."
+                else:
+                    hint = "adb is not installed on this system.\nInstall with: sudo pacman -S android-tools (or sudo apt install adb)"
+                QMessageBox.warning(self, "ADB Missing", hint)
         except Exception as e:
             self.log_message.emit(f"ADB forward error: {e}")

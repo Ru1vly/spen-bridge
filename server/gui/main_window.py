@@ -103,7 +103,7 @@ class MainWindow(QMainWindow):
         if self.config.auto_start_server:
             QTimer.singleShot(400, self.start_server)
         if self.config.auto_adb_forward:
-            QTimer.singleShot(600, self.system_tab.connection_panel.run_adb_reverse)
+            QTimer.singleShot(600, lambda: self.system_tab.connection_panel.run_adb_reverse(silent=True))
 
     # ------------------------------------------------------------------
     # UI Setup
@@ -476,7 +476,7 @@ class MainWindow(QMainWindow):
     # Window lifecycle
     # ------------------------------------------------------------------
     def closeEvent(self, event):
-        if self.config.minimize_to_tray and self.tray.tray_icon.isVisible():
+        if self.config.minimize_to_tray and self.tray.tray_icon.isSystemTrayAvailable() and self.tray.tray_icon.isVisible():
             event.ignore()
             self.hide()
             self.tray.notify("S Pen Bridge", "Application minimized to system tray.")

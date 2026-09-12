@@ -20,7 +20,11 @@ GUIDE_TEXT = (
     "- Enter window class / process name substrings above; when any matching application is\n"
     "  focused, this profile activates automatically (if Auto-Switch is enabled).\n"
     "- Every field in this panel (device mode, pressure, buttons, mapping) is fully independent\n"
-    "  per profile: changing one profile never affects another."
+    "  per profile: changing one profile never affects another.\n\n"
+    "Platform Notes:\n"
+    "- Windows: matches process executable name (e.g. 'krita.exe') and window title.\n"
+    "- Linux: supports Sway, Hyprland, driftwm, and X11/XWayland. On GNOME/KDE Wayland, compositor\n"
+    "  isolation restricts window querying for native Wayland apps; select profiles manually or use XWayland."
 )
 
 

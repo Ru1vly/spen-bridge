@@ -68,15 +68,17 @@ enables test-signing mode automatically. Pass `-SignToolPath` when SignTool is
 not on `PATH`; use the matching Windows SDK/WDK `bin` directory, not System32.
 
 Place the signed `spenvhid.sys`, stamped `spenvhid.inf` and `spenvhid.cat` in
-one directory. Use an elevated PowerShell and the WDK's x64 DevCon executable:
+one directory. Use an elevated PowerShell:
 
 ```powershell
+.\windows\install-driver.ps1 -InfPath C:\SPenDriver\spenvhid.inf
+
+# Or pass Devcon explicitly if located elsewhere:
 .\windows\install-driver.ps1 -InfPath C:\SPenDriver\spenvhid.inf -DevconPath C:\Tools\devcon.exe
 ```
 
 This creates the root device on first install and updates it thereafter.
-`pnputil /add-driver` alone does not create the initial root device; see
-[DevCon Install](https://learn.microsoft.com/en-us/windows-hardware/drivers/devtest/devcon-install).
+DevCon is automatically located from WDK install paths or PATH if present; otherwise `pnputil` is used.
 The INF installs VHF as the required lower filter, following Microsoft's
 [VHF installation contract](https://learn.microsoft.com/en-us/windows-hardware/drivers/hid/virtual-hid-framework--vhf-).
 
@@ -103,9 +105,10 @@ and put `adb.exe` on PATH. With the server listening:
 adb reverse tcp:40118 tcp:40118
 ```
 
-Use USB mode in the Android app. For Wi-Fi, enter the PC's LAN IP and allow the
-bridge Python executable through Windows Firewall on the private network.
-The installer does not open a firewall rule. Use only a trusted LAN.
+Use USB mode in the Android app. For Wi-Fi, enter the PC's LAN IP and ensure the
+inbound port 40118 is allowed through Windows Firewall (configured automatically by
+`install.ps1` if run as administrator, or configurable in Advanced Firewall Settings).
+Use only a trusted LAN.
 
 Configure drawing applications for Windows Ink (for example Krita's Windows
 8+ Pointer Input setting). There is no WinTab emulation. Windows controls the
