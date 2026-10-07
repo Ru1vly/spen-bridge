@@ -148,7 +148,9 @@ class LinuxUinputTablet(TabletBackendBase):
             version=0x01,
             input_props=input_props,
         )
-        logger.info(f"Device created: {self.uinput.device.path}")
+        # UInput.device is None when evdev cannot open the new event node
+        # (e.g. udev has not applied permissions yet); the device still works.
+        logger.info(f"Device created: {getattr(self.uinput, 'devnode', None) or 'unknown node'}")
         time.sleep(0.3)
 
     @staticmethod
