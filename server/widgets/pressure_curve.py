@@ -3,10 +3,10 @@ Interactive Pressure Curve visualizer widget using PySide6.
 Displays input vs output pressure transfer function with live indicator ball.
 """
 
-import math
 from PySide6.QtCore import Qt, QPointF
-from PySide6.QtGui import QPainter, QColor, QPen, QBrush, QFont, QPainterPath
+from PySide6.QtGui import QPainter, QColor, QPen, QFont, QPainterPath
 from PySide6.QtWidgets import QWidget
+from server.pressure import pressure_output
 
 
 class PressureCurveWidget(QWidget):
@@ -35,27 +35,7 @@ class PressureCurveWidget(QWidget):
 
     def calculate_output(self, norm_in: float) -> float:
         """Calculate normalized output (0.0 - 1.0) for a normalized input."""
-        if norm_in <= self.p_min:
-            return 0.0
-        if norm_in >= self.p_max:
-            norm = 1.0
-        else:
-            denom = max(0.001, self.p_max - self.p_min)
-            norm = (norm_in - self.p_min) / denom
-
-        norm = max(0.0, min(1.0, norm))
-
-        if self.curve_type == "soft":
-            return math.pow(norm, 0.65)
-        elif self.curve_type == "firm":
-            return math.pow(norm, 1.6)
-        elif self.curve_type == "sigmoid":
-            return norm * norm * (3.0 - 2.0 * norm)
-        elif self.curve_type == "custom":
-            gamma = max(0.1, min(5.0, self.gamma))
-            return math.pow(norm, gamma)
-        else:
-            return norm
+        return pressure_output(norm_in, self.curve_type, self.gamma, self.p_min, self.p_max)
 
     def paintEvent(self, event):
         painter = QPainter(self)
@@ -76,7 +56,6 @@ class PressureCurveWidget(QWidget):
         painter.fillRect(self.rect(), QColor("#181825"))
 
         # Plot area background
-        plot_rect = QPointF(pad_left, pad_top)
         painter.fillRect(pad_left, pad_top, plot_w, plot_h, QColor("#1e1e2e"))
 
         # Grid lines

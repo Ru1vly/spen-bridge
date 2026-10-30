@@ -1,8 +1,10 @@
 [Desktop Entry]
 Name=S Pen Bridge
+# Template for packaged installs providing spen-bridge on PATH.
+# Checkout installs generate an absolute-path entry through server.launcher.
 GenericName=Graphics Tablet Controller
 Comment=Turn Samsung Galaxy Tab and S Pen into a Linux graphics tablet
-Exec=start.sh
+Exec=spen-bridge
 Icon=spen_icon
 Terminal=false
 Type=Application

@@ -1,0 +1,15 @@
+Ignoring evdev: markers 'python_full_version < "3.11" and sys_platform == "linux"' don't match your environment
+Ignoring pycparser: markers 'python_full_version < "3.11" and implementation_name != "PyPy" and platform_python_implementation != "PyPy"' don't match your environment
+Processing /tmp/spen-qt-wheels/pyside6_addons-6.11.2-cp310-abi3-manylinux_2_34_x86_64.whl (from -r /tmp/spen-runtime-local-wheels.txt (line 174))
+Processing /tmp/spen-qt-wheels/pyside6_essentials-6.11.2-cp310-abi3-manylinux_2_34_x86_64.whl (from -r /tmp/spen-runtime-local-wheels.txt (line 181))
+Ignoring tomli: markers 'python_full_version < "3.11"' don't match your environment
+Ignoring typing-extensions: markers 'python_full_version < "3.11"' don't match your environment
+Requirement already satisfied: cffi==2.1.1 in /tmp/spen-audit-venv/lib64/python3.14/site-packages (from -r /tmp/spen-runtime-local-wheels.txt (line 3)) (2.1.1)
+Requirement already satisfied: cryptography==50.0.0 in /tmp/spen-audit-venv/lib64/python3.14/site-packages (from -r /tmp/spen-runtime-local-wheels.txt (line 105)) (50.0.0)
+Requirement already satisfied: evdev==2.0.0 in /tmp/spen-audit-venv/lib64/python3.14/site-packages (from -r /tmp/spen-runtime-local-wheels.txt (line 156)) (2.0.0)
+Requirement already satisfied: pycparser==3.12 in /tmp/spen-audit-venv/lib64/python3.14/site-packages (from -r /tmp/spen-runtime-local-wheels.txt (line 163)) (3.12)
+Requirement already satisfied: pyside6==6.11.2 in /usr/lib64/python3.14/site-packages (from -r /tmp/spen-runtime-local-wheels.txt (line 167)) (6.11.2)
+Requirement already satisfied: shiboken6==6.11.2 in /usr/lib64/python3.14/site-packages (from -r /tmp/spen-runtime-local-wheels.txt (line 190)) (6.11.2)
+Installing collected packages: pyside6-essentials, pyside6-addons
+
+Successfully installed pyside6-addons-6.11.2 pyside6-essentials-6.11.2

@@ -4,8 +4,8 @@ Draws detected monitors in their desktop coordinate arrangement and allows click
 """
 
 from typing import List, Dict, Any, Optional
-from PySide6.QtCore import Qt, Signal, QRectF, QPointF
-from PySide6.QtGui import QPainter, QColor, QPen, QBrush, QFont
+from PySide6.QtCore import Qt, Signal, QRectF
+from PySide6.QtGui import QPainter, QColor, QPen, QFont
 from PySide6.QtWidgets import QWidget
 
 
@@ -16,6 +16,10 @@ class MonitorLayoutWidget(QWidget):
         super().__init__(parent)
         self.setMinimumSize(280, 180)
         self.setCursor(Qt.PointingHandCursor)
+        self.setFocusPolicy(Qt.StrongFocus)
+        self.setAccessibleName("Monitor selection")
+        self.setAccessibleDescription("Use arrow keys to select a monitor; press Enter or Space to apply.")
+        self._keyboard_index = 0
 
         self.monitors: List[Dict[str, Any]] = []
         self.desktop_width = 1920
@@ -52,6 +56,20 @@ class MonitorLayoutWidget(QWidget):
                     self.monitor_clicked.emit(name)
                     break
         super().mousePressEvent(event)
+
+    def keyPressEvent(self, event):
+        if self.monitors and event.key() in (Qt.Key_Left, Qt.Key_Right, Qt.Key_Up, Qt.Key_Down):
+            step = -1 if event.key() in (Qt.Key_Left, Qt.Key_Up) else 1
+            self._keyboard_index = (self._keyboard_index + step) % len(self.monitors)
+            name = self.monitors[self._keyboard_index]["name"]
+            self.setAccessibleDescription(f"Selected {name}. Press Enter or Space to apply.")
+            self.update()
+            event.accept()
+        elif self.monitors and event.key() in (Qt.Key_Return, Qt.Key_Enter, Qt.Key_Space):
+            self.monitor_clicked.emit(self.monitors[self._keyboard_index % len(self.monitors)]["name"])
+            event.accept()
+        else:
+            super().keyPressEvent(event)
 
     def paintEvent(self, event):
         painter = QPainter(self)
@@ -120,6 +138,9 @@ class MonitorLayoutWidget(QWidget):
             painter.setPen(QColor("#cdd6f4") if is_selected else QColor("#a6adc8"))
             info_text = f"{mon['name']}\n{mon['width']}x{mon['height']}"
             painter.drawText(mrect, Qt.AlignCenter, info_text)
+            if self.hasFocus() and mon is self.monitors[self._keyboard_index % len(self.monitors)]:
+                painter.setPen(QPen(QColor("#f9e2af"), 2, Qt.DashLine))
+                painter.drawRect(mrect.adjusted(3, 3, -3, -3))
 
         # If custom bounds mode, draw custom highlighted rectangle
         if self.mapping_mode == "custom" and len(self.custom_bounds) == 4:

@@ -106,12 +106,15 @@ class MatchChip(QWidget):
         layout.setSpacing(4)
 
         self._label = QLabel(text)
+        self._label.setTextFormat(Qt.PlainText)
         layout.addWidget(self._label)
 
         self._btn_remove = QToolButton()
         self._btn_remove.setText("×")
         self._btn_remove.setAutoRaise(True)
-        self._btn_remove.setFixedSize(16, 16)
+        self._btn_remove.setFixedSize(24, 24)
+        self._btn_remove.setAccessibleName(f"Remove match rule {text}")
+        self._btn_remove.setToolTip(f"Remove {text}")
         self._btn_remove.setCursor(Qt.PointingHandCursor)
         self._btn_remove.clicked.connect(self.remove_requested.emit)
         layout.addWidget(self._btn_remove)
@@ -143,6 +146,7 @@ class MatchChipInput(QWidget):
         outer.addWidget(self._flow_container)
 
         self._edit = QLineEdit()
+        self._edit.setAccessibleName("Application match rule")
         self._edit.setPlaceholderText("Type a window name / process, press Enter to add (e.g. krita)")
         self._edit.returnPressed.connect(self._on_return_pressed)
         outer.addWidget(self._edit)

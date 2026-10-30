@@ -7,10 +7,13 @@ and `_release_touch`.
 """
 
 from abc import ABC, abstractmethod
-import math
 from typing import Callable, Optional, Tuple
 
 from server.protocol import PenEvent
+from server.pressure import pressure_output
+from server import validation as validate
+
+_UNSET = object()
 
 ABS_MAX_COORDINATE = 65535
 ABS_MAX_PRESSURE = 4095
@@ -47,6 +50,15 @@ class TabletBackendBase(ABC):
         tablet_aspect_ratio: str = "16:10",
         on_event_processed: Optional[Callable] = None,
     ):
+        self._validate_settings(dict(
+            name=name, mode=mode, direct_mode=direct_mode,
+            screen_bounds=screen_bounds, desktop_size=desktop_size,
+            pressure_curve_type=pressure_curve_type, pressure_gamma=pressure_gamma,
+            pressure_min=pressure_min, pressure_max=pressure_max,
+            stroke_smoothing=stroke_smoothing, button_primary=button_primary,
+            button_secondary=button_secondary, click_on_touch=click_on_touch,
+            aspect_ratio_lock=aspect_ratio_lock, tablet_aspect_ratio=tablet_aspect_ratio,
+        ))
         self.name = name
         self.mode = mode
         self.direct_mode = direct_mode
@@ -76,69 +88,69 @@ class TabletBackendBase(ABC):
 
         self._setup_device()
 
+    @staticmethod
+    def _validate_settings(values):
+        for name, value in values.items():
+            if name in ("screen_bounds", "desktop_size"):
+                if value is not None:
+                    validate.dimensions(value, name, rectangle=name == "screen_bounds")
+            elif name in ("click_on_touch", "aspect_ratio_lock", "direct_mode"):
+                validate.boolean(value, name)
+            elif name == "tablet_aspect_ratio":
+                validate.aspect_ratio(value)
+            elif name in ("button_primary", "button_secondary"):
+                validate.choice(value, name, validate.BUTTON_ACTIONS)
+            elif name == "pressure_curve_type":
+                validate.choice(value, name, validate.PRESSURE_CURVES)
+            elif name in ("pressure_min", "pressure_max", "pressure_gamma", "stroke_smoothing"):
+                bounds = {"pressure_min": (0, .5), "pressure_max": (.5, 1),
+                          "pressure_gamma": (.1, 5), "stroke_smoothing": (0, .9)}
+                validate.number(value, name, *bounds[name])
+            elif name == "mode":
+                validate.choice(value, name, {"pointer", "tablet"})
+            elif name == "name":
+                validate.text(value, name)
+            else:
+                raise ValueError(f"Unknown tablet setting: {name}")
+
     def update_settings(
         self,
-        screen_bounds: Optional[Tuple[int, int, int, int]] = None,
-        desktop_size: Optional[Tuple[int, int]] = None,
-        pressure_curve_type: Optional[str] = None,
-        pressure_gamma: Optional[float] = None,
-        pressure_min: Optional[float] = None,
-        pressure_max: Optional[float] = None,
-        stroke_smoothing: Optional[float] = None,
-        button_primary: Optional[str] = None,
-        button_secondary: Optional[str] = None,
-        click_on_touch: Optional[bool] = None,
-        **kwargs,
+        screen_bounds=_UNSET,
+        desktop_size=_UNSET,
+        pressure_curve_type=None,
+        pressure_gamma=None,
+        pressure_min=None,
+        pressure_max=None,
+        stroke_smoothing=None,
+        button_primary=None,
+        button_secondary=None,
+        click_on_touch=None,
+        aspect_ratio_lock=None,
+        tablet_aspect_ratio=None,
     ):
-        """Update runtime settings without re-creating the device."""
-        if screen_bounds is not None:
-            self.screen_bounds = screen_bounds
-        if desktop_size is not None:
-            self.desktop_size = desktop_size
-        if pressure_curve_type is not None:
-            self.pressure_curve_type = pressure_curve_type
-        if pressure_gamma is not None:
-            self.pressure_gamma = pressure_gamma
-        if pressure_min is not None:
-            self.pressure_min = max(0.0, min(0.5, pressure_min))
-        if pressure_max is not None:
-            self.pressure_max = max(0.5, min(1.0, pressure_max))
-        if stroke_smoothing is not None:
-            self.stroke_smoothing = max(0.0, min(0.9, stroke_smoothing))
-        if button_primary is not None:
-            self.button_primary = button_primary
-        if button_secondary is not None:
-            self.button_secondary = button_secondary
-        if click_on_touch is not None:
-            if not click_on_touch and self._is_down:
-                self._release_touch()
-            self.click_on_touch = click_on_touch
+        """Validate the complete change before applying it; None clears mapping."""
+        values = dict(
+            pressure_curve_type=pressure_curve_type, pressure_gamma=pressure_gamma,
+            pressure_min=pressure_min, pressure_max=pressure_max,
+            stroke_smoothing=stroke_smoothing, button_primary=button_primary,
+            button_secondary=button_secondary, click_on_touch=click_on_touch,
+            aspect_ratio_lock=aspect_ratio_lock, tablet_aspect_ratio=tablet_aspect_ratio,
+        )
+        values = {k: v for k, v in values.items() if v is not None}
+        if screen_bounds is not _UNSET:
+            values["screen_bounds"] = screen_bounds
+        if desktop_size is not _UNSET:
+            values["desktop_size"] = desktop_size
+        self._validate_settings(values)
+        if values.get("click_on_touch") is False and self._is_down:
+            self._release_touch()
+            self._is_down = False
+        for name, value in values.items():
+            setattr(self, name, value)
 
     def calibrate_pressure(self, raw_p: float) -> int:
-        """Apply deadzone, ceiling, and calibrated response curve to raw pressure."""
-        if raw_p <= self.pressure_min:
-            return 0
-        if raw_p >= self.pressure_max:
-            norm = 1.0
-        else:
-            denom = max(0.001, self.pressure_max - self.pressure_min)
-            norm = (raw_p - self.pressure_min) / denom
-
-        norm = max(0.0, min(1.0, norm))
-
-        if self.pressure_curve_type == "soft":
-            curved = math.pow(norm, 0.65)
-        elif self.pressure_curve_type == "firm":
-            curved = math.pow(norm, 1.6)
-        elif self.pressure_curve_type == "sigmoid":
-            curved = norm * norm * (3.0 - 2.0 * norm)
-        elif self.pressure_curve_type == "custom":
-            gamma = max(0.1, min(5.0, self.pressure_gamma))
-            curved = math.pow(norm, gamma)
-        else:
-            curved = norm
-
-        return int(max(0.0, min(1.0, curved)) * self.PRESSURE_MAX)
+        return int(pressure_output(raw_p, self.pressure_curve_type, self.pressure_gamma,
+                                   self.pressure_min, self.pressure_max) * self.PRESSURE_MAX)
 
     def _map_coordinates(self, norm_x: float, norm_y: float) -> Tuple[int, int]:
         """
@@ -149,22 +161,27 @@ class TabletBackendBase(ABC):
         clamped_x = max(0.0, min(1.0, norm_x))
         clamped_y = max(0.0, min(1.0, norm_y))
 
-        if self.screen_bounds and self.desktop_size:
-            sx, sy, sw, sh = self.screen_bounds
-            dw, dh = self.desktop_size
-            pixel_x = sx + clamped_x * sw
-            pixel_y = sy + clamped_y * sh
-            mapped_x = int((pixel_x / dw) * self.COORD_MAX)
-            mapped_y = int((pixel_y / dh) * self.COORD_MAX)
+        # Preserve physical proportions by fitting a centered target rectangle
+        # with the tablet's aspect inside the selected desktop region.
+        if self.screen_bounds is not None:
+            validate.dimensions(self.screen_bounds, "screen_bounds", rectangle=True)
+        if self.desktop_size is not None:
+            validate.dimensions(self.desktop_size, "desktop_size")
+        if self.screen_bounds is not None and self.desktop_size is None:
+            raise ValueError("Region mapping requires desktop dimensions")
+        if self.screen_bounds is not None or self.aspect_ratio_lock:
+            dw, dh = self.desktop_size or (1920, 1080)
+            sx, sy, sw, sh = self.screen_bounds or (0, 0, dw, dh)
+            if self.aspect_ratio_lock:
+                ratio = validate.aspect_ratio(self.tablet_aspect_ratio)
+                fit_w, fit_h = min(sw, sh * ratio), min(sh, sw / ratio)
+                sx, sy = sx + (sw - fit_w) / 2, sy + (sh - fit_h) / 2
+                sw, sh = fit_w, fit_h
             return (
-                max(0, min(self.COORD_MAX, mapped_x)),
-                max(0, min(self.COORD_MAX, mapped_y)),
+                max(0, min(self.COORD_MAX, int(((sx + clamped_x * sw) / dw) * self.COORD_MAX))),
+                max(0, min(self.COORD_MAX, int(((sy + clamped_y * sh) / dh) * self.COORD_MAX))),
             )
-
-        return (
-            int(clamped_x * self.COORD_MAX),
-            int(clamped_y * self.COORD_MAX),
-        )
+        return int(clamped_x * self.COORD_MAX), int(clamped_y * self.COORD_MAX)
 
     @abstractmethod
     def _setup_device(self):

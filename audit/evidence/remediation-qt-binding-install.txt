@@ -1,0 +1,15 @@
+Collecting pyside6==6.11.2 (from -r /tmp/spen-qt-binding-hashes.txt (line 1))
+  Using cached pyside6-6.11.2-cp310-abi3-manylinux_2_34_x86_64.whl (572 kB)
+Collecting shiboken6==6.11.2 (from -r /tmp/spen-qt-binding-hashes.txt (line 8))
+  Downloading shiboken6-6.11.2-cp310-abi3-manylinux_2_34_x86_64.whl (272 kB)
+Installing collected packages: shiboken6, pyside6
+  Attempting uninstall: shiboken6
+    Found existing installation: shiboken6 6.11.2
+    Not uninstalling shiboken6 at /usr/lib64/python3.14/site-packages, outside environment /tmp/spen-audit-venv
+    Can't uninstall 'shiboken6'. No files were found to uninstall.
+  Attempting uninstall: pyside6
+    Found existing installation: PySide6 6.11.2
+    Not uninstalling pyside6 at /usr/lib64/python3.14/site-packages, outside environment /tmp/spen-audit-venv
+    Can't uninstall 'PySide6'. No files were found to uninstall.
+
+Successfully installed pyside6-6.11.2 shiboken6-6.11.2

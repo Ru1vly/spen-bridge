@@ -6,7 +6,7 @@ window matches any of them.
 
 from typing import Optional
 
-from PySide6.QtCore import Signal
+from PySide6.QtCore import Signal, Qt
 from PySide6.QtWidgets import QGroupBox, QVBoxLayout, QHBoxLayout, QLabel, QToolButton
 
 from server.config import AppProfile
@@ -40,11 +40,12 @@ class IdentitySection(QGroupBox):
         layout.setSpacing(8)
 
         header_row = QHBoxLayout()
-        header_row.addWidget(QLabel("Applies when the focused window matches:"))
+        header_row.addWidget(QLabel("Match the focused window:"))
         header_row.addStretch()
         btn_help = QToolButton()
         btn_help.setText("?")
-        btn_help.setFixedSize(18, 18)
+        btn_help.setFixedSize(24, 24)
+        btn_help.setAccessibleName("How profile matching works")
         btn_help.setStyleSheet("border: 1px solid #45475a; border-radius: 9px;")
         btn_help.setToolTip(GUIDE_TEXT)
         header_row.addWidget(btn_help)
@@ -63,6 +64,7 @@ class IdentitySection(QGroupBox):
 
         live_row = QHBoxLayout()
         self.lbl_live_match = QLabel("Detected active window right now: (none yet)")
+        self.lbl_live_match.setTextFormat(Qt.PlainText)
         self.lbl_live_match.setWordWrap(True)
         live_row.addWidget(self.lbl_live_match, stretch=1)
         self.badge_live_match = PillBadge("No match", state="idle")

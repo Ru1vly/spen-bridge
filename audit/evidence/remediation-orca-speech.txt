@@ -1,0 +1,12 @@
+23:47:34.928559 - SPEECH OUTPUT: 'Advanced: Direct Input Mode' {'established': False, 'family': {'name': '', 'gender': None, 'lang': 'C', 'dialect': '', 'variant': None}}
+23:47:34.929749 - SPEECH OUTPUT: 'check box not checked.' {'established': False}
+23:47:34.930770 - SPEECH OUTPUT: 'Collapsed.' {'established': False}
+23:48:25.214644 - SPEECH OUTPUT: 'Advanced: Direct Input Mode' {'established': False, 'family': {'name': '', 'gender': None, 'lang': 'C', 'dialect': '', 'variant': None}}
+23:48:25.216010 - SPEECH OUTPUT: 'check box checked.' {'established': False}
+23:48:25.217164 - SPEECH OUTPUT: 'Expanded.' {'established': False}
+23:49:10.770134 - SPEECH OUTPUT: 'Profiles' {'established': False, 'family': {'name': '', 'gender': None, 'lang': 'C', 'dialect': '', 'variant': None}}
+23:49:10.771231 - SPEECH OUTPUT: 'List with 4 items' {'established': False}
+23:49:10.772470 - SPEECH OUTPUT: 'Krita.' {'established': False, 'family': {'name': '', 'gender': None, 'lang': 'C', 'dialect': '', 'variant': None}}
+23:49:40.093444 - SPEECH OUTPUT: 'Advanced: Direct Input Mode' {'established': False, 'family': {'name': '', 'gender': None, 'lang': 'C', 'dialect': '', 'variant': None}}
+23:49:40.094784 - SPEECH OUTPUT: 'check box not checked.' {'established': False}
+23:49:40.095965 - SPEECH OUTPUT: 'Collapsed.' {'established': False}

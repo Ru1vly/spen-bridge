@@ -36,13 +36,13 @@ class PenSurfaceView @JvmOverloads constructor(
 
     var customWidthPercent: Int = 100
         set(value) {
-            field = value.coerceIn(10, 100)
+            field = value.coerceIn(20, 100)
             invalidate()
         }
 
     var customHeightPercent: Int = 100
         set(value) {
-            field = value.coerceIn(10, 100)
+            field = value.coerceIn(20, 100)
             invalidate()
         }
 
@@ -112,7 +112,7 @@ class PenSurfaceView @JvmOverloads constructor(
 
     private val labelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = 0x80FFFFFF.toInt()
-        textSize = 26f
+        textSize = android.util.TypedValue.applyDimension(android.util.TypedValue.COMPLEX_UNIT_SP, 13f, resources.displayMetrics)
         typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.NORMAL)
     }
 
@@ -120,42 +120,28 @@ class PenSurfaceView @JvmOverloads constructor(
     private var hoverX = -1f
     private var hoverY = -1f
     private var isHovering = false
+    private val pointerTracker = ActivePointerTracker()
+    private val freshness = InputFreshness().apply { reset(android.os.SystemClock.uptimeMillis()) }
+    private var lastInputDevice: Int? = null
+    private var lastSent = Protocol.Event(Protocol.ACTION_CANCEL, Protocol.TOOL_STYLUS, 0, 0f, 0f, 0f)
+    private var trailSamples = 0
+
+    init {
+        isFocusable = true
+        contentDescription = context.getString(R.string.drawing_surface_description)
+    }
 
     fun getActiveRect(): RectF {
-        val w = width.toFloat().coerceAtLeast(1f)
-        val h = height.toFloat().coerceAtLeast(1f)
-
-        val (baseW, baseH) = when (areaMode) {
-            AreaMode.FULL -> FloatPair(w, h)
-            AreaMode.ASPECT_16_9 -> computeAspectFit(w, h, 16f / 9f)
-            AreaMode.ASPECT_16_10 -> computeAspectFit(w, h, 16f / 10f)
-            AreaMode.ASPECT_21_9 -> computeAspectFit(w, h, 21f / 9f)
-            AreaMode.CUSTOM -> {
-                val cw = w * (customWidthPercent.coerceIn(10, 100) / 100f)
-                val ch = h * (customHeightPercent.coerceIn(10, 100) / 100f)
-                FloatPair(cw, ch)
-            }
+        val mode = when (areaMode) {
+            AreaMode.FULL -> "full"
+            AreaMode.CUSTOM -> "custom"
+            AreaMode.ASPECT_16_10 -> "16:10"
+            AreaMode.ASPECT_21_9 -> "21:9"
+            else -> "16:9"
         }
-
-        val activeW = if (areaMode != AreaMode.CUSTOM && customWidthPercent < 100) {
-            baseW * (customWidthPercent.coerceIn(10, 100) / 100f)
-        } else {
-            baseW
-        }
-
-        val activeH = if (areaMode != AreaMode.CUSTOM && customHeightPercent < 100) {
-            baseH * (customHeightPercent.coerceIn(10, 100) / 100f)
-        } else {
-            baseH
-        }
-
-        val maxOffsetX = (w - activeW).coerceAtLeast(0f)
-        val maxOffsetY = (h - activeH).coerceAtLeast(0f)
-
-        val left = maxOffsetX * (customOffsetXPercent.coerceIn(0, 100) / 100f)
-        val top = maxOffsetY * (customOffsetYPercent.coerceIn(0, 100) / 100f)
-
-        return RectF(left, top, left + activeW, top + activeH)
+        val rect = TabletArea.calculate(width.toFloat(), height.toFloat(), mode,
+            customWidthPercent, customHeightPercent, customOffsetXPercent, customOffsetYPercent)
+        return RectF(rect.left, rect.top, rect.left + rect.width, rect.top + rect.height)
     }
 
     /**
@@ -177,15 +163,6 @@ class PenSurfaceView @JvmOverloads constructor(
         operator fun component2(): Float = y
     }
 
-    private fun computeAspectFit(w: Float, h: Float, targetAspect: Float): FloatPair {
-        val currentAspect = w / h
-        return if (currentAspect > targetAspect) {
-            FloatPair(h * targetAspect, h)
-        } else {
-            FloatPair(w, w / targetAspect)
-        }
-    }
-
     fun normalizeCoords(rawX: Float, rawY: Float): FloatPair {
         val rect = getActiveRect()
         val rw = rect.width().coerceAtLeast(1f)
@@ -195,224 +172,200 @@ class PenSurfaceView @JvmOverloads constructor(
         return FloatPair(nx, ny)
     }
 
-    override fun onTouchEvent(event: MotionEvent): Boolean {
-        val toolType = getProtocolToolType(event.getToolType(0))
-        if (rejectFingerTouches && toolType == Protocol.TOOL_FINGER) {
+    private fun acceptedTool(event: MotionEvent, index: Int): Boolean = when (event.getToolType(index)) {
+        MotionEvent.TOOL_TYPE_STYLUS, MotionEvent.TOOL_TYPE_ERASER -> true
+        MotionEvent.TOOL_TYPE_FINGER -> !rejectFingerTouches
+        else -> false
+    }
+
+    private fun send(events: List<Protocol.Event>): Boolean {
+        if (events.any { !it.isValid() }) {
+            cancelInput()
+            sender?.resetSession()
             return false
         }
+        if (events.isNotEmpty()) {
+            lastSent = events.last()
+            sender?.enqueueEvents(events)
+        }
+        return true
+    }
 
-        val buttons = getProtocolButtons(event.buttonState)
-        val (tiltX, tiltY) = getTiltDegrees(event)
+    private fun hasReportedOutput(): Boolean = lastSent.buttons.toInt() != 0 ||
+        (lastSent.action != Protocol.ACTION_CANCEL && lastSent.action != Protocol.ACTION_HOVER_EXIT)
 
-        when (event.actionMasked) {
-            MotionEvent.ACTION_DOWN -> {
-                val (normX, normY) = normalizeCoords(event.x, event.y)
-                val pressure = event.pressure.coerceIn(0f, 1f)
-
-                if (showLocalPreview) {
-                    trailPath.reset()
-                    trailPath.moveTo(event.x, event.y)
-                    invalidate()
+    private fun acceptTiming(event: MotionEvent): Boolean {
+        val oldest = if (event.historySize == 0) event.eventTime else event.getHistoricalEventTime(0)
+        return when (freshness.classify(oldest, event.eventTime, android.os.SystemClock.uptimeMillis())) {
+            InputFreshness.Result.FRESH -> true
+            InputFreshness.Result.BEFORE_CAPTURE -> false
+            InputFreshness.Result.STALE -> {
+                val ownsOutput = pointerTracker.current?.deviceId == event.deviceId ||
+                    (lastInputDevice == event.deviceId && hasReportedOutput())
+                if (ownsOutput) {
+                    cancelInput()
+                    sender?.resetSession()
                 }
-
-                sender?.enqueueEvents(
-                    listOf(
-                        Protocol.Event(
-                            action = Protocol.ACTION_DOWN,
-                            toolType = toolType,
-                            buttons = (buttons.toInt() or Protocol.BUTTON_TOUCH.toInt()).toShort(),
-                            x = normX,
-                            y = normY,
-                            pressure = pressure,
-                            tiltX = tiltX,
-                            tiltY = tiltY
-                        )
-                    )
-                )
-            }
-
-            MotionEvent.ACTION_MOVE -> {
-                val historySize = event.historySize
-                val events = ArrayList<Protocol.Event>(historySize + 1)
-
-                for (i in 0 until historySize) {
-                    val (histX, histY) = normalizeCoords(event.getHistoricalX(0, i), event.getHistoricalY(0, i))
-                    val histP = event.getHistoricalPressure(0, i).coerceIn(0f, 1f)
-
-                    if (showLocalPreview) {
-                        trailPath.lineTo(event.getHistoricalX(0, i), event.getHistoricalY(0, i))
-                    }
-
-                    events.add(
-                        Protocol.Event(
-                            action = Protocol.ACTION_MOVE,
-                            toolType = toolType,
-                            buttons = (buttons.toInt() or Protocol.BUTTON_TOUCH.toInt()).toShort(),
-                            x = histX,
-                            y = histY,
-                            pressure = histP,
-                            tiltX = tiltX,
-                            tiltY = tiltY
-                        )
-                    )
-                }
-
-                val (currentNormX, currentNormY) = normalizeCoords(event.x, event.y)
-                val currentP = event.pressure.coerceIn(0f, 1f)
-
-                if (showLocalPreview) {
-                    trailPath.lineTo(event.x, event.y)
-                    invalidate()
-                }
-
-                events.add(
-                    Protocol.Event(
-                        action = Protocol.ACTION_MOVE,
-                        toolType = toolType,
-                        buttons = (buttons.toInt() or Protocol.BUTTON_TOUCH.toInt()).toShort(),
-                        x = currentNormX,
-                        y = currentNormY,
-                        pressure = currentP,
-                        tiltX = tiltX,
-                        tiltY = tiltY
-                    )
-                )
-
-                sender?.enqueueEvents(events)
-            }
-
-            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                val (normX, normY) = normalizeCoords(event.x, event.y)
-
-                if (showLocalPreview) {
-                    trailPath.reset()
-                    invalidate()
-                }
-
-                sender?.enqueueEvents(
-                    listOf(
-                        Protocol.Event(
-                            action = if (event.actionMasked == MotionEvent.ACTION_UP) Protocol.ACTION_UP else Protocol.ACTION_CANCEL,
-                            toolType = toolType,
-                            buttons = buttons,
-                            x = normX,
-                            y = normY,
-                            pressure = 0f,
-                            tiltX = tiltX,
-                            tiltY = tiltY
-                        )
-                    )
-                )
+                false
             }
         }
+    }
 
+    private fun cancelPrevious() {
+        send(listOf(lastSent.copy(action = Protocol.ACTION_CANCEL, buttons = 0, pressure = 0f)))
+    }
+
+    fun cancelInput() {
+        freshness.reset(android.os.SystemClock.uptimeMillis())
+        if (pointerTracker.current != null || isHovering || hasReportedOutput()) cancelPrevious()
+        lastInputDevice = null
+        parent?.requestDisallowInterceptTouchEvent(false)
+        pointerTracker.clear()
+        isHovering = false
+        hoverX = -1f
+        hoverY = -1f
+        trailPath.reset()
+        trailSamples = 0
+        invalidate()
+    }
+
+    override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
+        super.onSizeChanged(w, h, oldw, oldh)
+        if (oldw != 0 && oldh != 0) cancelInput()
+    }
+
+    override fun onDetachedFromWindow() {
+        cancelInput()
+        super.onDetachedFromWindow()
+    }
+
+    override fun onWindowFocusChanged(hasWindowFocus: Boolean) {
+        super.onWindowFocusChanged(hasWindowFocus)
+        cancelInput()
+    }
+
+    override fun performClick(): Boolean = super.performClick()
+
+    private fun eventRecord(event: MotionEvent, index: Int, action: Byte, rect: RectF, history: Int? = null): Protocol.Event {
+        val rawX = if (history == null) event.getX(index) else event.getHistoricalX(index, history)
+        val rawY = if (history == null) event.getY(index) else event.getHistoricalY(index, history)
+        val pressure = if (history == null) event.getPressure(index) else event.getHistoricalPressure(index, history)
+        val (tiltX, tiltY) = getTiltDegrees(event, index, history)
+        val contact = action == Protocol.ACTION_DOWN || action == Protocol.ACTION_MOVE
+        val buttons = getProtocolButtons(event.buttonState).toInt() or if (contact) Protocol.BUTTON_TOUCH.toInt() else 0
+        return Protocol.Event(action, getProtocolToolType(event.getToolType(index)), buttons.toShort(),
+            if (rawX.isFinite()) ((rawX - rect.left) / rect.width().coerceAtLeast(1f)).coerceIn(0f, 1f) else Float.NaN,
+            if (rawY.isFinite()) ((rawY - rect.top) / rect.height().coerceAtLeast(1f)).coerceIn(0f, 1f) else Float.NaN,
+            if (!pressure.isFinite()) Float.NaN else if (contact) pressure.coerceIn(0f, 1f) else 0f, tiltX, tiltY)
+    }
+
+    private fun appendTrail(x: Float, y: Float, beginning: Boolean) {
+        if (!showLocalPreview) return
+        if (beginning || trailSamples >= 4096) {
+            trailPath.reset()
+            trailPath.moveTo(x, y)
+            trailSamples = 1
+        } else {
+            trailPath.lineTo(x, y)
+            trailSamples++
+        }
+    }
+
+    override fun onTouchEvent(event: MotionEvent): Boolean {
+        val actionIndex = event.actionIndex
+        val rect = getActiveRect()
+        when (event.actionMasked) {
+            MotionEvent.ACTION_DOWN, MotionEvent.ACTION_POINTER_DOWN -> {
+                if (!acceptedTool(event, actionIndex)) return true
+                val tool = getProtocolToolType(event.getToolType(actionIndex))
+                val active = pointerTracker.current
+                if (active != null && active.deviceId != event.deviceId &&
+                    !(active.tool == Protocol.TOOL_FINGER && tool != Protocol.TOOL_FINGER)) return true
+                if (!acceptTiming(event)) return true
+                val selected = pointerTracker.select(event.getPointerId(actionIndex), tool,
+                    !rejectFingerTouches, event.deviceId, event.actionMasked == MotionEvent.ACTION_DOWN)
+                if (selected == ActivePointerTracker.Selection.IGNORE) return true
+                if (selected == ActivePointerTracker.Selection.PREEMPT) cancelPrevious()
+                // Hover-to-contact preserves held barrel switches and their rising edges.
+                isHovering = false
+                lastInputDevice = event.deviceId
+                if (!send(listOf(eventRecord(event, actionIndex, Protocol.ACTION_DOWN, rect)))) return true
+                appendTrail(event.getX(actionIndex), event.getY(actionIndex), true)
+                parent?.requestDisallowInterceptTouchEvent(true)
+            }
+            MotionEvent.ACTION_MOVE -> {
+                val active = pointerTracker.current ?: return true
+                if (active.deviceId != event.deviceId || !acceptTiming(event)) return true
+                val index = event.findPointerIndex(active.id)
+                if (index < 0 || !acceptedTool(event, index)) { cancelInput(); return true }
+                val events = ArrayList<Protocol.Event>(event.historySize + 1)
+                for (history in 0 until event.historySize) events.add(eventRecord(event, index, Protocol.ACTION_MOVE, rect, history))
+                events.add(eventRecord(event, index, Protocol.ACTION_MOVE, rect))
+                lastInputDevice = event.deviceId
+                if (send(events)) {
+                    for (history in 0 until event.historySize) appendTrail(event.getHistoricalX(index, history), event.getHistoricalY(index, history), false)
+                    appendTrail(event.getX(index), event.getY(index), false)
+                }
+            }
+            MotionEvent.ACTION_UP, MotionEvent.ACTION_POINTER_UP -> {
+                val active = pointerTracker.current ?: return true
+                if (active.deviceId != event.deviceId || !acceptTiming(event)) return true
+                if (pointerTracker.finish(event.getPointerId(actionIndex), event.deviceId)) {
+                    lastInputDevice = event.deviceId
+                    if (send(listOf(eventRecord(event, actionIndex, Protocol.ACTION_UP, rect)))) performClick()
+                    trailPath.reset()
+                    trailSamples = 0
+                    parent?.requestDisallowInterceptTouchEvent(false)
+                }
+            }
+            MotionEvent.ACTION_CANCEL -> {
+                val owner = pointerTracker.current?.deviceId ?: lastInputDevice
+                if (owner != event.deviceId || !acceptTiming(event)) return true
+                cancelInput()
+            }
+        }
+        postInvalidateOnAnimation()
         return true
     }
 
     override fun onHoverEvent(event: MotionEvent): Boolean {
-        val toolType = getProtocolToolType(event.getToolType(0))
-        if (rejectFingerTouches && toolType == Protocol.TOOL_FINGER) {
-            return false
+        if (pointerTracker.current != null) return true
+        val index = (0 until event.pointerCount).firstOrNull { acceptedTool(event, it) } ?: return false
+        if (!acceptTiming(event)) return true
+        val rect = getActiveRect()
+        val action = when (event.actionMasked) {
+            MotionEvent.ACTION_HOVER_ENTER -> Protocol.ACTION_HOVER_ENTER
+            MotionEvent.ACTION_HOVER_MOVE -> Protocol.ACTION_HOVER_MOVE
+            MotionEvent.ACTION_HOVER_EXIT -> Protocol.ACTION_HOVER_EXIT
+            else -> return super.onHoverEvent(event)
         }
-
-        val buttons = getProtocolButtons(event.buttonState)
-        val (tiltX, tiltY) = getTiltDegrees(event)
-
-        val (normX, normY) = normalizeCoords(event.x, event.y)
-
-        when (event.actionMasked) {
-            MotionEvent.ACTION_HOVER_ENTER -> {
-                isHovering = true
-                hoverX = event.x
-                hoverY = event.y
-                invalidate()
-                sender?.enqueueEvents(
-                    listOf(
-                        Protocol.Event(
-                            action = Protocol.ACTION_HOVER_ENTER,
-                            toolType = toolType,
-                            buttons = buttons,
-                            x = normX,
-                            y = normY,
-                            pressure = 0f,
-                            tiltX = tiltX,
-                            tiltY = tiltY
-                        )
-                    )
-                )
-            }
-
-            MotionEvent.ACTION_HOVER_MOVE -> {
-                isHovering = true
-                hoverX = event.x
-                hoverY = event.y
-                invalidate()
-
-                // Drain batched historical samples the same way ACTION_MOVE
-                // does above - Android exposes event.historySize for
-                // hover-generated MotionEvents too. Without this, the
-                // cursor-preview position sent while hovering (before
-                // touchdown) was silently capped to the UI thread's
-                // callback/batching cadence (~60-120Hz) instead of the full
-                // digitizer sampling rate the touch path already carries
-                // through.
-                val historySize = event.historySize
-                val events = ArrayList<Protocol.Event>(historySize + 1)
-
-                for (i in 0 until historySize) {
-                    val (histX, histY) = normalizeCoords(event.getHistoricalX(0, i), event.getHistoricalY(0, i))
-                    events.add(
-                        Protocol.Event(
-                            action = Protocol.ACTION_HOVER_MOVE,
-                            toolType = toolType,
-                            buttons = buttons,
-                            x = histX,
-                            y = histY,
-                            pressure = 0f,
-                            tiltX = tiltX,
-                            tiltY = tiltY
-                        )
-                    )
-                }
-
-                events.add(
-                    Protocol.Event(
-                        action = Protocol.ACTION_HOVER_MOVE,
-                        toolType = toolType,
-                        buttons = buttons,
-                        x = normX,
-                        y = normY,
-                        pressure = 0f,
-                        tiltX = tiltX,
-                        tiltY = tiltY
-                    )
-                )
-
-                sender?.enqueueEvents(events)
-            }
-
-            MotionEvent.ACTION_HOVER_EXIT -> {
-                isHovering = false
-                hoverX = -1f
-                hoverY = -1f
-                invalidate()
-                sender?.enqueueEvents(
-                    listOf(
-                        Protocol.Event(
-                            action = Protocol.ACTION_HOVER_EXIT,
-                            toolType = toolType,
-                            buttons = buttons,
-                            x = normX,
-                            y = normY,
-                            pressure = 0f,
-                            tiltX = tiltX,
-                            tiltY = tiltY
-                        )
-                    )
-                )
-            }
+        lastInputDevice = event.deviceId
+        isHovering = action != Protocol.ACTION_HOVER_EXIT
+        hoverX = if (isHovering) event.getX(index) else -1f
+        hoverY = if (isHovering) event.getY(index) else -1f
+        val events = ArrayList<Protocol.Event>(event.historySize + 1)
+        if (action == Protocol.ACTION_HOVER_MOVE) {
+            for (history in 0 until event.historySize) events.add(eventRecord(event, index, action, rect, history))
         }
+        events.add(eventRecord(event, index, action, rect))
+        send(events)
+        postInvalidateOnAnimation()
+        return true
+    }
 
+    override fun onGenericMotionEvent(event: MotionEvent): Boolean {
+        if (event.actionMasked != MotionEvent.ACTION_BUTTON_PRESS && event.actionMasked != MotionEvent.ACTION_BUTTON_RELEASE) {
+            return super.onGenericMotionEvent(event)
+        }
+        val active = pointerTracker.current
+        if (active != null && active.deviceId != event.deviceId) return true
+        val index = if (active == null) (0 until event.pointerCount).firstOrNull { acceptedTool(event, it) }
+                    else event.findPointerIndex(active.id).takeIf { it >= 0 && acceptedTool(event, it) }
+        if (index == null) return false
+        if (!acceptTiming(event)) return true
+        lastInputDevice = event.deviceId
+        if (active == null) isHovering = true
+        send(listOf(eventRecord(event, index, if (active == null) Protocol.ACTION_HOVER_MOVE else Protocol.ACTION_MOVE, getActiveRect())))
         return true
     }
 
@@ -466,13 +419,14 @@ class PenSurfaceView @JvmOverloads constructor(
 
                 // Label
                 val modeLabel = when (areaMode) {
-                    AreaMode.FULL -> "Full Surface"
-                    AreaMode.ASPECT_16_9 -> "16:9 Active Area"
-                    AreaMode.ASPECT_16_10 -> "16:10 Active Area"
-                    AreaMode.ASPECT_21_9 -> "21:9 Active Area"
-                    AreaMode.CUSTOM -> "Custom Area (${customWidthPercent}% × ${customHeightPercent}%)"
+                    AreaMode.FULL -> context.getString(R.string.hud_area_full)
+                    AreaMode.ASPECT_16_9 -> context.getString(R.string.hud_area_aspect, "16:9")
+                    AreaMode.ASPECT_16_10 -> context.getString(R.string.hud_area_aspect, "16:10")
+                    AreaMode.ASPECT_21_9 -> context.getString(R.string.hud_area_aspect, "21:9")
+                    AreaMode.CUSTOM -> context.getString(R.string.hud_area_custom, customWidthPercent, customHeightPercent)
                 }
-                canvas.drawText(modeLabel, rect.left + 16f, rect.top + 34f, labelPaint)
+                val labelInset = 8f * resources.displayMetrics.density
+                canvas.drawText(modeLabel, rect.left + labelInset, rect.top + labelInset - labelPaint.ascent(), labelPaint)
             }
         }
 
@@ -504,9 +458,11 @@ class PenSurfaceView @JvmOverloads constructor(
         return buttons
     }
 
-    private fun getTiltDegrees(event: MotionEvent): FloatPair {
-        val tiltRad = event.getAxisValue(MotionEvent.AXIS_TILT)
-        val orientRad = event.getAxisValue(MotionEvent.AXIS_ORIENTATION)
+    private fun getTiltDegrees(event: MotionEvent, index: Int, history: Int? = null): FloatPair {
+        fun axis(which: Int): Float = if (history == null) event.getAxisValue(which, index)
+                                     else event.getHistoricalAxisValue(which, index, history)
+        val tiltRad = axis(MotionEvent.AXIS_TILT)
+        val orientRad = axis(MotionEvent.AXIS_ORIENTATION)
         var tx = 0f
         var ty = 0f
         if (tiltRad > 0f) {

@@ -4,7 +4,7 @@ server start/stop toggle, and save-config button.
 """
 
 from PySide6.QtCore import Signal
-from PySide6.QtWidgets import QFrame, QHBoxLayout, QLabel, QComboBox, QPushButton
+from PySide6.QtWidgets import QFrame, QVBoxLayout, QHBoxLayout, QLabel, QComboBox, QPushButton
 
 from server.gui.widgets.pill_badge import PillBadge
 
@@ -24,9 +24,10 @@ class HeaderBar(QFrame):
         # objectName rule in theme.py instead.
         self.setObjectName("HeaderBar")
 
-        layout = QHBoxLayout(self)
-        layout.setContentsMargins(12, 6, 12, 6)
-        layout.setSpacing(10)
+        outer = QVBoxLayout(self)
+        outer.setContentsMargins(12, 6, 12, 6)
+        layout = QHBoxLayout()
+        outer.addLayout(layout)
 
         title_label = QLabel("S Pen Bridge")
         title_label.setStyleSheet("font-size: 16px; font-weight: 700; color: #89b4fa;")
@@ -37,25 +38,29 @@ class HeaderBar(QFrame):
 
         layout.addStretch()
 
+        controls = QHBoxLayout()
+        outer.addLayout(controls)
         self.lbl_active_mode_prefix = QLabel("Active:")
         self.lbl_active_mode_prefix.setStyleSheet("color: #a6adc8; font-weight: 600; font-size: 13px;")
-        layout.addWidget(self.lbl_active_mode_prefix)
+        controls.addWidget(self.lbl_active_mode_prefix)
 
         self.combo_profiles = QComboBox()
-        self.combo_profiles.setMinimumWidth(160)
+        self.combo_profiles.setMinimumWidth(100)
+        self.combo_profiles.setSizeAdjustPolicy(QComboBox.AdjustToMinimumContentsLengthWithIcon)
+        self.combo_profiles.setAccessibleName("Active profile")
         self.combo_profiles.currentIndexChanged.connect(self._on_combo_changed)
-        layout.addWidget(self.combo_profiles)
+        controls.addWidget(self.combo_profiles, 1)
 
-        layout.addSpacing(6)
+        controls.addSpacing(6)
 
         self.btn_server_toggle = QPushButton("Start Server")
         self.btn_server_toggle.setObjectName("successBtn")
         self.btn_server_toggle.clicked.connect(self.server_toggle_clicked.emit)
-        layout.addWidget(self.btn_server_toggle)
+        controls.addWidget(self.btn_server_toggle)
 
         self.btn_save_config = QPushButton("Save Config")
         self.btn_save_config.clicked.connect(self.save_clicked.emit)
-        layout.addWidget(self.btn_save_config)
+        controls.addWidget(self.btn_save_config)
 
     def populate_profiles(self, profile_names, active_name: str):
         self.combo_profiles.blockSignals(True)
@@ -89,6 +94,7 @@ class HeaderBar(QFrame):
 
     def set_server_status(self, status: str, message: str):
         text = f"● {message}"
+        self.status_badge.setToolTip(message)
         if status == "running":
             self.status_badge.set_state("warn", text)
             self.btn_server_toggle.setText("Stop Server")

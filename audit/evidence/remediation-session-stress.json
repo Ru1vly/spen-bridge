@@ -1,0 +1,15 @@
+{
+  "events": 10080,
+  "expected": 10080,
+  "authenticated_sessions": 81,
+  "resets": 81,
+  "incomplete_tls_attempts": 120,
+  "peak_handlers": 4,
+  "maximum_handlers": 4,
+  "peak_ping_seconds": 0.0017067099688574672,
+  "shutdown_seconds": 0.00018016499234363437,
+  "elapsed_seconds": 3.466378318029456,
+  "fd_before": 8,
+  "fd_after": 7,
+  "desktop_events_sent": false
+}

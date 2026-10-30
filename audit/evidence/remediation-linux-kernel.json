@@ -1,0 +1,16 @@
+[
+  {
+    "mode": "pointer",
+    "desktop_events_sent": false,
+    "exclusive_grab": true,
+    "paired_tls_disconnect_release": true,
+    "result": "held outputs, reset, remap and stale-flag exit verified against kernel state"
+  },
+  {
+    "mode": "tablet",
+    "desktop_events_sent": false,
+    "exclusive_grab": true,
+    "paired_tls_disconnect_release": true,
+    "result": "held outputs, reset, remap and stale-flag exit verified against kernel state"
+  }
+]

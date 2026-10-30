@@ -9,7 +9,12 @@ import logging
 import os
 from pathlib import Path
 import sys
-from typing import Optional, List, Dict, Tuple, Any
+import tempfile
+import threading
+import time
+
+from server import validation as validate
+from typing import Optional, List, Dict, Tuple
 
 logger = logging.getLogger("SPenConfig")
 
@@ -18,6 +23,7 @@ if sys.platform == "win32":
 else:
     DEFAULT_CONFIG_DIR = Path(os.environ.get("XDG_CONFIG_HOME", str(Path.home() / ".config"))) / "spen-bridge"
 CONFIG_FILE_PATH = DEFAULT_CONFIG_DIR / "config.json"
+_SAVE_LOCK = threading.RLock()
 
 
 @dataclass
@@ -43,8 +49,33 @@ class AppProfile:
 
     @classmethod
     def from_dict(cls, data: dict) -> "AppProfile":
-        valid = {f.name for f in cls.__dataclass_fields__.values()}
-        return cls(**{k: v for k, v in data.items() if k in valid})
+        if not isinstance(data, dict):
+            raise ValueError("Each profile must be an object")
+        valid = set(cls.__dataclass_fields__)
+        profile = cls(**{k: v for k, v in data.items() if k in valid})
+        profile.validate()
+        return profile
+
+    def validate(self):
+        validate.text(self.name, "Profile name", limit=80)
+        if not isinstance(self.app_matches, list) or len(self.app_matches) > 128:
+            raise ValueError("Profile match rules must be a list of at most 128 strings")
+        for match in self.app_matches:
+            validate.text(match, "Match rule")
+        for name in ("click_on_touch", "direct_mode"):
+            validate.boolean(getattr(self, name), name)
+        validate.choice(self.device_mode, "device mode", {"pointer", "tablet"})
+        validate.choice(self.mapping_mode, "mapping mode", {"all", "monitor", "custom"})
+        validate.text(self.selected_monitor, "Selected monitor", empty=True)
+        validate.dimensions(self.custom_bounds, "Custom bounds", rectangle=True)
+        validate.choice(self.pressure_curve_type, "pressure curve", validate.PRESSURE_CURVES)
+        for name, low, high in (("pressure_gamma", .1, 5), ("pressure_min", 0, .5),
+                                ("pressure_max", .5, 1), ("stroke_smoothing", 0, .9)):
+            validate.number(getattr(self, name), name, low, high)
+        if self.pressure_min >= self.pressure_max:
+            raise ValueError("Pressure minimum must be smaller than maximum")
+        for name in ("button_primary", "button_secondary"):
+            validate.choice(getattr(self, name), name, validate.BUTTON_ACTIONS)
 
 
 def get_builtin_default_profiles() -> Dict[str, AppProfile]:
@@ -112,8 +143,9 @@ def get_builtin_default_profiles() -> Dict[str, AppProfile]:
 @dataclass
 class TabletConfig:
     # Server network settings
-    host: str = "0.0.0.0"
+    host: str = "127.0.0.1"
     port: int = 40118
+    wifi_enabled: bool = False
     auto_start_server: bool = True
     auto_adb_forward: bool = False
     minimize_to_tray: bool = True
@@ -128,6 +160,25 @@ class TabletConfig:
     auto_switch_profiles: bool = True
     active_profile_name: str = "Default"
     profiles: Dict[str, AppProfile] = field(default_factory=get_builtin_default_profiles)
+    recovery_notice: str = field(default="", init=False, repr=False)
+
+    def validate(self):
+        validate.bind_address(self.host)
+        validate.number(self.port, "Server port", 1024, 65535, integer=True)
+        for name in ("auto_start_server", "auto_adb_forward", "minimize_to_tray",
+                     "aspect_ratio_lock", "auto_switch_profiles", "wifi_enabled"):
+            validate.boolean(getattr(self, name), name)
+        validate.text(self.device_name, "Device name")
+        validate.dimensions(self.desktop_size, "Desktop dimensions")
+        validate.aspect_ratio(self.tablet_aspect_ratio)
+        if not isinstance(self.profiles, dict) or not 1 <= len(self.profiles) <= 256:
+            raise ValueError("Configuration must contain 1..256 profiles")
+        if "Default" not in self.profiles or self.active_profile_name not in self.profiles:
+            raise ValueError("Default and active profiles must exist")
+        for key, profile in self.profiles.items():
+            if not isinstance(profile, AppProfile) or profile.name != key:
+                raise ValueError("Profile name must match its dictionary key")
+            profile.validate()
 
     def get_active_profile(self) -> AppProfile:
         if self.active_profile_name in self.profiles:
@@ -281,15 +332,15 @@ class TabletConfig:
         monitor) silently caps how far down/right the pen can ever reach.
         """
         prof = self.get_active_profile()
-        if prof.mapping_mode == "all":
-            return None, None
-
         if detected_desktop_size and len(detected_desktop_size) >= 2:
             desk_w, desk_h = detected_desktop_size[0], detected_desktop_size[1]
         else:
             desk_w = self.desktop_size[0] if len(self.desktop_size) >= 2 else 1920
             desk_h = self.desktop_size[1] if len(self.desktop_size) >= 2 else 1080
         effective_desk = (desk_w, desk_h)
+        validate.dimensions(effective_desk, "Desktop dimensions")
+        if prof.mapping_mode == "all":
+            return None, effective_desk if self.aspect_ratio_lock else None
 
         if prof.mapping_mode == "custom" and len(prof.custom_bounds) == 4:
             sb = (prof.custom_bounds[0], prof.custom_bounds[1], prof.custom_bounds[2], prof.custom_bounds[3])
@@ -307,6 +358,7 @@ class TabletConfig:
         prof = self.get_active_profile()
         d = {
             "host": self.host,
+            "wifi_enabled": self.wifi_enabled,
             "port": self.port,
             "auto_start_server": self.auto_start_server,
             "auto_adb_forward": self.auto_adb_forward,
@@ -337,8 +389,11 @@ class TabletConfig:
 
     @classmethod
     def from_dict(cls, data: dict) -> "TabletConfig":
+        if not isinstance(data, dict):
+            raise ValueError("Configuration must be a JSON object")
         cfg = cls()
         cfg.host = data.get("host", cfg.host)
+        cfg.wifi_enabled = data.get("wifi_enabled", False)
         cfg.port = data.get("port", cfg.port)
         cfg.auto_start_server = data.get("auto_start_server", cfg.auto_start_server)
         cfg.auto_adb_forward = data.get("auto_adb_forward", cfg.auto_adb_forward)
@@ -352,8 +407,18 @@ class TabletConfig:
 
         # Parse profiles
         profiles_raw = data.get("profiles")
+        if profiles_raw is not None and not isinstance(profiles_raw, dict):
+            raise ValueError("Profiles must be an object")
         if isinstance(profiles_raw, dict):
-            cfg.profiles = {k: AppProfile.from_dict(v) for k, v in profiles_raw.items()}
+            cfg.profiles = {}
+            for name, raw in profiles_raw.items():
+                if not isinstance(raw, dict):
+                    raise ValueError("Each profile must be an object")
+                # The dictionary key is the canonical name in legacy files.
+                cfg.profiles[name] = AppProfile.from_dict(dict(raw, name=name))
+            cfg.profiles.setdefault("Default", AppProfile())
+            if cfg.active_profile_name not in cfg.profiles:
+                cfg.active_profile_name = "Default"
             # Migrate the old global "direct_mode" flag into any profile whose own
             # serialized data didn't already carry a per-profile value.
             legacy_direct_mode = data.get("direct_mode", False)
@@ -380,37 +445,75 @@ class TabletConfig:
                 def_p.button_secondary = data.get("button_secondary", "middle_click")
             cfg.profiles = defaults
 
+        cfg.validate()
         return cfg
 
 
+def _read_config(path):
+    with path.open("r", encoding="utf-8") as stream:
+        return TabletConfig.from_dict(json.load(stream))
+
+
 def load_config() -> TabletConfig:
-    """Load settings from the per-user JSON file, or return built-in defaults.
-
-    Intentionally has no fallback to a config bundled next to the source
-    (e.g. a `server/config.json`): a fresh install must always start from
-    `TabletConfig()` defaults, never whatever settings happen to ship in the
-    installed/checked-out tree.
-    """
-    if CONFIG_FILE_PATH.is_file():
+    """Recover a validated last-good backup without replacing damaged evidence."""
+    if not CONFIG_FILE_PATH.exists():
+        return TabletConfig()
+    try:
+        return _read_config(CONFIG_FILE_PATH)
+    except (ValueError, TypeError, OSError) as error:
+        logger.warning("Cannot load configuration: %s", error)
+        notice = "Settings could not be read. Built-in defaults are active."
         try:
-            with open(CONFIG_FILE_PATH, "r", encoding="utf-8") as f:
-                data = json.load(f)
-                logger.info(f"Loaded configuration from {CONFIG_FILE_PATH}")
-                return TabletConfig.from_dict(data)
-        except Exception as e:
-            logger.warning(f"Failed to load configuration from {CONFIG_FILE_PATH}: {e}. Using defaults.")
+            recovered = _read_config(CONFIG_FILE_PATH.with_suffix(".json.bak"))
+            notice = "Settings were damaged. The last valid backup is active; save to restore it."
+        except (ValueError, TypeError, OSError):
+            recovered = TabletConfig()
+        try:
+            damaged = CONFIG_FILE_PATH.with_name(f"config.json.corrupt-{time.time_ns()}")
+            _atomic_write(damaged, CONFIG_FILE_PATH.read_bytes())
+        except OSError:
+            logger.warning("Could not preserve the damaged configuration", exc_info=True)
+        recovered.recovery_notice = notice
+        return recovered
 
-    return TabletConfig()
+
+def _atomic_write(path, content):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    descriptor, temporary = tempfile.mkstemp(prefix=f".{path.name}-", dir=path.parent)
+    try:
+        with os.fdopen(descriptor, "wb") as stream:
+            stream.write(content)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temporary, path)
+        if sys.platform != "win32":
+            directory = os.open(path.parent, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
+            try:
+                os.fsync(directory)
+            finally:
+                os.close(directory)
+    finally:
+        Path(temporary).unlink(missing_ok=True)
 
 
 def save_config(config: TabletConfig) -> bool:
-    """Save configuration to the per-user JSON file."""
-    try:
-        DEFAULT_CONFIG_DIR.mkdir(parents=True, exist_ok=True)
-        with open(CONFIG_FILE_PATH, "w", encoding="utf-8") as f:
-            json.dump(config.to_dict(), f, indent=2)
-        logger.info(f"Saved configuration to {CONFIG_FILE_PATH}")
-        return True
-    except Exception as e:
-        logger.error(f"Error saving configuration to {CONFIG_FILE_PATH}: {e}")
-        return False
+    """Validate first, preserve the last good version, then atomically replace."""
+    with _SAVE_LOCK:
+        try:
+            config.validate()
+            content = (json.dumps(config.to_dict(), indent=2, allow_nan=False) + "\n").encode("utf-8")
+            if CONFIG_FILE_PATH.exists():
+                try:
+                    previous = _read_config(CONFIG_FILE_PATH)
+                except (ValueError, TypeError, OSError):
+                    previous = None
+                if previous is not None:
+                    backup = (json.dumps(previous.to_dict(), indent=2, allow_nan=False) + "\n").encode("utf-8")
+                    _atomic_write(CONFIG_FILE_PATH.with_suffix(".json.bak"), backup)
+            _atomic_write(CONFIG_FILE_PATH, content)
+            config.recovery_notice = ""
+            logger.info("Saved configuration to %s", CONFIG_FILE_PATH)
+            return True
+        except (ValueError, TypeError, OSError) as error:
+            logger.error("Cannot save configuration: %s", error)
+            return False

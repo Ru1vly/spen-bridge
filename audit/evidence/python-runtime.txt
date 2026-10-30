@@ -1,0 +1,3 @@
+evdev==2.0.0
+PySide6==6.11.2
+shiboken6==6.11.2

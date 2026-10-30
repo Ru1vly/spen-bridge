@@ -59,11 +59,12 @@ class DiagnosticsCard(QGroupBox):
 
         is_hover = ev.action in (0, 1)
         is_down = ev.action in (3, 4)
-        has_barrel = bool(ev.buttons & 1)
+        has_barrel = bool(ev.buttons & 3)
 
         self.badge_hover.set_state("ok" if is_hover else "idle")
         self.badge_touch.set_state("ok" if is_down else "idle")
         self.badge_barrel.set_state("warn" if has_barrel else "idle")
+        self.badge_eraser.set_state("ok" if ev.tool_type == 1 and ev.action not in (2, 6) else "idle")
 
     def update_traffic(self, rate: float, packets: int):
         self.lbl_traffic_val.setText(f"{rate:.1f} events/sec ({packets} pkts)")

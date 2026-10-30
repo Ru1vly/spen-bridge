@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.ActivityInfo
 import android.content.res.Configuration
+import android.content.res.ColorStateList
 import android.os.Bundle
 import android.view.Gravity
 import android.view.View
@@ -15,6 +16,7 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.Lifecycle
 import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
@@ -139,7 +141,7 @@ class MainActivity : AppCompatActivity(), PenEventSender.StatusListener {
     }
 
     private fun updateBarOrientation(orientation: Int) {
-        val isLandscape = (orientation == Configuration.ORIENTATION_LANDSCAPE)
+        val isLandscape = (orientation == Configuration.ORIENTATION_LANDSCAPE) || resources.configuration.fontScale > 1.3f
 
         if (isLandscape) {
             // Move toolbar to the side in landscape mode so it does not block drawing area
@@ -156,20 +158,20 @@ class MainActivity : AppCompatActivity(), PenEventSender.StatusListener {
             statusContainer.orientation = LinearLayout.VERTICAL
             barSpacer.visibility = View.GONE
 
-            btnRotate.text = "⟳ Rotate"
-            btnSettings.text = "Settings"
-            btnCollapse.text = if (sidebarOnLeft) "◀" else "▶"
+            btnRotate.setText(R.string.btn_rotate)
+            btnSettings.setText(R.string.settings_title)
+            btnCollapse.setText(R.string.hide_controls)
 
             val expandParams = FrameLayout.LayoutParams(
-                dpToPx(38),
-                dpToPx(38)
+                dpToPx(48),
+                dpToPx(48)
             ).apply {
                 gravity = if (sidebarOnLeft) (Gravity.START or Gravity.CENTER_VERTICAL) else (Gravity.END or Gravity.CENTER_VERTICAL)
                 val m = dpToPx(10)
                 setMargins(m, m, m, m)
             }
             btnExpand.layoutParams = expandParams
-            btnExpand.text = if (sidebarOnLeft) "▶" else "◀"
+            btnExpand.setText(R.string.show_controls)
 
         } else {
             // Standard horizontal toolbar at top in portrait
@@ -186,22 +188,26 @@ class MainActivity : AppCompatActivity(), PenEventSender.StatusListener {
             statusContainer.orientation = LinearLayout.HORIZONTAL
             barSpacer.visibility = View.VISIBLE
 
-            btnRotate.text = "⟳ Rotate"
-            btnSettings.text = "Settings"
-            btnCollapse.text = "▲"
+            btnRotate.setText(R.string.btn_rotate)
+            btnSettings.setText(R.string.settings_title)
+            btnCollapse.setText(R.string.hide_controls)
 
             val expandParams = FrameLayout.LayoutParams(
-                dpToPx(38),
-                dpToPx(38)
+                dpToPx(48),
+                dpToPx(48)
             ).apply {
                 gravity = Gravity.TOP or Gravity.START
                 val m = dpToPx(10)
                 setMargins(m, m, m, m)
             }
             btnExpand.layoutParams = expandParams
-            btnExpand.text = "▼"
+            btnExpand.setText(R.string.show_controls)
         }
 
+        statusText.maxWidth = dpToPx(if (isLandscape) 180 else 110)
+        btnRotate.contentDescription = getString(R.string.rotate_description)
+        btnCollapse.contentDescription = getString(R.string.hide_controls_description)
+        btnExpand.contentDescription = getString(R.string.show_controls_description)
         if (isBarCollapsed) {
             topBar.visibility = View.GONE
             btnExpand.visibility = View.VISIBLE
@@ -213,24 +219,24 @@ class MainActivity : AppCompatActivity(), PenEventSender.StatusListener {
 
     private fun initSender() {
         val prefs = getSharedPreferences(SettingsActivity.PREFS_NAME, Context.MODE_PRIVATE)
-        val host = prefs.getString(SettingsActivity.KEY_SERVER_IP, SettingsActivity.DEFAULT_IP)
-            ?: SettingsActivity.DEFAULT_IP
-        val port = prefs.getInt(SettingsActivity.KEY_SERVER_PORT, SettingsActivity.DEFAULT_PORT)
+        val host = prefs.stringOrDefault(SettingsActivity.KEY_SERVER_IP, SettingsActivity.DEFAULT_IP)
+        val port = prefs.intOrDefault(SettingsActivity.KEY_SERVER_PORT, SettingsActivity.DEFAULT_PORT)
 
-        sender = PenEventSender(applicationContext, host, port, this).also {
+        sender = PenEventSender(applicationContext, host, port, this,
+            prefs.stringOrDefault(SettingsActivity.KEY_FINGERPRINT, ""),
+            prefs.stringOrDefault(SettingsActivity.KEY_PAIRING_CODE, "")).also {
             penSurfaceView.sender = it
-            it.start()
         }
     }
 
     private fun applySettings() {
+        penSurfaceView.cancelInput()
         val prefs = getSharedPreferences(SettingsActivity.PREFS_NAME, Context.MODE_PRIVATE)
-        val host = prefs.getString(SettingsActivity.KEY_SERVER_IP, SettingsActivity.DEFAULT_IP)
-            ?: SettingsActivity.DEFAULT_IP
-        val port = prefs.getInt(SettingsActivity.KEY_SERVER_PORT, SettingsActivity.DEFAULT_PORT)
+        val host = prefs.stringOrDefault(SettingsActivity.KEY_SERVER_IP, SettingsActivity.DEFAULT_IP)
+        val port = prefs.intOrDefault(SettingsActivity.KEY_SERVER_PORT, SettingsActivity.DEFAULT_PORT)
 
         // Custom Tablet Area Settings
-        val modeStr = prefs.getString(SettingsActivity.KEY_AREA_MODE, SettingsActivity.MODE_16_9)
+        val modeStr = prefs.stringOrDefault(SettingsActivity.KEY_AREA_MODE, SettingsActivity.MODE_16_9)
         penSurfaceView.areaMode = when (modeStr) {
             SettingsActivity.MODE_FULL -> PenSurfaceView.AreaMode.FULL
             SettingsActivity.MODE_16_10 -> PenSurfaceView.AreaMode.ASPECT_16_10
@@ -239,19 +245,19 @@ class MainActivity : AppCompatActivity(), PenEventSender.StatusListener {
             else -> PenSurfaceView.AreaMode.ASPECT_16_9
         }
 
-        penSurfaceView.customWidthPercent = prefs.getInt(SettingsActivity.KEY_AREA_WIDTH, 100)
-        penSurfaceView.customHeightPercent = prefs.getInt(SettingsActivity.KEY_AREA_HEIGHT, 100)
-        penSurfaceView.customOffsetXPercent = prefs.getInt(SettingsActivity.KEY_AREA_OFFSET_X, 50)
-        penSurfaceView.customOffsetYPercent = prefs.getInt(SettingsActivity.KEY_AREA_OFFSET_Y, 50)
-        penSurfaceView.showAreaBorder = prefs.getBoolean(SettingsActivity.KEY_AREA_SHOW_BORDER, true)
-        penSurfaceView.showAreaShading = prefs.getBoolean(SettingsActivity.KEY_AREA_SHOW_SHADE, true)
+        penSurfaceView.customWidthPercent = prefs.intOrDefault(SettingsActivity.KEY_AREA_WIDTH, 100)
+        penSurfaceView.customHeightPercent = prefs.intOrDefault(SettingsActivity.KEY_AREA_HEIGHT, 100)
+        penSurfaceView.customOffsetXPercent = prefs.intOrDefault(SettingsActivity.KEY_AREA_OFFSET_X, 50)
+        penSurfaceView.customOffsetYPercent = prefs.intOrDefault(SettingsActivity.KEY_AREA_OFFSET_Y, 50)
+        penSurfaceView.showAreaBorder = prefs.booleanOrDefault(SettingsActivity.KEY_AREA_SHOW_BORDER, true)
+        penSurfaceView.showAreaShading = prefs.booleanOrDefault(SettingsActivity.KEY_AREA_SHOW_SHADE, true)
 
-        penSurfaceView.rejectFingerTouches = prefs.getBoolean(SettingsActivity.KEY_REJECT_TOUCH, true)
-        penSurfaceView.showLocalPreview = prefs.getBoolean(SettingsActivity.KEY_SHOW_PREVIEW, true)
+        penSurfaceView.rejectFingerTouches = prefs.booleanOrDefault(SettingsActivity.KEY_REJECT_TOUCH, true)
+        penSurfaceView.showLocalPreview = prefs.booleanOrDefault(SettingsActivity.KEY_SHOW_PREVIEW, true)
 
-        sidebarOnLeft = prefs.getBoolean(SettingsActivity.KEY_SIDEBAR_ON_LEFT, true)
+        sidebarOnLeft = prefs.booleanOrDefault(SettingsActivity.KEY_SIDEBAR_ON_LEFT, true)
 
-        val forceLandscape = prefs.getBoolean(SettingsActivity.KEY_FORCE_LANDSCAPE, true)
+        val forceLandscape = prefs.booleanOrDefault(SettingsActivity.KEY_FORCE_LANDSCAPE, true)
         if (forceLandscape) {
             if (requestedOrientation != ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE &&
                 requestedOrientation != ActivityInfo.SCREEN_ORIENTATION_REVERSE_LANDSCAPE) {
@@ -262,20 +268,44 @@ class MainActivity : AppCompatActivity(), PenEventSender.StatusListener {
         }
 
         updateBarOrientation(resources.configuration.orientation)
-        sender?.updateEndpoint(host, port)
+        sender?.updateEndpoint(host, port,
+            prefs.stringOrDefault(SettingsActivity.KEY_FINGERPRINT, ""),
+            prefs.stringOrDefault(SettingsActivity.KEY_PAIRING_CODE, ""))
     }
 
     override fun onStatusChanged(status: PenEventSender.Status, message: String) {
         runOnUiThread {
+            if (isDestroyed || isFinishing || !lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) return@runOnUiThread
+            if (sender?.currentStatus != status) return@runOnUiThread
+            penSurfaceView.cancelInput()
+            if (status == PenEventSender.Status.CONNECTED) sender?.resumeCapture(sender!!.currentGeneration)
             statusText.text = message
+            statusText.tooltipText = message
+            statusText.contentDescription = message
             val colorRes = when (status) {
                 PenEventSender.Status.CONNECTED -> R.color.status_connected
                 PenEventSender.Status.CONNECTING -> R.color.status_connecting
                 PenEventSender.Status.DISCONNECTED,
+                PenEventSender.Status.PAIRING_REQUIRED,
                 PenEventSender.Status.ERROR -> R.color.status_disconnected
             }
-            statusIndicator.setBackgroundColor(ContextCompat.getColor(this, colorRes))
+            statusIndicator.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, colorRes))
         }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        applySettings()
+        statusText.setText(R.string.status_connecting)
+        sender?.start()
+    }
+
+    override fun onStop() {
+        penSurfaceView.cancelInput()
+        sender?.stop()
+        statusText.setText(R.string.status_disconnected)
+        statusIndicator.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.status_disconnected))
+        super.onStop()
     }
 
     override fun onDestroy() {

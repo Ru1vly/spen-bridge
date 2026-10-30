@@ -1,0 +1,33 @@
+[
+  {
+    "python": "3.10",
+    "evidence": "remediation-python310.txt",
+    "passed": 116,
+    "skipped": 1
+  },
+  {
+    "python": "3.11",
+    "evidence": "remediation-python311.txt",
+    "passed": 116,
+    "skipped": 1
+  },
+  {
+    "python": "3.12",
+    "evidence": "remediation-python312.txt",
+    "passed": 116,
+    "skipped": 1
+  },
+  {
+    "python": "3.13",
+    "evidence": "remediation-python313.txt",
+    "passed": 116,
+    "skipped": 1
+  },
+  {
+    "python": "3.14",
+    "evidence": "remediation-python.txt",
+    "passed": 119,
+    "skipped": 0,
+    "note": "Two endpoint/startup-callback regressions added after the 117-case cross-version run; verified on 3.14."
+  }
+]

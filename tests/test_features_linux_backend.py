@@ -1,13 +1,14 @@
 """
-Tests for the Linux uinput tablet backend. These construct a real
-LinuxUinputTablet (which opens /dev/uinput) or import evdev.ecodes directly,
-so they're skipped everywhere except Linux - see server/backends/ for the
-cross-platform seam these tests exercise the Linux side of.
+Linux backend logic tests with the kernel device boundary replaced by a mock.
+No writable /dev/uinput or administrator setup is required. Native compositor
+and kernel integration is a separate platform validation gate.
 """
 
 import os
 import sys
 import unittest
+import tempfile
+from unittest.mock import Mock, patch
 
 # Ensure headless execution works in CI/headless environments without X11/Wayland
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
@@ -21,14 +22,26 @@ from server.config import TabletConfig
 
 
 try:
-    import evdev
+    import evdev  # noqa: F401 -- verifies that the platform dependency imports
     HAS_EVDEV = True
 except ImportError:
     HAS_EVDEV = False
 
-@unittest.skipUnless(sys.platform.startswith("linux") and os.access("/dev/uinput", os.W_OK) and HAS_EVDEV,
-                     "requires writable /dev/uinput and evdev module")
+@unittest.skipUnless(sys.platform.startswith("linux") and HAS_EVDEV,
+                     "requires Linux evdev constants (device creation is mocked)")
 class TestLinuxUinputBackend(unittest.TestCase):
+    def setUp(self):
+        from server.security import load_identity
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        identity = load_identity(directory.name)
+        devices = patch("evdev.UInput", side_effect=lambda *args, **kwargs: Mock())
+        identities = patch("server.gui.server_worker.load_identity", return_value=identity)
+        devices.start()
+        identities.start()
+        self.addCleanup(devices.stop)
+        self.addCleanup(identities.stop)
+
     def test_pressure_calibration_curves(self):
         from server.backends.linux_uinput import LinuxUinputTablet, ABS_MAX_PRESSURE
 
@@ -208,15 +221,23 @@ class TestLinuxUinputBackend(unittest.TestCase):
     def test_device_mode_hotswap(self):
         from server.gui import ServerWorker
 
+        # Keep the real listener/lifecycle, but let the kernel choose its port.
+        # A fixed app port collides with other test processes or a running app.
+        from server.server import SPenServer
+        def isolated_server(*args, **kwargs):
+            kwargs["port"] = 0
+            return SPenServer(*args, **kwargs)
+        listener = patch("server.gui.server_worker.SPenServer", side_effect=isolated_server)
+        listener.start()
+        self.addCleanup(listener.stop)
         cfg = TabletConfig()
-        cfg.port = 40129
         cfg.device_mode = "tablet"
         worker = ServerWorker(cfg)
         worker.start_server()
         try:
             import time
             for _ in range(30):
-                if worker.tablet is not None:
+                if worker.state == "running":
                     break
                 time.sleep(0.1)
             self.assertIsNotNone(worker.tablet)
@@ -224,12 +245,14 @@ class TestLinuxUinputBackend(unittest.TestCase):
 
             # Hot-swap to pointer mode
             worker.set_device_mode(mode="pointer")
+            for _ in range(30):
+                if worker.tablet.mode == "pointer":
+                    break
+                time.sleep(.1)
             self.assertEqual(worker.tablet.mode, "pointer")
             self.assertEqual(worker.server.tablet.mode, "pointer")
         finally:
-            worker.stop_server()
-            if worker.tablet:
-                worker.tablet.close()
+            worker.shutdown()
 
 
 if __name__ == "__main__":

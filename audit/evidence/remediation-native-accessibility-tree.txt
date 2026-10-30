@@ -1,0 +1,635 @@
+=== before ===
+App=S Pen Bridge Audit (pid 950039)
+Window: "S Pen Bridge Accessibility Audit", App: S Pen Bridge Audit.
+	0 frame S Pen Bridge Accessibility Audit Frame: {x: 0, y: 0, width: 960, height: 640}
+		1 filler QApplication.MainWindow.QWidget Frame: {x: 0, y: 0, width: 960, height: 640}
+			2 panel QApplication.MainWindow.QWidget.HeaderBar Frame: {x: 14, y: 12, width: 932, height: 98}
+				3 label S Pen Bridge Frame: {x: 33, y: 25, width: 99, height: 22}
+				4 label ● Server Stopped Frame: {x: 138, y: 25, width: 125, height: 22}
+				5 label Auto: Frame: {x: 33, y: 53, width: 34, height: 44}
+				6 combo box Default (Global) Secondary Actions: ShowMenu, Press Frame: {x: 73, y: 55, width: 624, height: 40}
+					7 list QApplication.MainWindow.QWidget.HeaderBar.QComboBox.QComboBoxListView
+						8 list item Default (Global) Secondary Actions: Toggle Frame: {x: -682, y: -423, width: 165, height: 24}
+						9 list item osu! Secondary Actions: Toggle Frame: {x: -682, y: -399, width: 165, height: 24}
+						10 list item Krita Secondary Actions: Toggle Frame: {x: -682, y: -375, width: 165, height: 24}
+						11 list item Blender Secondary Actions: Toggle Frame: {x: -682, y: -351, width: 165, height: 24}
+				12 button Start Server Secondary Actions: Press, SetFocus Frame: {x: 709, y: 53, width: 106, height: 44}
+				13 button Save Config Secondary Actions: Press, SetFocus Frame: {x: 821, y: 53, width: 106, height: 44}
+			14 label QApplication.MainWindow.QWidget.QLabel
+			15 filler QApplication.MainWindow.QWidget.QTabWidget Secondary Actions: SetFocus Frame: {x: 14, y: 120, width: 932, height: 508}
+				16 layered pane QApplication.MainWindow.QWidget.QTabWidget.qt_tabwidget_stackedwidget Frame: {x: 15, y: 156, width: 930, height: 471}
+					17 filler QApplication.MainWindow.QWidget.QTabWidget.qt_tabwidget_stackedwidget.ProfilesTab Frame: {x: 15, y: 156, width: 930, height: 471}
+						18 split pane QApplication.MainWindow.QWidget.QTabWidget.qt_tabwidget_stackedwidget.ProfilesTab.QSplitter Frame: {x: 27, y: 168, width: 906, height: 447}
+							19 filler QApplication.MainWindow.QWidget.QTabWidget.qt_tabwidget_stackedwidget.ProfilesTab.QSplitter.ProfileEditorPanel Frame: {x: 271, y: 168, width: 662, height: 447}
+								20 filler QApplication.MainWindow.QWidget.QTabWidget.qt_tabwidget_stackedwidget.ProfilesTab.QSplitter.ProfileEditorPanel.QScrollArea Secondary Actions: SetFocus Frame: {x: 271, y: 168, width: 662, height: 447}
+									21 filler QApplication.MainWindow.QWidget.QTabWidget.qt_tabwidget_stackedwidget.ProfilesTab.QSplitter.ProfileEditorPanel.QScrollArea.qt_scrollarea_viewport Frame: {x: 271, y: 168, width: 648, height: 447}
+										22 filler QApplication.MainWindow.QWidget.QTabWidget.qt_tabwidget_stackedwidget.ProfilesTab.QSplitter.ProfileEditorPanel.QScrollArea.qt_scrollarea_viewport.QWidget Frame: {x: 271, y: 168, width: 648, height: 1688}
+											23 panel Profile Identity & Matching Frame: {x: 275, y: 172, width: 640, height: 144}
+												24 label Match the focused window: Frame: {x: 301, y: 212, width: 170, height: 24}
+												25 button How profile matching works Secondary Actions: Press, SetFocus Frame: {x: 865, y: 212, width: 24, height: 24}
+												26 filler Profile Identity & Matching
+													27 filler QApplication.MainWindow.QWidget.QTabWidget.qt_tabwidget_stackedwidget.ProfilesTab.QSplitter.ProfileEditorPanel.QScrollArea.qt_scrollarea_viewport.QWidget.IdentitySection.MatchChipInput.QWidget
+													28 text Application match rule Secondary Actions: SetFocus
+												29 label Used when no other profile matches. Default has no match rules of its own. Frame: {x: 301, y: 244, width: 588, height: 16}
+												30 label Detected active window right now: (none yet) Frame: {x: 301, y: 268, width: 501, height: 22}
+												31 label No match Frame: {x: 810, y: 268, width: 79, height: 22}
+											32 panel Device Behavior Frame: {x: 275, y: 332, width: 640, height: 226}
+												33 label Device Type: Frame: {x: 301, y: 372, width: 80, height: 40}
+												34 combo box Pointer Mode (Absolute Cursor - Wayland & X11) Secondary Actions: ShowMenu, Press Frame: {x: 391, y: 372, width: 498, height: 40}
+													35 list QApplication.MainWindow.QWidget.QTabWidget.qt_tabwidget_stackedwidget.ProfilesTab.QSplitter.ProfileEditorPanel.QScrollArea.qt_scrollarea_viewport.QWidget.DeviceSection.QComboBox.QComboBoxListView Secondary Actions: SetFocus
+														36 list item Pointer Mode (Absolute Cursor - Wayland & X11) Secondary Actions: Toggle Frame: {x: -682, y: -423, width: 165, height: 24}
+														37 list item Tablet Mode (Wacom Tablet-v2 for Krita/GIMP) Secondary Actions: Toggle Frame: {x: -682, y: -399, width: 165, height: 24}
+												38 check box Generate clicks on pen contact Secondary Actions: Toggle, Press, SetFocus Frame: {x: 301, y: 422, width: 220, height: 18}
+												39 label When disabled, hovering, movement, and pressure are tracked without emitting mouse click events, ideal for keyboard-tapping rhythm games, custom gesture controls, or hover-only navigation. Frame: {x: 301, y: 450, width: 588, height: 28}
+												40 panel Device Behavior Frame: {x: 301, y: 488, width: 588, height: 44}
+													41 check box Advanced: Direct Input Mode Secondary Actions: Toggle, Press, SetFocus Frame: {x: 301, y: 488, width: 588, height: 44}
+														42 label ▸ Frame: {x: 309, y: 494, width: 12, height: 32}
+														43 label Advanced: Direct Input Mode Frame: {x: 329, y: 494, width: 183, height: 32}
+														44 label direct mode: off Frame: {x: 798, y: 494, width: 83, height: 32}
+													45 filler QApplication.MainWindow.QWidget.QTabWidget.qt_tabwidget_stackedwidget.ProfilesTab.QSplitter.ProfileEditorPanel.QScrollArea.qt_scrollarea_viewport.QWidget.DeviceSection.CollapsibleBox.QWidget
+														46 check box Direct input (display tablet) Secondary Actions: Toggle, Press, SetFocus
+											47 panel Pressure Sensitivity Curve & Deadzone Frame: {x: 275, y: 574, width: 640, height: 503}
+												48 label Presets: Frame: {x: 301, y: 614, width: 110, height: 44}
+												49 check box Linear Secondary Actions: Toggle, Press, SetFocus Frame: {x: 421, y: 614, width: 109, height: 44}
+												50 check box Soft Secondary Actions: Toggle, Press, SetFocus Frame: {x: 540, y: 614, width: 110, height: 44}
+												51 check box Firm Secondary Actions: Toggle, Press, SetFocus Frame: {x: 660, y: 614, width: 109, height: 44}
+												52 check box Sigmoid Secondary Actions: Toggle, Press, SetFocus Frame: {x: 779, y: 614, width: 110, height: 44}
+												53 label Sensitivity Exponent (Gamma): Frame: {x: 320, y: 826, width: 291, height: 16}
+												54 label 1.00 Frame: {x: 617, y: 826, width: 291, height: 16}
+												55 slider Pressure sensitivity exponent Value: 100.0 Secondary Actions: SetFocus, Increase, Decrease Frame: {x: 320, y: 848, width: 588, height: 15}
+												56 label Minimum Pressure Threshold (Deadzone): Frame: {x: 320, y: 869, width: 291, height: 16}
+												57 label 0% Frame: {x: 617, y: 869, width: 291, height: 16}
+												58 slider Minimum pressure percent Value: 0.0 Secondary Actions: SetFocus, Increase, Decrease Frame: {x: 320, y: 891, width: 588, height: 15}
+												59 label Maximum Pressure Ceiling (100% Force): Frame: {x: 320, y: 912, width: 291, height: 16}
+												60 label 100% Frame: {x: 617, y: 912, width: 291, height: 16}
+												61 slider Maximum pressure percent Value: 100.0 Secondary Actions: SetFocus, Increase, Decrease Frame: {x: 320, y: 934, width: 588, height: 15}
+												62 filler Pressure Sensitivity Curve & Deadzone Frame: {x: 320, y: 959, width: 588, height: 200}
+												63 label Raw Input: Frame: {x: 320, y: 1169, width: 67, height: 18}
+												64 progress bar Pressure Sensitivity Curve & Deadzone Value: -1.0 Secondary Actions: Increase, Decrease Frame: {x: 391, y: 1169, width: 517, height: 18}
+												65 label Calibrated: Frame: {x: 320, y: 1191, width: 67, height: 18}
+												66 progress bar Pressure Sensitivity Curve & Deadzone Value: -1.0 Secondary Actions: Increase, Decrease Frame: {x: 391, y: 1191, width: 517, height: 18}
+											67 panel Hardware Buttons & Stroke Smoothing Frame: {x: 294, y: 1251, width: 640, height: 231}
+												68 label Primary barrel button: Frame: {x: 320, y: 1291, width: 289, height: 40}
+												69 combo box Right Click Secondary Actions: ShowMenu, Press Frame: {x: 619, y: 1291, width: 289, height: 40}
+													70 list QApplication.MainWindow.QWidget.QTabWidget.qt_tabwidget_stackedwidget.ProfilesTab.QSplitter.ProfileEditorPanel.QScrollArea.qt_scrollarea_viewport.QWidget.ButtonsSection.QComboBox.QComboBoxListView Secondary Actions: SetFocus
+														71 list item Left Click Secondary Actions: Toggle Frame: {x: -682, y: -423, width: 165, height: 24}
+														72 list item Right Click Secondary Actions: Toggle Frame: {x: -682, y: -399, width: 165, height: 24}
+														73 list item Middle Click Secondary Actions: Toggle Frame: {x: -682, y: -375, width: 165, height: 24}
+														74 list item Undo (Ctrl+Z) Secondary Actions: Toggle Frame: {x: -682, y: -351, width: 165, height: 24}
+														75 list item Disabled Secondary Actions: Toggle Frame: {x: -682, y: -327, width: 165, height: 24}
+												76 label Secondary Button: Frame: {x: 320, y: 1341, width: 289, height: 40}
+												77 combo box Middle Click Secondary Actions: ShowMenu, Press Frame: {x: 619, y: 1341, width: 289, height: 40}
+													78 list QApplication.MainWindow.QWidget.QTabWidget.qt_tabwidget_stackedwidget.ProfilesTab.QSplitter.ProfileEditorPanel.QScrollArea.qt_scrollarea_viewport.QWidget.ButtonsSection.QComboBox.QComboBoxListView Secondary Actions: SetFocus
+														79 list item Left Click Secondary Actions: Toggle Frame: {x: -682, y: -423, width: 165, height: 24}
+														80 list item Right Click Secondary Actions: Toggle Frame: {x: -682, y: -399, width: 165, height: 24}
+														81 list item Middle Click Secondary Actions: Toggle Frame: {x: -682, y: -375, width: 165, height: 24}
+														82 list item Undo (Ctrl+Z) Secondary Actions: Toggle Frame: {x: -682, y: -351, width: 165, height: 24}
+														83 list item Disabled Secondary Actions: Toggle Frame: {x: -682, y: -327, width: 165, height: 24}
+												84 label Smoothing Filter Strength: Frame: {x: 320, y: 1391, width: 289, height: 16}
+												85 label 0% Frame: {x: 619, y: 1391, width: 289, height: 16}
+												86 slider Stroke smoothing percent Value: 0.0 Secondary Actions: SetFocus, Increase, Decrease Frame: {x: 320, y: 1417, width: 588, height: 15}
+												87 label Filters coordinate noise and stabilizes lines for drawing or handwriting. Frame: {x: 320, y: 1442, width: 588, height: 14}
+											88 panel Screen Mapping Frame: {x: 294, y: 1498, width: 640, height: 512}
+												89 radio button Whole Virtual Desktop (spanning all screens) Secondary Actions: Toggle, SetFocus Frame: {x: 320, y: 1538, width: 588, height: 18}
+												90 radio button Single Monitor: Secondary Actions: Toggle, SetFocus Frame: {x: 320, y: 1566, width: 588, height: 18}
+												91 combo box HDMI-A-1 (1927x1084 at +0+0) Secondary Actions: ShowMenu, Press Frame: {x: 320, y: 1596, width: 500, height: 40}
+													92 list QApplication.MainWindow.QWidget.QTabWidget.qt_tabwidget_stackedwidget.ProfilesTab.QSplitter.ProfileEditorPanel.QScrollArea.qt_scrollarea_viewport.QWidget.MappingSection.QComboBox.QComboBoxListView Secondary Actions: SetFocus
+														93 list item HDMI-A-1 (1927x1084 at +0+0) Secondary Actions: Toggle Frame: {x: -682, y: -423, width: 165, height: 24}
+														94 list item eDP-1 (1676x943 at +143+1242) Secondary Actions: Toggle Frame: {x: -682, y: -399, width: 165, height: 24}
+												95 button Refresh Secondary Actions: Press, SetFocus Frame: {x: 830, y: 1594, width: 78, height: 44}
+												96 filler Monitor selection Secondary Actions: SetFocus Frame: {x: 320, y: 1648, width: 588, height: 180}
+												97 radio button Custom Rectangle: Secondary Actions: Toggle, SetFocus Frame: {x: 301, y: 1680, width: 588, height: 18}
+												98 panel Screen Mapping Frame: {x: 301, y: 1708, width: 588, height: 44}
+													99 check box Advanced: Exact Pixel Bounds Secondary Actions: Toggle, Press, SetFocus Frame: {x: 301, y: 1708, width: 588, height: 44}
+														100 label ▸ Frame: {x: 309, y: 1714, width: 12, height: 32}
+														101 label Advanced: Exact Pixel Bounds Frame: {x: 329, y: 1714, width: 191, height: 32}
+														102 label custom bounds: 0,0 1920x1080 Frame: {x: 718, y: 1714, width: 163, height: 32}
+													103 filler QApplication.MainWindow.QWidget.QTabWidget.qt_tabwidget_stackedwidget.ProfilesTab.QSplitter.ProfileEditorPanel.QScrollArea.qt_scrollarea_viewport.QWidget.MappingSection.CollapsibleBox.QWidget
+														104 label X:
+														105 spin button Mapping left coordinate Value: 0 Secondary Actions: SetFocus, Increase, Decrease
+														106 label Y:
+														107 spin button Mapping top coordinate Value: 0 Secondary Actions: SetFocus, Increase, Decrease
+														108 label Width:
+														109 spin button Mapping width Value: 1920 Secondary Actions: SetFocus, Increase, Decrease
+														110 label Height:
+														111 spin button Mapping height Value: 1080 Secondary Actions: SetFocus, Increase, Decrease
+												112 label Active Area: Entire Virtual Desktop (1927x2185) Frame: {x: 301, y: 1762, width: 588, height: 14}
+												113 check box Lock Aspect Ratio Secondary Actions: Toggle, Press, SetFocus Frame: {x: 301, y: 1797, width: 137, height: 18}
+												114 combo box 16:10 Secondary Actions: ShowMenu, Press Frame: {x: 448, y: 1786, width: 132, height: 40}
+													115 list QApplication.MainWindow.QWidget.QTabWidget.qt_tabwidget_stackedwidget.ProfilesTab.QSplitter.ProfileEditorPanel.QScrollArea.qt_scrollarea_viewport.QWidget.MappingSection.QComboBox.QComboBoxListView Secondary Actions: SetFocus
+														116 list item 16:10 Secondary Actions: Toggle Frame: {x: -682, y: -423, width: 165, height: 24}
+														117 list item 16:9 Secondary Actions: Toggle Frame: {x: -682, y: -399, width: 165, height: 24}
+														118 list item 4:3 Secondary Actions: Toggle Frame: {x: -682, y: -375, width: 165, height: 24}
+														119 list item 21:9 Secondary Actions: Toggle Frame: {x: -682, y: -351, width: 165, height: 24}
+														120 list item 3:2 Secondary Actions: Toggle Frame: {x: -682, y: -327, width: 165, height: 24}
+												121 label (applies to all profiles) Frame: {x: 590, y: 1786, width: 115, height: 40}
+									122 filler QApplication.MainWindow.QWidget.QTabWidget.qt_tabwidget_stackedwidget.ProfilesTab.QSplitter.ProfileEditorPanel.QScrollArea.qt_scrollarea_vcontainer Frame: {x: 919, y: 168, width: 14, height: 447}
+										123 scroll bar QApplication.MainWindow.QWidget.QTabWidget.qt_tabwidget_stackedwidget.ProfilesTab.QSplitter.ProfileEditorPanel.QScrollArea.qt_scrollarea_vcontainer.QScrollBar Value: 0.0 Secondary Actions: Increase, Decrease Frame: {x: 919, y: 168, width: 14, height: 447}
+							124 filler QApplication.MainWindow.QWidget.QTabWidget.qt_tabwidget_stackedwidget.ProfilesTab.QSplitter.ProfileListPanel Frame: {x: 27, y: 168, width: 240, height: 447}
+								125 check box Auto-switch by focused window Secondary Actions: Toggle, Press, SetFocus Frame: {x: 27, y: 168, width: 227, height: 18}
+								126 label Active Window: Detecting... Frame: {x: 27, y: 194, width: 240, height: 22}
+								127 list Profiles Secondary Actions: SetFocus Frame: {x: 27, y: 224, width: 240, height: 287}
+									128 list item Default Secondary Actions: Toggle Frame: {x: 33, y: 230, width: 228, height: 30}
+									129 list item osu! Secondary Actions: Toggle Frame: {x: 33, y: 260, width: 228, height: 30}
+									130 list item Krita Secondary Actions: Toggle Frame: {x: 33, y: 290, width: 228, height: 30}
+									131 list item Blender Secondary Actions: Toggle Frame: {x: 33, y: 320, width: 228, height: 30}
+								132 button + New Secondary Actions: Press, SetFocus Frame: {x: 27, y: 519, width: 116, height: 44}
+								133 button Duplicate Secondary Actions: Press, SetFocus Frame: {x: 151, y: 519, width: 116, height: 44}
+								134 button Delete Frame: {x: 27, y: 571, width: 240, height: 44}
+							135 unknown QApplication.MainWindow.QWidget.QTabWidget.qt_tabwidget_stackedwidget.ProfilesTab.QSplitter.qt_splithandle_
+							136 unknown QApplication.MainWindow.QWidget.QTabWidget.qt_tabwidget_stackedwidget.ProfilesTab.QSplitter.qt_splithandle_ Frame: {x: 267, y: 168, width: 4, height: 447}
+					137 filler QApplication.MainWindow.QWidget.QTabWidget.qt_tabwidget_stackedwidget.SystemTab
+						138 filler QApplication.MainWindow.QWidget.QTabWidget.qt_tabwidget_stackedwidget.SystemTab.QScrollArea Secondary Actions: SetFocus
+							139 filler QApplication.MainWindow.QWidget.QTabWidget.qt_tabwidget_stackedwidget.SystemTab.QScrollArea.qt_scrollarea_viewport
+								140 filler QApplication.MainWindow.QWidget.QTabWidget.qt_tabwidget_stackedwidget.SystemTab.QScrollArea.qt_scrollarea_viewport.QWidget
+									141 panel Quick Connect (Tablet Setup)
+										142 label Configured (server stopped): 127.0.0.1:40118
+										143 button Copy address Secondary Actions: Press, SetFocus
+										144 label Copy this address and the pairing details into the tablet Settings. USB uses 127.0.0.1.
+										145 button Pair Tablet Secondary Actions: Press, SetFocus
+										146 button Enable USB Mode (ADB) Secondary Actions: Press, SetFocus
+									147 panel System & Startup Preferences
+										148 label Port:
+										149 spin button Server port Value: 40118 Secondary Actions: SetFocus, Increase, Decrease
+										150 check box Allow paired Wi-Fi connections Secondary Actions: Toggle, Press, SetFocus
+										151 check box Auto-start server on app launch Secondary Actions: Toggle, Press, SetFocus
+										152 check box Auto-forward USB ADB on launch Secondary Actions: Toggle, Press, SetFocus
+										153 check box Minimize to tray on window close Secondary Actions: Toggle, Press, SetFocus
+										154 label Device Name:
+										155 text Virtual device name Value: Samsung S Pen Virtual Tablet Secondary Actions: SetFocus
+										156 label Detected desktop: 1927x2185
+										157 button Check / Setup uinput Permissions Secondary Actions: Press, SetFocus
+										158 button Install Desktop Launcher (.desktop) Secondary Actions: Press, SetFocus
+										159 button Reset All to Defaults Secondary Actions: Press, SetFocus
+						160 filler QApplication.MainWindow.QWidget.QTabWidget.qt_tabwidget_stackedwidget.SystemTab.QScrollArea Secondary Actions: SetFocus
+							161 filler QApplication.MainWindow.QWidget.QTabWidget.qt_tabwidget_stackedwidget.SystemTab.QScrollArea.qt_scrollarea_viewport
+								162 filler QApplication.MainWindow.QWidget.QTabWidget.qt_tabwidget_stackedwidget.SystemTab.QScrollArea.qt_scrollarea_viewport.QWidget
+									163 panel Live S Pen Input Diagnostics
+										164 label Pressure: 0 / 4095 (0%)
+										165 progress bar Live S Pen Input Diagnostics Value: -1.0 Secondary Actions: Increase, Decrease
+										166 label Position:
+										167 label 0.000, 0.000
+										168 label Tilt:
+										169 label 0.0°, 0.0°
+										170 label Traffic:
+										171 label 0 events/sec
+										172 label Hover
+										173 label Touch
+										174 label Barrel Btn
+										175 label Eraser
+										176 label Click: ON
+									177 panel Interactive Scratchpad
+										178 button Pen color #89b4fa Secondary Actions: Press, SetFocus
+										179 button Pen color #cba6f7 Secondary Actions: Press, SetFocus
+										180 button Pen color #a6e3a1 Secondary Actions: Press, SetFocus
+										181 button Pen color #f9e2af Secondary Actions: Press, SetFocus
+										182 button Pen color #f38ba8 Secondary Actions: Press, SetFocus
+										183 button Pen color #ffffff Secondary Actions: Press, SetFocus
+										184 button Test Stroke Secondary Actions: Press, SetFocus
+										185 button Clear Secondary Actions: Press, SetFocus
+										186 filler Interactive Scratchpad
+									187 panel QApplication.MainWindow.QWidget.QTabWidget.qt_tabwidget_stackedwidget.SystemTab.QScrollArea.qt_scrollarea_viewport.QWidget.CollapsibleBox
+										188 check box Server Logs Secondary Actions: Toggle, Press, SetFocus
+											189 label ▸
+											190 label Server Logs
+											191 label 0 lines
+										192 filler QApplication.MainWindow.QWidget.QTabWidget.qt_tabwidget_stackedwidget.SystemTab.QScrollArea.qt_scrollarea_viewport.QWidget.CollapsibleBox.QWidget
+											193 button Copy Secondary Actions: Press, SetFocus
+											194 button Clear Secondary Actions: Press, SetFocus
+											195 text QApplication.MainWindow.QWidget.QTabWidget.qt_tabwidget_stackedwidget.SystemTab.QScrollArea.qt_scrollarea_viewport.QWidget.CollapsibleBox.QWidget.QTextEdit Secondary Actions: SetFocus
+												196 filler QApplication.MainWindow.QWidget.QTabWidget.qt_tabwidget_stackedwidget.SystemTab.QScrollArea.qt_scrollarea_viewport.QWidget.CollapsibleBox.QWidget.QTextEdit.qt_scrollarea_viewport
+												197 filler QApplication.MainWindow.QWidget.QTabWidget.qt_tabwidget_stackedwidget.SystemTab.QScrollArea.qt_scrollarea_viewport.QWidget.CollapsibleBox.QWidget.QTextEdit.qt_scrollarea_hcontainer
+													198 scroll bar QApplication.MainWindow.QWidget.QTabWidget.qt_tabwidget_stackedwidget.SystemTab.QScrollArea.qt_scrollarea_viewport.QWidget.CollapsibleBox.QWidget.QTextEdit.qt_scrollarea_hcontainer.QScrollBar Value: 0.0 Secondary Actions: Increase, Decrease
+												199 filler QApplication.MainWindow.QWidget.QTabWidget.qt_tabwidget_stackedwidget.SystemTab.QScrollArea.qt_scrollarea_viewport.QWidget.CollapsibleBox.QWidget.QTextEdit.qt_scrollarea_vcontainer
+													200 scroll bar QApplication.MainWindow.QWidget.QTabWidget.qt_tabwidget_stackedwidget.SystemTab.QScrollArea.qt_scrollarea_viewport.QWidget.CollapsibleBox.QWidget.QTextEdit.qt_scrollarea_vcontainer.QScrollBar Value: 0.0 Secondary Actions: Increase, Decrease
+				201 page tab list Profiles Secondary Actions: SetFocus Frame: {x: 14, y: 120, width: 263, height: 36}
+					202 page tab Profiles Secondary Actions: Press Frame: {x: 14, y: 120, width: 88, height: 36}
+					203 page tab System & Diagnostics Secondary Actions: Press Frame: {x: 102, y: 120, width: 175, height: 36}
+					204 button Scroll Left
+					205 button Scroll Right
+
+The focused UI element is list item Default (Global).
+
+=== action ===
+App=S Pen Bridge Audit (pid 950039)
+Window: "S Pen Bridge Accessibility Audit", App: S Pen Bridge Audit.
+	0 frame S Pen Bridge Accessibility Audit Frame: {x: 0, y: 0, width: 960, height: 640}
+		1 filler QApplication.MainWindow.QWidget Frame: {x: 0, y: 0, width: 960, height: 640}
+			2 panel QApplication.MainWindow.QWidget.HeaderBar Frame: {x: 14, y: 12, width: 932, height: 98}
+				3 label S Pen Bridge Frame: {x: 33, y: 25, width: 99, height: 22}
+				4 label ● Server Stopped Frame: {x: 138, y: 25, width: 125, height: 22}
+				5 label Auto: Frame: {x: 33, y: 53, width: 34, height: 44}
+				6 combo box Default (Global) Secondary Actions: ShowMenu, Press Frame: {x: 73, y: 55, width: 624, height: 40}
+					7 list QApplication.MainWindow.QWidget.HeaderBar.QComboBox.QComboBoxListView
+						8 list item Default (Global) Secondary Actions: Toggle Frame: {x: -682, y: -423, width: 165, height: 24}
+						9 list item osu! Secondary Actions: Toggle Frame: {x: -682, y: -399, width: 165, height: 24}
+						10 list item Krita Secondary Actions: Toggle Frame: {x: -682, y: -375, width: 165, height: 24}
+						11 list item Blender Secondary Actions: Toggle Frame: {x: -682, y: -351, width: 165, height: 24}
+				12 button Start Server Secondary Actions: Press, SetFocus Frame: {x: 709, y: 53, width: 106, height: 44}
+				13 button Save Config Secondary Actions: Press, SetFocus Frame: {x: 821, y: 53, width: 106, height: 44}
+			14 label QApplication.MainWindow.QWidget.QLabel
+			15 filler QApplication.MainWindow.QWidget.QTabWidget Secondary Actions: SetFocus Frame: {x: 14, y: 120, width: 932, height: 508}
+				16 layered pane QApplication.MainWindow.QWidget.QTabWidget.qt_tabwidget_stackedwidget Frame: {x: 15, y: 156, width: 930, height: 471}
+					17 filler QApplication.MainWindow.QWidget.QTabWidget.qt_tabwidget_stackedwidget.ProfilesTab Frame: {x: 15, y: 156, width: 930, height: 471}
+						18 split pane QApplication.MainWindow.QWidget.QTabWidget.qt_tabwidget_stackedwidget.ProfilesTab.QSplitter Frame: {x: 27, y: 168, width: 906, height: 447}
+							19 filler QApplication.MainWindow.QWidget.QTabWidget.qt_tabwidget_stackedwidget.ProfilesTab.QSplitter.ProfileEditorPanel Frame: {x: 271, y: 168, width: 662, height: 447}
+								20 filler QApplication.MainWindow.QWidget.QTabWidget.qt_tabwidget_stackedwidget.ProfilesTab.QSplitter.ProfileEditorPanel.QScrollArea Secondary Actions: SetFocus Frame: {x: 271, y: 168, width: 662, height: 447}
+									21 filler QApplication.MainWindow.QWidget.QTabWidget.qt_tabwidget_stackedwidget.ProfilesTab.QSplitter.ProfileEditorPanel.QScrollArea.qt_scrollarea_viewport Frame: {x: 271, y: 168, width: 648, height: 447}
+										22 filler QApplication.MainWindow.QWidget.QTabWidget.qt_tabwidget_stackedwidget.ProfilesTab.QSplitter.ProfileEditorPanel.QScrollArea.qt_scrollarea_viewport.QWidget Frame: {x: 271, y: 168, width: 648, height: 1718}
+											23 panel Profile Identity & Matching Frame: {x: 275, y: 172, width: 640, height: 144}
+												24 label Match the focused window: Frame: {x: 301, y: 212, width: 170, height: 24}
+												25 button How profile matching works Secondary Actions: Press, SetFocus Frame: {x: 865, y: 212, width: 24, height: 24}
+												26 filler Profile Identity & Matching
+													27 filler QApplication.MainWindow.QWidget.QTabWidget.qt_tabwidget_stackedwidget.ProfilesTab.QSplitter.ProfileEditorPanel.QScrollArea.qt_scrollarea_viewport.QWidget.IdentitySection.MatchChipInput.QWidget
+													28 text Application match rule Secondary Actions: SetFocus
+												29 label Used when no other profile matches. Default has no match rules of its own. Frame: {x: 301, y: 244, width: 588, height: 16}
+												30 label Detected active window right now: (none yet) Frame: {x: 301, y: 268, width: 501, height: 22}
+												31 label No match Frame: {x: 810, y: 268, width: 79, height: 22}
+											32 panel Device Behavior Frame: {x: 275, y: 332, width: 640, height: 256}
+												33 label Device Type: Frame: {x: 301, y: 372, width: 80, height: 40}
+												34 combo box Pointer Mode (Absolute Cursor - Wayland & X11) Secondary Actions: ShowMenu, Press Frame: {x: 391, y: 372, width: 498, height: 40}
+													35 list QApplication.MainWindow.QWidget.QTabWidget.qt_tabwidget_stackedwidget.ProfilesTab.QSplitter.ProfileEditorPanel.QScrollArea.qt_scrollarea_viewport.QWidget.DeviceSection.QComboBox.QComboBoxListView Secondary Actions: SetFocus
+														36 list item Pointer Mode (Absolute Cursor - Wayland & X11) Secondary Actions: Toggle Frame: {x: -682, y: -423, width: 165, height: 24}
+														37 list item Tablet Mode (Wacom Tablet-v2 for Krita/GIMP) Secondary Actions: Toggle Frame: {x: -682, y: -399, width: 165, height: 24}
+												38 check box Generate clicks on pen contact Secondary Actions: Toggle, Press, SetFocus Frame: {x: 301, y: 422, width: 220, height: 18}
+												39 label When disabled, hovering, movement, and pressure are tracked without emitting mouse click events, ideal for keyboard-tapping rhythm games, custom gesture controls, or hover-only navigation. Frame: {x: 301, y: 450, width: 588, height: 28}
+												40 panel Device Behavior Frame: {x: 301, y: 488, width: 588, height: 74}
+													41 check box Advanced: Direct Input Mode Secondary Actions: Toggle, Press, SetFocus Frame: {x: 301, y: 488, width: 588, height: 44}
+														42 label ▾ Frame: {x: 309, y: 494, width: 12, height: 32}
+														43 label Advanced: Direct Input Mode Frame: {x: 329, y: 494, width: 183, height: 32}
+														44 label direct mode: off Frame: {x: 798, y: 494, width: 83, height: 32}
+													45 filler QApplication.MainWindow.QWidget.QTabWidget.qt_tabwidget_stackedwidget.ProfilesTab.QSplitter.ProfileEditorPanel.QScrollArea.qt_scrollarea_viewport.QWidget.DeviceSection.CollapsibleBox.QWidget Frame: {x: 301, y: 532, width: 588, height: 30}
+														46 check box Direct input (display tablet) Secondary Actions: Toggle, Press, SetFocus Frame: {x: 309, y: 536, width: 195, height: 18}
+											47 panel Pressure Sensitivity Curve & Deadzone Frame: {x: 275, y: 604, width: 640, height: 503}
+												48 label Presets: Frame: {x: 301, y: 644, width: 110, height: 44}
+												49 check box Linear Secondary Actions: Toggle, Press, SetFocus Frame: {x: 421, y: 644, width: 109, height: 44}
+												50 check box Soft Secondary Actions: Toggle, Press, SetFocus Frame: {x: 540, y: 644, width: 110, height: 44}
+												51 check box Firm Secondary Actions: Toggle, Press, SetFocus Frame: {x: 660, y: 644, width: 109, height: 44}
+												52 check box Sigmoid Secondary Actions: Toggle, Press, SetFocus Frame: {x: 779, y: 644, width: 110, height: 44}
+												53 label Sensitivity Exponent (Gamma): Frame: {x: 320, y: 856, width: 291, height: 16}
+												54 label 1.00 Frame: {x: 617, y: 856, width: 291, height: 16}
+												55 slider Pressure sensitivity exponent Value: 100.0 Secondary Actions: SetFocus, Increase, Decrease Frame: {x: 320, y: 878, width: 588, height: 15}
+												56 label Minimum Pressure Threshold (Deadzone): Frame: {x: 320, y: 899, width: 291, height: 16}
+												57 label 0% Frame: {x: 617, y: 899, width: 291, height: 16}
+												58 slider Minimum pressure percent Value: 0.0 Secondary Actions: SetFocus, Increase, Decrease Frame: {x: 320, y: 921, width: 588, height: 15}
+												59 label Maximum Pressure Ceiling (100% Force): Frame: {x: 320, y: 942, width: 291, height: 16}
+												60 label 100% Frame: {x: 617, y: 942, width: 291, height: 16}
+												61 slider Maximum pressure percent Value: 100.0 Secondary Actions: SetFocus, Increase, Decrease Frame: {x: 320, y: 964, width: 588, height: 15}
+												62 filler Pressure Sensitivity Curve & Deadzone Frame: {x: 320, y: 989, width: 588, height: 200}
+												63 label Raw Input: Frame: {x: 320, y: 1199, width: 67, height: 18}
+												64 progress bar Pressure Sensitivity Curve & Deadzone Value: -1.0 Secondary Actions: Increase, Decrease Frame: {x: 391, y: 1199, width: 517, height: 18}
+												65 label Calibrated: Frame: {x: 320, y: 1221, width: 67, height: 18}
+												66 progress bar Pressure Sensitivity Curve & Deadzone Value: -1.0 Secondary Actions: Increase, Decrease Frame: {x: 391, y: 1221, width: 517, height: 18}
+											67 panel Hardware Buttons & Stroke Smoothing Frame: {x: 294, y: 1281, width: 640, height: 231}
+												68 label Primary barrel button: Frame: {x: 320, y: 1321, width: 289, height: 40}
+												69 combo box Right Click Secondary Actions: ShowMenu, Press Frame: {x: 619, y: 1321, width: 289, height: 40}
+													70 list QApplication.MainWindow.QWidget.QTabWidget.qt_tabwidget_stackedwidget.ProfilesTab.QSplitter.ProfileEditorPanel.QScrollArea.qt_scrollarea_viewport.QWidget.ButtonsSection.QComboBox.QComboBoxListView Secondary Actions: SetFocus
+														71 list item Left Click Secondary Actions: Toggle Frame: {x: -682, y: -423, width: 165, height: 24}
+														72 list item Right Click Secondary Actions: Toggle Frame: {x: -682, y: -399, width: 165, height: 24}
+														73 list item Middle Click Secondary Actions: Toggle Frame: {x: -682, y: -375, width: 165, height: 24}
+														74 list item Undo (Ctrl+Z) Secondary Actions: Toggle Frame: {x: -682, y: -351, width: 165, height: 24}
+														75 list item Disabled Secondary Actions: Toggle Frame: {x: -682, y: -327, width: 165, height: 24}
+												76 label Secondary Button: Frame: {x: 320, y: 1371, width: 289, height: 40}
+												77 combo box Middle Click Secondary Actions: ShowMenu, Press Frame: {x: 619, y: 1371, width: 289, height: 40}
+													78 list QApplication.MainWindow.QWidget.QTabWidget.qt_tabwidget_stackedwidget.ProfilesTab.QSplitter.ProfileEditorPanel.QScrollArea.qt_scrollarea_viewport.QWidget.ButtonsSection.QComboBox.QComboBoxListView Secondary Actions: SetFocus
+														79 list item Left Click Secondary Actions: Toggle Frame: {x: -682, y: -423, width: 165, height: 24}
+														80 list item Right Click Secondary Actions: Toggle Frame: {x: -682, y: -399, width: 165, height: 24}
+														81 list item Middle Click Secondary Actions: Toggle Frame: {x: -682, y: -375, width: 165, height: 24}
+														82 list item Undo (Ctrl+Z) Secondary Actions: Toggle Frame: {x: -682, y: -351, width: 165, height: 24}
+														83 list item Disabled Secondary Actions: Toggle Frame: {x: -682, y: -327, width: 165, height: 24}
+												84 label Smoothing Filter Strength: Frame: {x: 320, y: 1421, width: 289, height: 16}
+												85 label 0% Frame: {x: 619, y: 1421, width: 289, height: 16}
+												86 slider Stroke smoothing percent Value: 0.0 Secondary Actions: SetFocus, Increase, Decrease Frame: {x: 320, y: 1447, width: 588, height: 15}
+												87 label Filters coordinate noise and stabilizes lines for drawing or handwriting. Frame: {x: 320, y: 1472, width: 588, height: 14}
+											88 panel Screen Mapping Frame: {x: 294, y: 1528, width: 640, height: 512}
+												89 radio button Whole Virtual Desktop (spanning all screens) Secondary Actions: Toggle, SetFocus Frame: {x: 320, y: 1568, width: 588, height: 18}
+												90 radio button Single Monitor: Secondary Actions: Toggle, SetFocus Frame: {x: 320, y: 1596, width: 588, height: 18}
+												91 combo box HDMI-A-1 (1927x1084 at +0+0) Secondary Actions: ShowMenu, Press Frame: {x: 320, y: 1626, width: 500, height: 40}
+													92 list QApplication.MainWindow.QWidget.QTabWidget.qt_tabwidget_stackedwidget.ProfilesTab.QSplitter.ProfileEditorPanel.QScrollArea.qt_scrollarea_viewport.QWidget.MappingSection.QComboBox.QComboBoxListView Secondary Actions: SetFocus
+														93 list item HDMI-A-1 (1927x1084 at +0+0) Secondary Actions: Toggle Frame: {x: -682, y: -423, width: 165, height: 24}
+														94 list item eDP-1 (1676x943 at +143+1242) Secondary Actions: Toggle Frame: {x: -682, y: -399, width: 165, height: 24}
+												95 button Refresh Secondary Actions: Press, SetFocus Frame: {x: 830, y: 1624, width: 78, height: 44}
+												96 filler Monitor selection Secondary Actions: SetFocus Frame: {x: 320, y: 1678, width: 588, height: 180}
+												97 radio button Custom Rectangle: Secondary Actions: Toggle, SetFocus Frame: {x: 301, y: 1710, width: 588, height: 18}
+												98 panel Screen Mapping Frame: {x: 301, y: 1738, width: 588, height: 44}
+													99 check box Advanced: Exact Pixel Bounds Secondary Actions: Toggle, Press, SetFocus Frame: {x: 301, y: 1738, width: 588, height: 44}
+														100 label ▸ Frame: {x: 309, y: 1744, width: 12, height: 32}
+														101 label Advanced: Exact Pixel Bounds Frame: {x: 329, y: 1744, width: 191, height: 32}
+														102 label custom bounds: 0,0 1920x1080 Frame: {x: 718, y: 1744, width: 163, height: 32}
+													103 filler QApplication.MainWindow.QWidget.QTabWidget.qt_tabwidget_stackedwidget.ProfilesTab.QSplitter.ProfileEditorPanel.QScrollArea.qt_scrollarea_viewport.QWidget.MappingSection.CollapsibleBox.QWidget
+														104 label X:
+														105 spin button Mapping left coordinate Value: 0 Secondary Actions: SetFocus, Increase, Decrease
+														106 label Y:
+														107 spin button Mapping top coordinate Value: 0 Secondary Actions: SetFocus, Increase, Decrease
+														108 label Width:
+														109 spin button Mapping width Value: 1920 Secondary Actions: SetFocus, Increase, Decrease
+														110 label Height:
+														111 spin button Mapping height Value: 1080 Secondary Actions: SetFocus, Increase, Decrease
+												112 label Active Area: Entire Virtual Desktop (1927x2185) Frame: {x: 301, y: 1792, width: 588, height: 14}
+												113 check box Lock Aspect Ratio Secondary Actions: Toggle, Press, SetFocus Frame: {x: 301, y: 1827, width: 137, height: 18}
+												114 combo box 16:10 Secondary Actions: ShowMenu, Press Frame: {x: 448, y: 1816, width: 132, height: 40}
+													115 list QApplication.MainWindow.QWidget.QTabWidget.qt_tabwidget_stackedwidget.ProfilesTab.QSplitter.ProfileEditorPanel.QScrollArea.qt_scrollarea_viewport.QWidget.MappingSection.QComboBox.QComboBoxListView Secondary Actions: SetFocus
+														116 list item 16:10 Secondary Actions: Toggle Frame: {x: -682, y: -423, width: 165, height: 24}
+														117 list item 16:9 Secondary Actions: Toggle Frame: {x: -682, y: -399, width: 165, height: 24}
+														118 list item 4:3 Secondary Actions: Toggle Frame: {x: -682, y: -375, width: 165, height: 24}
+														119 list item 21:9 Secondary Actions: Toggle Frame: {x: -682, y: -351, width: 165, height: 24}
+														120 list item 3:2 Secondary Actions: Toggle Frame: {x: -682, y: -327, width: 165, height: 24}
+												121 label (applies to all profiles) Frame: {x: 590, y: 1816, width: 115, height: 40}
+									122 filler QApplication.MainWindow.QWidget.QTabWidget.qt_tabwidget_stackedwidget.ProfilesTab.QSplitter.ProfileEditorPanel.QScrollArea.qt_scrollarea_vcontainer Frame: {x: 919, y: 168, width: 14, height: 447}
+										123 scroll bar QApplication.MainWindow.QWidget.QTabWidget.qt_tabwidget_stackedwidget.ProfilesTab.QSplitter.ProfileEditorPanel.QScrollArea.qt_scrollarea_vcontainer.QScrollBar Value: 0.0 Secondary Actions: Increase, Decrease Frame: {x: 919, y: 168, width: 14, height: 447}
+							124 filler QApplication.MainWindow.QWidget.QTabWidget.qt_tabwidget_stackedwidget.ProfilesTab.QSplitter.ProfileListPanel Frame: {x: 27, y: 168, width: 240, height: 447}
+								125 check box Auto-switch by focused window Secondary Actions: Toggle, Press, SetFocus Frame: {x: 27, y: 168, width: 227, height: 18}
+								126 label Active Window: Detecting... Frame: {x: 27, y: 194, width: 240, height: 22}
+								127 list Profiles Secondary Actions: SetFocus Frame: {x: 27, y: 224, width: 240, height: 287}
+									128 list item Default Secondary Actions: Toggle Frame: {x: 33, y: 230, width: 228, height: 30}
+									129 list item osu! Secondary Actions: Toggle Frame: {x: 33, y: 260, width: 228, height: 30}
+									130 list item Krita Secondary Actions: Toggle Frame: {x: 33, y: 290, width: 228, height: 30}
+									131 list item Blender Secondary Actions: Toggle Frame: {x: 33, y: 320, width: 228, height: 30}
+								132 button + New Secondary Actions: Press, SetFocus Frame: {x: 27, y: 519, width: 116, height: 44}
+								133 button Duplicate Secondary Actions: Press, SetFocus Frame: {x: 151, y: 519, width: 116, height: 44}
+								134 button Delete Frame: {x: 27, y: 571, width: 240, height: 44}
+							135 unknown QApplication.MainWindow.QWidget.QTabWidget.qt_tabwidget_stackedwidget.ProfilesTab.QSplitter.qt_splithandle_
+							136 unknown QApplication.MainWindow.QWidget.QTabWidget.qt_tabwidget_stackedwidget.ProfilesTab.QSplitter.qt_splithandle_ Frame: {x: 267, y: 168, width: 4, height: 447}
+					137 filler QApplication.MainWindow.QWidget.QTabWidget.qt_tabwidget_stackedwidget.SystemTab
+						138 filler QApplication.MainWindow.QWidget.QTabWidget.qt_tabwidget_stackedwidget.SystemTab.QScrollArea Secondary Actions: SetFocus
+							139 filler QApplication.MainWindow.QWidget.QTabWidget.qt_tabwidget_stackedwidget.SystemTab.QScrollArea.qt_scrollarea_viewport
+								140 filler QApplication.MainWindow.QWidget.QTabWidget.qt_tabwidget_stackedwidget.SystemTab.QScrollArea.qt_scrollarea_viewport.QWidget
+									141 panel Quick Connect (Tablet Setup)
+										142 label Configured (server stopped): 127.0.0.1:40118
+										143 button Copy address Secondary Actions: Press, SetFocus
+										144 label Copy this address and the pairing details into the tablet Settings. USB uses 127.0.0.1.
+										145 button Pair Tablet Secondary Actions: Press, SetFocus
+										146 button Enable USB Mode (ADB) Secondary Actions: Press, SetFocus
+									147 panel System & Startup Preferences
+										148 label Port:
+										149 spin button Server port Value: 40118 Secondary Actions: SetFocus, Increase, Decrease
+										150 check box Allow paired Wi-Fi connections Secondary Actions: Toggle, Press, SetFocus
+										151 check box Auto-start server on app launch Secondary Actions: Toggle, Press, SetFocus
+										152 check box Auto-forward USB ADB on launch Secondary Actions: Toggle, Press, SetFocus
+										153 check box Minimize to tray on window close Secondary Actions: Toggle, Press, SetFocus
+										154 label Device Name:
+										155 text Virtual device name Value: Samsung S Pen Virtual Tablet Secondary Actions: SetFocus
+										156 label Detected desktop: 1927x2185
+										157 button Check / Setup uinput Permissions Secondary Actions: Press, SetFocus
+										158 button Install Desktop Launcher (.desktop) Secondary Actions: Press, SetFocus
+										159 button Reset All to Defaults Secondary Actions: Press, SetFocus
+						160 filler QApplication.MainWindow.QWidget.QTabWidget.qt_tabwidget_stackedwidget.SystemTab.QScrollArea Secondary Actions: SetFocus
+							161 filler QApplication.MainWindow.QWidget.QTabWidget.qt_tabwidget_stackedwidget.SystemTab.QScrollArea.qt_scrollarea_viewport
+								162 filler QApplication.MainWindow.QWidget.QTabWidget.qt_tabwidget_stackedwidget.SystemTab.QScrollArea.qt_scrollarea_viewport.QWidget
+									163 panel Live S Pen Input Diagnostics
+										164 label Pressure: 0 / 4095 (0%)
+										165 progress bar Live S Pen Input Diagnostics Value: -1.0 Secondary Actions: Increase, Decrease
+										166 label Position:
+										167 label 0.000, 0.000
+										168 label Tilt:
+										169 label 0.0°, 0.0°
+										170 label Traffic:
+										171 label 0 events/sec
+										172 label Hover
+										173 label Touch
+										174 label Barrel Btn
+										175 label Eraser
+										176 label Click: ON
+									177 panel Interactive Scratchpad
+										178 button Pen color #89b4fa Secondary Actions: Press, SetFocus
+										179 button Pen color #cba6f7 Secondary Actions: Press, SetFocus
+										180 button Pen color #a6e3a1 Secondary Actions: Press, SetFocus
+										181 button Pen color #f9e2af Secondary Actions: Press, SetFocus
+										182 button Pen color #f38ba8 Secondary Actions: Press, SetFocus
+										183 button Pen color #ffffff Secondary Actions: Press, SetFocus
+										184 button Test Stroke Secondary Actions: Press, SetFocus
+										185 button Clear Secondary Actions: Press, SetFocus
+										186 filler Interactive Scratchpad
+									187 panel QApplication.MainWindow.QWidget.QTabWidget.qt_tabwidget_stackedwidget.SystemTab.QScrollArea.qt_scrollarea_viewport.QWidget.CollapsibleBox
+										188 check box Server Logs Secondary Actions: Toggle, Press, SetFocus
+											189 label ▸
+											190 label Server Logs
+											191 label 0 lines
+										192 filler QApplication.MainWindow.QWidget.QTabWidget.qt_tabwidget_stackedwidget.SystemTab.QScrollArea.qt_scrollarea_viewport.QWidget.CollapsibleBox.QWidget
+											193 button Copy Secondary Actions: Press, SetFocus
+											194 button Clear Secondary Actions: Press, SetFocus
+											195 text QApplication.MainWindow.QWidget.QTabWidget.qt_tabwidget_stackedwidget.SystemTab.QScrollArea.qt_scrollarea_viewport.QWidget.CollapsibleBox.QWidget.QTextEdit Secondary Actions: SetFocus
+												196 filler QApplication.MainWindow.QWidget.QTabWidget.qt_tabwidget_stackedwidget.SystemTab.QScrollArea.qt_scrollarea_viewport.QWidget.CollapsibleBox.QWidget.QTextEdit.qt_scrollarea_viewport
+												197 filler QApplication.MainWindow.QWidget.QTabWidget.qt_tabwidget_stackedwidget.SystemTab.QScrollArea.qt_scrollarea_viewport.QWidget.CollapsibleBox.QWidget.QTextEdit.qt_scrollarea_hcontainer
+													198 scroll bar QApplication.MainWindow.QWidget.QTabWidget.qt_tabwidget_stackedwidget.SystemTab.QScrollArea.qt_scrollarea_viewport.QWidget.CollapsibleBox.QWidget.QTextEdit.qt_scrollarea_hcontainer.QScrollBar Value: 0.0 Secondary Actions: Increase, Decrease
+												199 filler QApplication.MainWindow.QWidget.QTabWidget.qt_tabwidget_stackedwidget.SystemTab.QScrollArea.qt_scrollarea_viewport.QWidget.CollapsibleBox.QWidget.QTextEdit.qt_scrollarea_vcontainer
+													200 scroll bar QApplication.MainWindow.QWidget.QTabWidget.qt_tabwidget_stackedwidget.SystemTab.QScrollArea.qt_scrollarea_viewport.QWidget.CollapsibleBox.QWidget.QTextEdit.qt_scrollarea_vcontainer.QScrollBar Value: 0.0 Secondary Actions: Increase, Decrease
+				201 page tab list Profiles Secondary Actions: SetFocus Frame: {x: 14, y: 120, width: 263, height: 36}
+					202 page tab Profiles Secondary Actions: Press Frame: {x: 14, y: 120, width: 88, height: 36}
+					203 page tab System & Diagnostics Secondary Actions: Press Frame: {x: 102, y: 120, width: 175, height: 36}
+					204 button Scroll Left
+					205 button Scroll Right
+
+The focused UI element is list item Default (Global).
+
+=== collapsed ===
+App=S Pen Bridge Audit (pid 950039)
+Window: "S Pen Bridge Accessibility Audit", App: S Pen Bridge Audit.
+	0 frame S Pen Bridge Accessibility Audit Frame: {x: 0, y: 0, width: 960, height: 640}
+		1 filler QApplication.MainWindow.QWidget Frame: {x: 0, y: 0, width: 960, height: 640}
+			2 panel QApplication.MainWindow.QWidget.HeaderBar Frame: {x: 14, y: 12, width: 932, height: 98}
+				3 label S Pen Bridge Frame: {x: 33, y: 25, width: 99, height: 22}
+				4 label ● Server Stopped Frame: {x: 138, y: 25, width: 125, height: 22}
+				5 label Auto: Frame: {x: 33, y: 53, width: 34, height: 44}
+				6 combo box Default (Global) Secondary Actions: ShowMenu, Press Frame: {x: 73, y: 55, width: 624, height: 40}
+					7 list QApplication.MainWindow.QWidget.HeaderBar.QComboBox.QComboBoxListView
+						8 list item Default (Global) Secondary Actions: Toggle Frame: {x: -682, y: -423, width: 165, height: 24}
+						9 list item osu! Secondary Actions: Toggle Frame: {x: -682, y: -399, width: 165, height: 24}
+						10 list item Krita Secondary Actions: Toggle Frame: {x: -682, y: -375, width: 165, height: 24}
+						11 list item Blender Secondary Actions: Toggle Frame: {x: -682, y: -351, width: 165, height: 24}
+				12 button Start Server Secondary Actions: Press, SetFocus Frame: {x: 709, y: 53, width: 106, height: 44}
+				13 button Save Config Secondary Actions: Press, SetFocus Frame: {x: 821, y: 53, width: 106, height: 44}
+			14 label QApplication.MainWindow.QWidget.QLabel
+			15 filler QApplication.MainWindow.QWidget.QTabWidget Secondary Actions: SetFocus Frame: {x: 14, y: 120, width: 932, height: 508}
+				16 layered pane QApplication.MainWindow.QWidget.QTabWidget.qt_tabwidget_stackedwidget Frame: {x: 15, y: 156, width: 930, height: 471}
+					17 filler QApplication.MainWindow.QWidget.QTabWidget.qt_tabwidget_stackedwidget.ProfilesTab Frame: {x: 15, y: 156, width: 930, height: 471}
+						18 split pane QApplication.MainWindow.QWidget.QTabWidget.qt_tabwidget_stackedwidget.ProfilesTab.QSplitter Frame: {x: 27, y: 168, width: 906, height: 447}
+							19 filler QApplication.MainWindow.QWidget.QTabWidget.qt_tabwidget_stackedwidget.ProfilesTab.QSplitter.ProfileEditorPanel Frame: {x: 271, y: 168, width: 662, height: 447}
+								20 filler QApplication.MainWindow.QWidget.QTabWidget.qt_tabwidget_stackedwidget.ProfilesTab.QSplitter.ProfileEditorPanel.QScrollArea Secondary Actions: SetFocus Frame: {x: 271, y: 168, width: 662, height: 447}
+									21 filler QApplication.MainWindow.QWidget.QTabWidget.qt_tabwidget_stackedwidget.ProfilesTab.QSplitter.ProfileEditorPanel.QScrollArea.qt_scrollarea_viewport Frame: {x: 271, y: 168, width: 648, height: 447}
+										22 filler QApplication.MainWindow.QWidget.QTabWidget.qt_tabwidget_stackedwidget.ProfilesTab.QSplitter.ProfileEditorPanel.QScrollArea.qt_scrollarea_viewport.QWidget Frame: {x: 271, y: 168, width: 648, height: 1688}
+											23 panel Profile Identity & Matching Frame: {x: 275, y: 172, width: 640, height: 144}
+												24 label Match the focused window: Frame: {x: 301, y: 212, width: 170, height: 24}
+												25 button How profile matching works Secondary Actions: Press, SetFocus Frame: {x: 865, y: 212, width: 24, height: 24}
+												26 filler Profile Identity & Matching
+													27 filler QApplication.MainWindow.QWidget.QTabWidget.qt_tabwidget_stackedwidget.ProfilesTab.QSplitter.ProfileEditorPanel.QScrollArea.qt_scrollarea_viewport.QWidget.IdentitySection.MatchChipInput.QWidget
+													28 text Application match rule Secondary Actions: SetFocus
+												29 label Used when no other profile matches. Default has no match rules of its own. Frame: {x: 301, y: 244, width: 588, height: 16}
+												30 label Detected active window right now: (none yet) Frame: {x: 301, y: 268, width: 501, height: 22}
+												31 label No match Frame: {x: 810, y: 268, width: 79, height: 22}
+											32 panel Device Behavior Frame: {x: 275, y: 332, width: 640, height: 226}
+												33 label Device Type: Frame: {x: 301, y: 372, width: 80, height: 40}
+												34 combo box Pointer Mode (Absolute Cursor - Wayland & X11) Secondary Actions: ShowMenu, Press Frame: {x: 391, y: 372, width: 498, height: 40}
+													35 list QApplication.MainWindow.QWidget.QTabWidget.qt_tabwidget_stackedwidget.ProfilesTab.QSplitter.ProfileEditorPanel.QScrollArea.qt_scrollarea_viewport.QWidget.DeviceSection.QComboBox.QComboBoxListView Secondary Actions: SetFocus
+														36 list item Pointer Mode (Absolute Cursor - Wayland & X11) Secondary Actions: Toggle Frame: {x: -682, y: -423, width: 165, height: 24}
+														37 list item Tablet Mode (Wacom Tablet-v2 for Krita/GIMP) Secondary Actions: Toggle Frame: {x: -682, y: -399, width: 165, height: 24}
+												38 check box Generate clicks on pen contact Secondary Actions: Toggle, Press, SetFocus Frame: {x: 301, y: 422, width: 220, height: 18}
+												39 label When disabled, hovering, movement, and pressure are tracked without emitting mouse click events, ideal for keyboard-tapping rhythm games, custom gesture controls, or hover-only navigation. Frame: {x: 301, y: 450, width: 588, height: 28}
+												40 panel Device Behavior Frame: {x: 301, y: 488, width: 588, height: 44}
+													41 check box Advanced: Direct Input Mode Secondary Actions: Toggle, Press, SetFocus Frame: {x: 301, y: 488, width: 588, height: 44}
+														42 label ▸ Frame: {x: 309, y: 494, width: 12, height: 32}
+														43 label Advanced: Direct Input Mode Frame: {x: 329, y: 494, width: 183, height: 32}
+														44 label direct mode: off Frame: {x: 798, y: 494, width: 83, height: 32}
+													45 filler QApplication.MainWindow.QWidget.QTabWidget.qt_tabwidget_stackedwidget.ProfilesTab.QSplitter.ProfileEditorPanel.QScrollArea.qt_scrollarea_viewport.QWidget.DeviceSection.CollapsibleBox.QWidget
+														46 check box Direct input (display tablet) Secondary Actions: Toggle, Press, SetFocus
+											47 panel Pressure Sensitivity Curve & Deadzone Frame: {x: 275, y: 574, width: 640, height: 503}
+												48 label Presets: Frame: {x: 301, y: 614, width: 110, height: 44}
+												49 check box Linear Secondary Actions: Toggle, Press, SetFocus Frame: {x: 421, y: 614, width: 109, height: 44}
+												50 check box Soft Secondary Actions: Toggle, Press, SetFocus Frame: {x: 540, y: 614, width: 110, height: 44}
+												51 check box Firm Secondary Actions: Toggle, Press, SetFocus Frame: {x: 660, y: 614, width: 109, height: 44}
+												52 check box Sigmoid Secondary Actions: Toggle, Press, SetFocus Frame: {x: 779, y: 614, width: 110, height: 44}
+												53 label Sensitivity Exponent (Gamma): Frame: {x: 320, y: 826, width: 291, height: 16}
+												54 label 1.00 Frame: {x: 617, y: 826, width: 291, height: 16}
+												55 slider Pressure sensitivity exponent Value: 100.0 Secondary Actions: SetFocus, Increase, Decrease Frame: {x: 320, y: 848, width: 588, height: 15}
+												56 label Minimum Pressure Threshold (Deadzone): Frame: {x: 320, y: 869, width: 291, height: 16}
+												57 label 0% Frame: {x: 617, y: 869, width: 291, height: 16}
+												58 slider Minimum pressure percent Value: 0.0 Secondary Actions: SetFocus, Increase, Decrease Frame: {x: 320, y: 891, width: 588, height: 15}
+												59 label Maximum Pressure Ceiling (100% Force): Frame: {x: 320, y: 912, width: 291, height: 16}
+												60 label 100% Frame: {x: 617, y: 912, width: 291, height: 16}
+												61 slider Maximum pressure percent Value: 100.0 Secondary Actions: SetFocus, Increase, Decrease Frame: {x: 320, y: 934, width: 588, height: 15}
+												62 filler Pressure Sensitivity Curve & Deadzone Frame: {x: 320, y: 959, width: 588, height: 200}
+												63 label Raw Input: Frame: {x: 320, y: 1169, width: 67, height: 18}
+												64 progress bar Pressure Sensitivity Curve & Deadzone Value: -1.0 Secondary Actions: Increase, Decrease Frame: {x: 391, y: 1169, width: 517, height: 18}
+												65 label Calibrated: Frame: {x: 320, y: 1191, width: 67, height: 18}
+												66 progress bar Pressure Sensitivity Curve & Deadzone Value: -1.0 Secondary Actions: Increase, Decrease Frame: {x: 391, y: 1191, width: 517, height: 18}
+											67 panel Hardware Buttons & Stroke Smoothing Frame: {x: 294, y: 1251, width: 640, height: 231}
+												68 label Primary barrel button: Frame: {x: 320, y: 1291, width: 289, height: 40}
+												69 combo box Right Click Secondary Actions: ShowMenu, Press Frame: {x: 619, y: 1291, width: 289, height: 40}
+													70 list QApplication.MainWindow.QWidget.QTabWidget.qt_tabwidget_stackedwidget.ProfilesTab.QSplitter.ProfileEditorPanel.QScrollArea.qt_scrollarea_viewport.QWidget.ButtonsSection.QComboBox.QComboBoxListView Secondary Actions: SetFocus
+														71 list item Left Click Secondary Actions: Toggle Frame: {x: -682, y: -423, width: 165, height: 24}
+														72 list item Right Click Secondary Actions: Toggle Frame: {x: -682, y: -399, width: 165, height: 24}
+														73 list item Middle Click Secondary Actions: Toggle Frame: {x: -682, y: -375, width: 165, height: 24}
+														74 list item Undo (Ctrl+Z) Secondary Actions: Toggle Frame: {x: -682, y: -351, width: 165, height: 24}
+														75 list item Disabled Secondary Actions: Toggle Frame: {x: -682, y: -327, width: 165, height: 24}
+												76 label Secondary Button: Frame: {x: 320, y: 1341, width: 289, height: 40}
+												77 combo box Middle Click Secondary Actions: ShowMenu, Press Frame: {x: 619, y: 1341, width: 289, height: 40}
+													78 list QApplication.MainWindow.QWidget.QTabWidget.qt_tabwidget_stackedwidget.ProfilesTab.QSplitter.ProfileEditorPanel.QScrollArea.qt_scrollarea_viewport.QWidget.ButtonsSection.QComboBox.QComboBoxListView Secondary Actions: SetFocus
+														79 list item Left Click Secondary Actions: Toggle Frame: {x: -682, y: -423, width: 165, height: 24}
+														80 list item Right Click Secondary Actions: Toggle Frame: {x: -682, y: -399, width: 165, height: 24}
+														81 list item Middle Click Secondary Actions: Toggle Frame: {x: -682, y: -375, width: 165, height: 24}
+														82 list item Undo (Ctrl+Z) Secondary Actions: Toggle Frame: {x: -682, y: -351, width: 165, height: 24}
+														83 list item Disabled Secondary Actions: Toggle Frame: {x: -682, y: -327, width: 165, height: 24}
+												84 label Smoothing Filter Strength: Frame: {x: 320, y: 1391, width: 289, height: 16}
+												85 label 0% Frame: {x: 619, y: 1391, width: 289, height: 16}
+												86 slider Stroke smoothing percent Value: 0.0 Secondary Actions: SetFocus, Increase, Decrease Frame: {x: 320, y: 1417, width: 588, height: 15}
+												87 label Filters coordinate noise and stabilizes lines for drawing or handwriting. Frame: {x: 320, y: 1442, width: 588, height: 14}
+											88 panel Screen Mapping Frame: {x: 294, y: 1498, width: 640, height: 512}
+												89 radio button Whole Virtual Desktop (spanning all screens) Secondary Actions: Toggle, SetFocus Frame: {x: 320, y: 1538, width: 588, height: 18}
+												90 radio button Single Monitor: Secondary Actions: Toggle, SetFocus Frame: {x: 320, y: 1566, width: 588, height: 18}
+												91 combo box HDMI-A-1 (1927x1084 at +0+0) Secondary Actions: ShowMenu, Press Frame: {x: 320, y: 1596, width: 500, height: 40}
+													92 list QApplication.MainWindow.QWidget.QTabWidget.qt_tabwidget_stackedwidget.ProfilesTab.QSplitter.ProfileEditorPanel.QScrollArea.qt_scrollarea_viewport.QWidget.MappingSection.QComboBox.QComboBoxListView Secondary Actions: SetFocus
+														93 list item HDMI-A-1 (1927x1084 at +0+0) Secondary Actions: Toggle Frame: {x: -682, y: -423, width: 165, height: 24}
+														94 list item eDP-1 (1676x943 at +143+1242) Secondary Actions: Toggle Frame: {x: -682, y: -399, width: 165, height: 24}
+												95 button Refresh Secondary Actions: Press, SetFocus Frame: {x: 830, y: 1594, width: 78, height: 44}
+												96 filler Monitor selection Secondary Actions: SetFocus Frame: {x: 320, y: 1648, width: 588, height: 180}
+												97 radio button Custom Rectangle: Secondary Actions: Toggle, SetFocus Frame: {x: 301, y: 1680, width: 588, height: 18}
+												98 panel Screen Mapping Frame: {x: 301, y: 1708, width: 588, height: 44}
+													99 check box Advanced: Exact Pixel Bounds Secondary Actions: Toggle, Press, SetFocus Frame: {x: 301, y: 1708, width: 588, height: 44}
+														100 label ▸ Frame: {x: 309, y: 1714, width: 12, height: 32}
+														101 label Advanced: Exact Pixel Bounds Frame: {x: 329, y: 1714, width: 191, height: 32}
+														102 label custom bounds: 0,0 1920x1080 Frame: {x: 718, y: 1714, width: 163, height: 32}
+													103 filler QApplication.MainWindow.QWidget.QTabWidget.qt_tabwidget_stackedwidget.ProfilesTab.QSplitter.ProfileEditorPanel.QScrollArea.qt_scrollarea_viewport.QWidget.MappingSection.CollapsibleBox.QWidget
+														104 label X:
+														105 spin button Mapping left coordinate Value: 0 Secondary Actions: SetFocus, Increase, Decrease
+														106 label Y:
+														107 spin button Mapping top coordinate Value: 0 Secondary Actions: SetFocus, Increase, Decrease
+														108 label Width:
+														109 spin button Mapping width Value: 1920 Secondary Actions: SetFocus, Increase, Decrease
+														110 label Height:
+														111 spin button Mapping height Value: 1080 Secondary Actions: SetFocus, Increase, Decrease
+												112 label Active Area: Entire Virtual Desktop (1927x2185) Frame: {x: 301, y: 1762, width: 588, height: 14}
+												113 check box Lock Aspect Ratio Secondary Actions: Toggle, Press, SetFocus Frame: {x: 301, y: 1797, width: 137, height: 18}
+												114 combo box 16:10 Secondary Actions: ShowMenu, Press Frame: {x: 448, y: 1786, width: 132, height: 40}
+													115 list QApplication.MainWindow.QWidget.QTabWidget.qt_tabwidget_stackedwidget.ProfilesTab.QSplitter.ProfileEditorPanel.QScrollArea.qt_scrollarea_viewport.QWidget.MappingSection.QComboBox.QComboBoxListView Secondary Actions: SetFocus
+														116 list item 16:10 Secondary Actions: Toggle Frame: {x: -682, y: -423, width: 165, height: 24}
+														117 list item 16:9 Secondary Actions: Toggle Frame: {x: -682, y: -399, width: 165, height: 24}
+														118 list item 4:3 Secondary Actions: Toggle Frame: {x: -682, y: -375, width: 165, height: 24}
+														119 list item 21:9 Secondary Actions: Toggle Frame: {x: -682, y: -351, width: 165, height: 24}
+														120 list item 3:2 Secondary Actions: Toggle Frame: {x: -682, y: -327, width: 165, height: 24}
+												121 label (applies to all profiles) Frame: {x: 590, y: 1786, width: 115, height: 40}
+									122 filler QApplication.MainWindow.QWidget.QTabWidget.qt_tabwidget_stackedwidget.ProfilesTab.QSplitter.ProfileEditorPanel.QScrollArea.qt_scrollarea_vcontainer Frame: {x: 919, y: 168, width: 14, height: 447}
+										123 scroll bar QApplication.MainWindow.QWidget.QTabWidget.qt_tabwidget_stackedwidget.ProfilesTab.QSplitter.ProfileEditorPanel.QScrollArea.qt_scrollarea_vcontainer.QScrollBar Value: 0.0 Secondary Actions: Increase, Decrease Frame: {x: 919, y: 168, width: 14, height: 447}
+							124 filler QApplication.MainWindow.QWidget.QTabWidget.qt_tabwidget_stackedwidget.ProfilesTab.QSplitter.ProfileListPanel Frame: {x: 27, y: 168, width: 240, height: 447}
+								125 check box Auto-switch by focused window Secondary Actions: Toggle, Press, SetFocus Frame: {x: 27, y: 168, width: 227, height: 18}
+								126 label Active Window: Detecting... Frame: {x: 27, y: 194, width: 240, height: 22}
+								127 list Profiles Secondary Actions: SetFocus Frame: {x: 27, y: 224, width: 240, height: 287}
+									128 list item Default Secondary Actions: Toggle Frame: {x: 33, y: 230, width: 228, height: 30}
+									129 list item osu! Secondary Actions: Toggle Frame: {x: 33, y: 260, width: 228, height: 30}
+									130 list item Krita Secondary Actions: Toggle Frame: {x: 33, y: 290, width: 228, height: 30}
+									131 list item Blender Secondary Actions: Toggle Frame: {x: 33, y: 320, width: 228, height: 30}
+								132 button + New Secondary Actions: Press, SetFocus Frame: {x: 27, y: 519, width: 116, height: 44}
+								133 button Duplicate Secondary Actions: Press, SetFocus Frame: {x: 151, y: 519, width: 116, height: 44}
+								134 button Delete Frame: {x: 27, y: 571, width: 240, height: 44}
+							135 unknown QApplication.MainWindow.QWidget.QTabWidget.qt_tabwidget_stackedwidget.ProfilesTab.QSplitter.qt_splithandle_
+							136 unknown QApplication.MainWindow.QWidget.QTabWidget.qt_tabwidget_stackedwidget.ProfilesTab.QSplitter.qt_splithandle_ Frame: {x: 267, y: 168, width: 4, height: 447}
+					137 filler QApplication.MainWindow.QWidget.QTabWidget.qt_tabwidget_stackedwidget.SystemTab
+						138 filler QApplication.MainWindow.QWidget.QTabWidget.qt_tabwidget_stackedwidget.SystemTab.QScrollArea Secondary Actions: SetFocus
+							139 filler QApplication.MainWindow.QWidget.QTabWidget.qt_tabwidget_stackedwidget.SystemTab.QScrollArea.qt_scrollarea_viewport
+								140 filler QApplication.MainWindow.QWidget.QTabWidget.qt_tabwidget_stackedwidget.SystemTab.QScrollArea.qt_scrollarea_viewport.QWidget
+									141 panel Quick Connect (Tablet Setup)
+										142 label Configured (server stopped): 127.0.0.1:40118
+										143 button Copy address Secondary Actions: Press, SetFocus
+										144 label Copy this address and the pairing details into the tablet Settings. USB uses 127.0.0.1.
+										145 button Pair Tablet Secondary Actions: Press, SetFocus
+										146 button Enable USB Mode (ADB) Secondary Actions: Press, SetFocus
+									147 panel System & Startup Preferences
+										148 label Port:
+										149 spin button Server port Value: 40118 Secondary Actions: SetFocus, Increase, Decrease
+										150 check box Allow paired Wi-Fi connections Secondary Actions: Toggle, Press, SetFocus
+										151 check box Auto-start server on app launch Secondary Actions: Toggle, Press, SetFocus
+										152 check box Auto-forward USB ADB on launch Secondary Actions: Toggle, Press, SetFocus
+										153 check box Minimize to tray on window close Secondary Actions: Toggle, Press, SetFocus
+										154 label Device Name:
+										155 text Virtual device name Value: Samsung S Pen Virtual Tablet Secondary Actions: SetFocus
+										156 label Detected desktop: 1927x2185
+										157 button Check / Setup uinput Permissions Secondary Actions: Press, SetFocus
+										158 button Install Desktop Launcher (.desktop) Secondary Actions: Press, SetFocus
+										159 button Reset All to Defaults Secondary Actions: Press, SetFocus
+						160 filler QApplication.MainWindow.QWidget.QTabWidget.qt_tabwidget_stackedwidget.SystemTab.QScrollArea Secondary Actions: SetFocus
+							161 filler QApplication.MainWindow.QWidget.QTabWidget.qt_tabwidget_stackedwidget.SystemTab.QScrollArea.qt_scrollarea_viewport
+								162 filler QApplication.MainWindow.QWidget.QTabWidget.qt_tabwidget_stackedwidget.SystemTab.QScrollArea.qt_scrollarea_viewport.QWidget
+									163 panel Live S Pen Input Diagnostics
+										164 label Pressure: 0 / 4095 (0%)
+										165 progress bar Live S Pen Input Diagnostics Value: -1.0 Secondary Actions: Increase, Decrease
+										166 label Position:
+										167 label 0.000, 0.000
+										168 label Tilt:
+										169 label 0.0°, 0.0°
+										170 label Traffic:
+										171 label 0 events/sec
+										172 label Hover
+										173 label Touch
+										174 label Barrel Btn
+										175 label Eraser
+										176 label Click: ON
+									177 panel Interactive Scratchpad
+										178 button Pen color #89b4fa Secondary Actions: Press, SetFocus
+										179 button Pen color #cba6f7 Secondary Actions: Press, SetFocus
+										180 button Pen color #a6e3a1 Secondary Actions: Press, SetFocus
+										181 button Pen color #f9e2af Secondary Actions: Press, SetFocus
+										182 button Pen color #f38ba8 Secondary Actions: Press, SetFocus
+										183 button Pen color #ffffff Secondary Actions: Press, SetFocus
+										184 button Test Stroke Secondary Actions: Press, SetFocus
+										185 button Clear Secondary Actions: Press, SetFocus
+										186 filler Interactive Scratchpad
+									187 panel QApplication.MainWindow.QWidget.QTabWidget.qt_tabwidget_stackedwidget.SystemTab.QScrollArea.qt_scrollarea_viewport.QWidget.CollapsibleBox
+										188 check box Server Logs Secondary Actions: Toggle, Press, SetFocus
+											189 label ▸
+											190 label Server Logs
+											191 label 0 lines
+										192 filler QApplication.MainWindow.QWidget.QTabWidget.qt_tabwidget_stackedwidget.SystemTab.QScrollArea.qt_scrollarea_viewport.QWidget.CollapsibleBox.QWidget
+											193 button Copy Secondary Actions: Press, SetFocus
+											194 button Clear Secondary Actions: Press, SetFocus
+											195 text QApplication.MainWindow.QWidget.QTabWidget.qt_tabwidget_stackedwidget.SystemTab.QScrollArea.qt_scrollarea_viewport.QWidget.CollapsibleBox.QWidget.QTextEdit Secondary Actions: SetFocus
+												196 filler QApplication.MainWindow.QWidget.QTabWidget.qt_tabwidget_stackedwidget.SystemTab.QScrollArea.qt_scrollarea_viewport.QWidget.CollapsibleBox.QWidget.QTextEdit.qt_scrollarea_viewport
+												197 filler QApplication.MainWindow.QWidget.QTabWidget.qt_tabwidget_stackedwidget.SystemTab.QScrollArea.qt_scrollarea_viewport.QWidget.CollapsibleBox.QWidget.QTextEdit.qt_scrollarea_hcontainer
+													198 scroll bar QApplication.MainWindow.QWidget.QTabWidget.qt_tabwidget_stackedwidget.SystemTab.QScrollArea.qt_scrollarea_viewport.QWidget.CollapsibleBox.QWidget.QTextEdit.qt_scrollarea_hcontainer.QScrollBar Value: 0.0 Secondary Actions: Increase, Decrease
+												199 filler QApplication.MainWindow.QWidget.QTabWidget.qt_tabwidget_stackedwidget.SystemTab.QScrollArea.qt_scrollarea_viewport.QWidget.CollapsibleBox.QWidget.QTextEdit.qt_scrollarea_vcontainer
+													200 scroll bar QApplication.MainWindow.QWidget.QTabWidget.qt_tabwidget_stackedwidget.SystemTab.QScrollArea.qt_scrollarea_viewport.QWidget.CollapsibleBox.QWidget.QTextEdit.qt_scrollarea_vcontainer.QScrollBar Value: 0.0 Secondary Actions: Increase, Decrease
+				201 page tab list Profiles Secondary Actions: SetFocus Frame: {x: 14, y: 120, width: 263, height: 36}
+					202 page tab Profiles Secondary Actions: Press Frame: {x: 14, y: 120, width: 88, height: 36}
+					203 page tab System & Diagnostics Secondary Actions: Press Frame: {x: 102, y: 120, width: 175, height: 36}
+					204 button Scroll Left
+					205 button Scroll Right
+
+The focused UI element is list item Default (Global).

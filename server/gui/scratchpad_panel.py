@@ -21,13 +21,14 @@ class ScratchpadPanel(QGroupBox):
         header = QHBoxLayout()
         for col_hex in SWATCH_COLORS:
             btn_col = QPushButton()
-            btn_col.setFixedSize(18, 18)
+            btn_col.setFixedSize(24, 24)
+            btn_col.setAccessibleName(f"Pen color {col_hex}")
             btn_col.setStyleSheet(f"background-color: {col_hex}; border-radius: 9px; border: 1px solid #585b70;")
             btn_col.clicked.connect(lambda _checked, c=col_hex: self.scratchpad.set_pen_color(QColor(c)))
             header.addWidget(btn_col)
 
         header.addStretch()
-        btn_synthetic = QPushButton("Test Stroke")
+        self.btn_synthetic = btn_synthetic = QPushButton("Test Stroke")
         btn_synthetic.clicked.connect(self._on_test_stroke)
         header.addWidget(btn_synthetic)
 

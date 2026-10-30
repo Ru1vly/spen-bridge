@@ -1,0 +1,521 @@
+{
+  "meta": {
+    "format": 3,
+    "version": "7.17.0",
+    "timestamp": "2026-10-26T18:54:53.271536",
+    "branch_coverage": false,
+    "show_contexts": false
+  },
+  "totals": {
+    "covered_lines": 2188,
+    "num_statements": 3631,
+    "percent_covered": 60.25888185072983,
+    "percent_covered_display": "60",
+    "missing_lines": 1443,
+    "excluded_lines": 0,
+    "percent_statements_covered": 60.25888185072983,
+    "percent_statements_covered_display": "60"
+  },
+  "files": {
+    "server/__init__.py": {
+      "covered_lines": 0,
+      "num_statements": 0,
+      "percent_covered": 100.0,
+      "percent_covered_display": "100",
+      "missing_lines": 0,
+      "excluded_lines": 0,
+      "percent_statements_covered": 100.0,
+      "percent_statements_covered_display": "100"
+    },
+    "server/backends/__init__.py": {
+      "covered_lines": 3,
+      "num_statements": 3,
+      "percent_covered": 100.0,
+      "percent_covered_display": "100",
+      "missing_lines": 0,
+      "excluded_lines": 0,
+      "percent_statements_covered": 100.0,
+      "percent_statements_covered_display": "100"
+    },
+    "server/backends/base.py": {
+      "covered_lines": 82,
+      "num_statements": 96,
+      "percent_covered": 85.41666666666667,
+      "percent_covered_display": "85",
+      "missing_lines": 14,
+      "excluded_lines": 0,
+      "percent_statements_covered": 85.41666666666667,
+      "percent_statements_covered_display": "85"
+    },
+    "server/backends/factory.py": {
+      "covered_lines": 11,
+      "num_statements": 11,
+      "percent_covered": 100.0,
+      "percent_covered_display": "100",
+      "missing_lines": 0,
+      "excluded_lines": 0,
+      "percent_statements_covered": 100.0,
+      "percent_statements_covered_display": "100"
+    },
+    "server/backends/linux_uinput.py": {
+      "covered_lines": 0,
+      "num_statements": 175,
+      "percent_covered": 0.0,
+      "percent_covered_display": "0",
+      "missing_lines": 175,
+      "excluded_lines": 0,
+      "percent_statements_covered": 0.0,
+      "percent_statements_covered_display": "0"
+    },
+    "server/backends/windows_hid.py": {
+      "covered_lines": 87,
+      "num_statements": 92,
+      "percent_covered": 94.56521739130434,
+      "percent_covered_display": "95",
+      "missing_lines": 5,
+      "excluded_lines": 0,
+      "percent_statements_covered": 94.56521739130434,
+      "percent_statements_covered_display": "95"
+    },
+    "server/backends/windows_report.py": {
+      "covered_lines": 12,
+      "num_statements": 12,
+      "percent_covered": 100.0,
+      "percent_covered_display": "100",
+      "missing_lines": 0,
+      "excluded_lines": 0,
+      "percent_statements_covered": 100.0,
+      "percent_statements_covered_display": "100"
+    },
+    "server/backends/windows_transport.py": {
+      "covered_lines": 49,
+      "num_statements": 52,
+      "percent_covered": 94.23076923076923,
+      "percent_covered_display": "94",
+      "missing_lines": 3,
+      "excluded_lines": 0,
+      "percent_statements_covered": 94.23076923076923,
+      "percent_statements_covered_display": "94"
+    },
+    "server/config.py": {
+      "covered_lines": 176,
+      "num_statements": 233,
+      "percent_covered": 75.53648068669528,
+      "percent_covered_display": "76",
+      "missing_lines": 57,
+      "excluded_lines": 0,
+      "percent_statements_covered": 75.53648068669528,
+      "percent_statements_covered_display": "76"
+    },
+    "server/gui/__init__.py": {
+      "covered_lines": 4,
+      "num_statements": 4,
+      "percent_covered": 100.0,
+      "percent_covered_display": "100",
+      "missing_lines": 0,
+      "excluded_lines": 0,
+      "percent_statements_covered": 100.0,
+      "percent_statements_covered_display": "100"
+    },
+    "server/gui/app.py": {
+      "covered_lines": 6,
+      "num_statements": 14,
+      "percent_covered": 42.857142857142854,
+      "percent_covered_display": "43",
+      "missing_lines": 8,
+      "excluded_lines": 0,
+      "percent_statements_covered": 42.857142857142854,
+      "percent_statements_covered_display": "43"
+    },
+    "server/gui/connection_panel.py": {
+      "covered_lines": 46,
+      "num_statements": 62,
+      "percent_covered": 74.19354838709677,
+      "percent_covered_display": "74",
+      "missing_lines": 16,
+      "excluded_lines": 0,
+      "percent_statements_covered": 74.19354838709677,
+      "percent_statements_covered_display": "74"
+    },
+    "server/gui/diagnostics_panel.py": {
+      "covered_lines": 39,
+      "num_statements": 51,
+      "percent_covered": 76.47058823529412,
+      "percent_covered_display": "76",
+      "missing_lines": 12,
+      "excluded_lines": 0,
+      "percent_statements_covered": 76.47058823529412,
+      "percent_statements_covered_display": "76"
+    },
+    "server/gui/dialogs.py": {
+      "covered_lines": 7,
+      "num_statements": 55,
+      "percent_covered": 12.727272727272727,
+      "percent_covered_display": "13",
+      "missing_lines": 48,
+      "excluded_lines": 0,
+      "percent_statements_covered": 12.727272727272727,
+      "percent_statements_covered_display": "13"
+    },
+    "server/gui/header_bar.py": {
+      "covered_lines": 58,
+      "num_statements": 80,
+      "percent_covered": 72.5,
+      "percent_covered_display": "72",
+      "missing_lines": 22,
+      "excluded_lines": 0,
+      "percent_statements_covered": 72.5,
+      "percent_statements_covered_display": "72"
+    },
+    "server/gui/log_panel.py": {
+      "covered_lines": 23,
+      "num_statements": 30,
+      "percent_covered": 76.66666666666667,
+      "percent_covered_display": "77",
+      "missing_lines": 7,
+      "excluded_lines": 0,
+      "percent_statements_covered": 76.66666666666667,
+      "percent_statements_covered_display": "77"
+    },
+    "server/gui/main_window.py": {
+      "covered_lines": 173,
+      "num_statements": 326,
+      "percent_covered": 53.06748466257669,
+      "percent_covered_display": "53",
+      "missing_lines": 153,
+      "excluded_lines": 0,
+      "percent_statements_covered": 53.06748466257669,
+      "percent_statements_covered_display": "53"
+    },
+    "server/gui/network_info.py": {
+      "covered_lines": 12,
+      "num_statements": 22,
+      "percent_covered": 54.54545454545455,
+      "percent_covered_display": "55",
+      "missing_lines": 10,
+      "excluded_lines": 0,
+      "percent_statements_covered": 54.54545454545455,
+      "percent_statements_covered_display": "55"
+    },
+    "server/gui/profile_editor_panel.py": {
+      "covered_lines": 57,
+      "num_statements": 64,
+      "percent_covered": 89.0625,
+      "percent_covered_display": "89",
+      "missing_lines": 7,
+      "excluded_lines": 0,
+      "percent_statements_covered": 89.0625,
+      "percent_statements_covered_display": "89"
+    },
+    "server/gui/profile_list_panel.py": {
+      "covered_lines": 114,
+      "num_statements": 122,
+      "percent_covered": 93.44262295081967,
+      "percent_covered_display": "93",
+      "missing_lines": 8,
+      "excluded_lines": 0,
+      "percent_statements_covered": 93.44262295081967,
+      "percent_statements_covered_display": "93"
+    },
+    "server/gui/profile_sections/__init__.py": {
+      "covered_lines": 0,
+      "num_statements": 0,
+      "percent_covered": 100.0,
+      "percent_covered_display": "100",
+      "missing_lines": 0,
+      "excluded_lines": 0,
+      "percent_statements_covered": 100.0,
+      "percent_statements_covered_display": "100"
+    },
+    "server/gui/profile_sections/buttons_section.py": {
+      "covered_lines": 70,
+      "num_statements": 79,
+      "percent_covered": 88.60759493670886,
+      "percent_covered_display": "89",
+      "missing_lines": 9,
+      "excluded_lines": 0,
+      "percent_statements_covered": 88.60759493670886,
+      "percent_statements_covered_display": "89"
+    },
+    "server/gui/profile_sections/device_section.py": {
+      "covered_lines": 54,
+      "num_statements": 67,
+      "percent_covered": 80.59701492537313,
+      "percent_covered_display": "81",
+      "missing_lines": 13,
+      "excluded_lines": 0,
+      "percent_statements_covered": 80.59701492537313,
+      "percent_statements_covered_display": "81"
+    },
+    "server/gui/profile_sections/identity_section.py": {
+      "covered_lines": 50,
+      "num_statements": 70,
+      "percent_covered": 71.42857142857143,
+      "percent_covered_display": "71",
+      "missing_lines": 20,
+      "excluded_lines": 0,
+      "percent_statements_covered": 71.42857142857143,
+      "percent_statements_covered_display": "71"
+    },
+    "server/gui/profile_sections/mapping_section.py": {
+      "covered_lines": 139,
+      "num_statements": 204,
+      "percent_covered": 68.13725490196079,
+      "percent_covered_display": "68",
+      "missing_lines": 65,
+      "excluded_lines": 0,
+      "percent_statements_covered": 68.13725490196079,
+      "percent_statements_covered_display": "68"
+    },
+    "server/gui/profile_sections/pressure_section.py": {
+      "covered_lines": 101,
+      "num_statements": 131,
+      "percent_covered": 77.09923664122137,
+      "percent_covered_display": "77",
+      "missing_lines": 30,
+      "excluded_lines": 0,
+      "percent_statements_covered": 77.09923664122137,
+      "percent_statements_covered_display": "77"
+    },
+    "server/gui/profiles_tab.py": {
+      "covered_lines": 25,
+      "num_statements": 25,
+      "percent_covered": 100.0,
+      "percent_covered_display": "100",
+      "missing_lines": 0,
+      "excluded_lines": 0,
+      "percent_statements_covered": 100.0,
+      "percent_statements_covered_display": "100"
+    },
+    "server/gui/scratchpad_panel.py": {
+      "covered_lines": 30,
+      "num_statements": 32,
+      "percent_covered": 93.75,
+      "percent_covered_display": "94",
+      "missing_lines": 2,
+      "excluded_lines": 0,
+      "percent_statements_covered": 93.75,
+      "percent_statements_covered_display": "94"
+    },
+    "server/gui/server_worker.py": {
+      "covered_lines": 48,
+      "num_statements": 103,
+      "percent_covered": 46.601941747572816,
+      "percent_covered_display": "47",
+      "missing_lines": 55,
+      "excluded_lines": 0,
+      "percent_statements_covered": 46.601941747572816,
+      "percent_statements_covered_display": "47"
+    },
+    "server/gui/startup_panel.py": {
+      "covered_lines": 73,
+      "num_statements": 111,
+      "percent_covered": 65.76576576576576,
+      "percent_covered_display": "66",
+      "missing_lines": 38,
+      "excluded_lines": 0,
+      "percent_statements_covered": 65.76576576576576,
+      "percent_statements_covered_display": "66"
+    },
+    "server/gui/state.py": {
+      "covered_lines": 15,
+      "num_statements": 16,
+      "percent_covered": 93.75,
+      "percent_covered_display": "94",
+      "missing_lines": 1,
+      "excluded_lines": 0,
+      "percent_statements_covered": 93.75,
+      "percent_statements_covered_display": "94"
+    },
+    "server/gui/system_tab.py": {
+      "covered_lines": 42,
+      "num_statements": 42,
+      "percent_covered": 100.0,
+      "percent_covered_display": "100",
+      "missing_lines": 0,
+      "excluded_lines": 0,
+      "percent_statements_covered": 100.0,
+      "percent_statements_covered_display": "100"
+    },
+    "server/gui/theme.py": {
+      "covered_lines": 36,
+      "num_statements": 36,
+      "percent_covered": 100.0,
+      "percent_covered_display": "100",
+      "missing_lines": 0,
+      "excluded_lines": 0,
+      "percent_statements_covered": 100.0,
+      "percent_statements_covered_display": "100"
+    },
+    "server/gui/tray.py": {
+      "covered_lines": 24,
+      "num_statements": 34,
+      "percent_covered": 70.58823529411765,
+      "percent_covered_display": "71",
+      "missing_lines": 10,
+      "excluded_lines": 0,
+      "percent_statements_covered": 70.58823529411765,
+      "percent_statements_covered_display": "71"
+    },
+    "server/gui/widgets/__init__.py": {
+      "covered_lines": 0,
+      "num_statements": 0,
+      "percent_covered": 100.0,
+      "percent_covered_display": "100",
+      "missing_lines": 0,
+      "excluded_lines": 0,
+      "percent_statements_covered": 100.0,
+      "percent_statements_covered_display": "100"
+    },
+    "server/gui/widgets/chip_input.py": {
+      "covered_lines": 100,
+      "num_statements": 144,
+      "percent_covered": 69.44444444444444,
+      "percent_covered_display": "69",
+      "missing_lines": 44,
+      "excluded_lines": 0,
+      "percent_statements_covered": 69.44444444444444,
+      "percent_statements_covered_display": "69"
+    },
+    "server/gui/widgets/collapsible_box.py": {
+      "covered_lines": 51,
+      "num_statements": 58,
+      "percent_covered": 87.93103448275862,
+      "percent_covered_display": "88",
+      "missing_lines": 7,
+      "excluded_lines": 0,
+      "percent_statements_covered": 87.93103448275862,
+      "percent_statements_covered_display": "88"
+    },
+    "server/gui/widgets/pill_badge.py": {
+      "covered_lines": 13,
+      "num_statements": 13,
+      "percent_covered": 100.0,
+      "percent_covered_display": "100",
+      "missing_lines": 0,
+      "excluded_lines": 0,
+      "percent_statements_covered": 100.0,
+      "percent_statements_covered_display": "100"
+    },
+    "server/main.py": {
+      "covered_lines": 0,
+      "num_statements": 94,
+      "percent_covered": 0.0,
+      "percent_covered_display": "0",
+      "missing_lines": 94,
+      "excluded_lines": 0,
+      "percent_statements_covered": 0.0,
+      "percent_statements_covered_display": "0"
+    },
+    "server/monitors.py": {
+      "covered_lines": 46,
+      "num_statements": 99,
+      "percent_covered": 46.464646464646464,
+      "percent_covered_display": "46",
+      "missing_lines": 53,
+      "excluded_lines": 0,
+      "percent_statements_covered": 46.464646464646464,
+      "percent_statements_covered_display": "46"
+    },
+    "server/protocol.py": {
+      "covered_lines": 50,
+      "num_statements": 52,
+      "percent_covered": 96.15384615384616,
+      "percent_covered_display": "96",
+      "missing_lines": 2,
+      "excluded_lines": 0,
+      "percent_statements_covered": 96.15384615384616,
+      "percent_statements_covered_display": "96"
+    },
+    "server/server.py": {
+      "covered_lines": 97,
+      "num_statements": 152,
+      "percent_covered": 63.81578947368421,
+      "percent_covered_display": "64",
+      "missing_lines": 55,
+      "excluded_lines": 0,
+      "percent_statements_covered": 63.81578947368421,
+      "percent_statements_covered_display": "64"
+    },
+    "server/test_synthetic.py": {
+      "covered_lines": 11,
+      "num_statements": 59,
+      "percent_covered": 18.64406779661017,
+      "percent_covered_display": "19",
+      "missing_lines": 48,
+      "excluded_lines": 0,
+      "percent_statements_covered": 18.64406779661017,
+      "percent_statements_covered_display": "19"
+    },
+    "server/widgets/__init__.py": {
+      "covered_lines": 0,
+      "num_statements": 0,
+      "percent_covered": 100.0,
+      "percent_covered_display": "100",
+      "missing_lines": 0,
+      "excluded_lines": 0,
+      "percent_statements_covered": 100.0,
+      "percent_statements_covered_display": "100"
+    },
+    "server/widgets/monitor_layout.py": {
+      "covered_lines": 28,
+      "num_statements": 91,
+      "percent_covered": 30.76923076923077,
+      "percent_covered_display": "31",
+      "missing_lines": 63,
+      "excluded_lines": 0,
+      "percent_statements_covered": 30.76923076923077,
+      "percent_statements_covered_display": "31"
+    },
+    "server/widgets/pressure_curve.py": {
+      "covered_lines": 35,
+      "num_statements": 117,
+      "percent_covered": 29.914529914529915,
+      "percent_covered_display": "30",
+      "missing_lines": 82,
+      "excluded_lines": 0,
+      "percent_statements_covered": 29.914529914529915,
+      "percent_statements_covered_display": "30"
+    },
+    "server/widgets/scratchpad.py": {
+      "covered_lines": 31,
+      "num_statements": 141,
+      "percent_covered": 21.98581560283688,
+      "percent_covered_display": "22",
+      "missing_lines": 110,
+      "excluded_lines": 0,
+      "percent_statements_covered": 21.98581560283688,
+      "percent_statements_covered_display": "22"
+    },
+    "server/window_watcher.py": {
+      "covered_lines": 30,
+      "num_statements": 38,
+      "percent_covered": 78.94736842105263,
+      "percent_covered_display": "79",
+      "missing_lines": 8,
+      "excluded_lines": 0,
+      "percent_statements_covered": 78.94736842105263,
+      "percent_statements_covered_display": "79"
+    },
+    "server/window_watcher_linux.py": {
+      "covered_lines": 30,
+      "num_statements": 70,
+      "percent_covered": 42.857142857142854,
+      "percent_covered_display": "43",
+      "missing_lines": 40,
+      "excluded_lines": 0,
+      "percent_statements_covered": 42.857142857142854,
+      "percent_statements_covered_display": "43"
+    },
+    "server/window_watcher_windows.py": {
+      "covered_lines": 0,
+      "num_statements": 49,
+      "percent_covered": 0.0,
+      "percent_covered_display": "0",
+      "missing_lines": 49,
+      "excluded_lines": 0,
+      "percent_statements_covered": 0.0,
+      "percent_statements_covered_display": "0"
+    }
+  }
+}

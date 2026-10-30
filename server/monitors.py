@@ -30,7 +30,7 @@ def get_monitors_from_xrandr() -> List[Dict[str, Any]]:
 
         # Example matching: eDP-1 connected primary 1920x1080+0+1080 or HDMI-A-1 connected 1920x1080+0+0
         pattern = re.compile(
-            r"^(\S+)\s+connected\s+(primary\s+)?(\d+)x(\d+)\+(\d+)\+(\d+)"
+            r"^(\S+)\s+connected\s+(primary\s+)?(\d+)x(\d+)([+-]\d+)([+-]\d+)"
         )
         for line in res.stdout.splitlines():
             m = pattern.match(line)

@@ -11,11 +11,14 @@ before a real Windows backend exists (see server.backends.factory).
 
 import logging
 import time
+import threading
+from dataclasses import replace
 from typing import Optional
 
 import evdev
 from evdev import ecodes as e
 
+from server.button_actions import validate_actions
 from server.backends.base import (
     ABS_MAX_COORDINATE,
     ABS_MAX_PRESSURE,
@@ -25,8 +28,7 @@ from server.backends.base import (
 )
 from server.protocol import (
     PenEvent,
-    ACTION_HOVER_MOVE,
-    ACTION_HOVER_ENTER,
+    valid_event,
     ACTION_HOVER_EXIT,
     ACTION_DOWN,
     ACTION_MOVE,
@@ -45,6 +47,14 @@ class LinuxUinputTablet(TabletBackendBase):
     """Emulates a drawing tablet / pointer via /dev/uinput."""
 
     def __init__(self, **kwargs):
+        validate_actions("linux", kwargs.get("mode", "pointer"),
+                         kwargs.get("button_primary", "right_click"), kwargs.get("button_secondary", "middle_click"))
+        self._lock = threading.RLock()
+        self._shortcut_device = None
+        self._held_codes = set()
+        self._eraser_latched = False
+        self._last_event = PenEvent(ACTION_CANCEL, TOOL_STYLUS, 0, 0, 0, 0)
+        self._last_position = (0, 0)
         self.uinput: Optional[evdev.UInput] = None
         self._is_in_proximity = False
         self._active_tool = TOOL_STYLUS
@@ -78,6 +88,10 @@ class LinuxUinputTablet(TabletBackendBase):
                 e.BTN_TOUCH,
             ]
 
+        # Register every supported output up front. Tablet mode still includes
+        # BTN_TOOL_PEN, preserving tablet classification; pointer mode omits it.
+        key_codes = sorted(set(key_codes + [e.BTN_LEFT, e.BTN_RIGHT, e.BTN_MIDDLE,
+                                           e.BTN_STYLUS, e.BTN_STYLUS2]))
         capabilities = {
             e.EV_KEY: key_codes,
             e.EV_ABS: [
@@ -163,180 +177,158 @@ class LinuxUinputTablet(TabletBackendBase):
             return e.BTN_LEFT
         return None
 
+    def update_settings(self, **kwargs):
+        with self._lock:
+            self._validate_settings(kwargs)
+            validate_actions("linux", self.mode, kwargs.get("button_primary", self.button_primary),
+                             kwargs.get("button_secondary", self.button_secondary))
+            if any(key in kwargs and kwargs[key] != getattr(self, key)
+                   for key in ("button_primary", "button_secondary", "click_on_touch")):
+                self.reset()
+            super().update_settings(**kwargs)
+
+    def _button_code(self, action):
+        if action == "stylus":
+            return e.BTN_STYLUS
+        if action == "stylus2":
+            return e.BTN_STYLUS2
+        if self.mode == "tablet":
+            # Native tablet bindings: primary/secondary switches conventionally
+            # implement context menu/pan; left click is a shared tip source.
+            return {"right_click": e.BTN_STYLUS, "middle_click": e.BTN_STYLUS2,
+                    "left_click": e.BTN_TOUCH}.get(action)
+        return self._get_button_code(action)
+
+    def _undo(self):
+        if self._shortcut_device is None:
+            self._shortcut_device = evdev.UInput(
+                {e.EV_KEY: [e.KEY_LEFTCTRL, e.KEY_Z]}, name=f"{self.name} Shortcuts")
+        try:
+            for code in (e.KEY_LEFTCTRL, e.KEY_Z):
+                self._shortcut_device.write(e.EV_KEY, code, 1)
+            self._shortcut_device.syn()
+        finally:
+            for code in (e.KEY_Z, e.KEY_LEFTCTRL):
+                self._shortcut_device.write(e.EV_KEY, code, 0)
+            self._shortcut_device.syn()
+
+    def _write_buttons(self, desired):
+        for code in sorted(self._held_codes - desired):
+            self.uinput.write(e.EV_KEY, code, 0)
+        for code in sorted(desired - self._held_codes):
+            self.uinput.write(e.EV_KEY, code, 1)
+        self._held_codes = desired
+
     def handle_event(self, ev: PenEvent):
-        """Process a PenEvent and write corresponding evdev events."""
-        if self.uinput is None:
-            return
-
-        # Stroke smoothing logic. Only ACTION_MOVE (an actual drawn stroke) is
-        # ever smoothed. Every other action - DOWN, UP, CANCEL, and critically
-        # HOVER_ENTER/HOVER_MOVE (hovering to position the cursor before
-        # touching down) - tracks the raw position directly. Without this,
-        # hover events matched none of the branches here, so the smoothed
-        # coordinate stayed frozen at wherever it was last set (e.g. the end
-        # of the previous stroke) for as long as the pen was only hovering -
-        # the cursor would not follow the pen at all while hovering, then
-        # suddenly jump to the real position the moment it touched down.
-        if self.stroke_smoothing > 0.0 and ev.action == ACTION_MOVE:
-            if self._smooth_x is None:
+        with self._lock:
+            if self.uinput is None or not valid_event(ev):
+                return
+            if ev.action in (ACTION_CANCEL, ACTION_HOVER_EXIT):
+                self.reset(event=ev)
+                return
+            self._last_event = ev
+            if self.stroke_smoothing > 0 and ev.action == ACTION_MOVE and self._smooth_x is not None:
+                alpha = 1 - self.stroke_smoothing
+                self._smooth_x += alpha * (ev.x - self._smooth_x)
+                self._smooth_y += alpha * (ev.y - self._smooth_y)
+            else:
                 self._smooth_x, self._smooth_y = ev.x, ev.y
-            else:
-                alpha = 1.0 - self.stroke_smoothing
-                self._smooth_x = alpha * ev.x + (1.0 - alpha) * self._smooth_x
-                self._smooth_y = alpha * ev.y + (1.0 - alpha) * self._smooth_y
-            coord_x, coord_y = self._smooth_x, self._smooth_y
-        else:
-            self._smooth_x, self._smooth_y = ev.x, ev.y
-            coord_x, coord_y = ev.x, ev.y
-
-        abs_x, abs_y = self._map_coordinates(coord_x, coord_y)
-        pressure_val = self.calibrate_pressure(ev.pressure)
-        tilt_x = int(max(TILT_MIN, min(TILT_MAX, ev.tilt_x)))
-        tilt_y = int(max(TILT_MIN, min(TILT_MAX, ev.tilt_y)))
-
-        is_tablet_mode = (self.mode == "tablet")
-
-        # Barrel Button state
-        has_stylus_btn = bool(ev.buttons & BUTTON_STYLUS)
-        if has_stylus_btn != self._button_stylus_pressed:
-            if is_tablet_mode:
-                self.uinput.write(e.EV_KEY, e.BTN_STYLUS, 1 if has_stylus_btn else 0)
-            else:
-                code = self._get_button_code(self.button_primary)
-                if code is not None:
-                    self.uinput.write(e.EV_KEY, code, 1 if has_stylus_btn else 0)
-            self._button_stylus_pressed = has_stylus_btn
-
-        has_stylus2_btn = bool(ev.buttons & BUTTON_STYLUS2)
-        if has_stylus2_btn != self._button_stylus2_pressed:
-            if is_tablet_mode:
-                self.uinput.write(e.EV_KEY, e.BTN_STYLUS2, 1 if has_stylus2_btn else 0)
-            else:
-                code = self._get_button_code(self.button_secondary)
-                if code is not None:
-                    self.uinput.write(e.EV_KEY, code, 1 if has_stylus2_btn else 0)
-            self._button_stylus2_pressed = has_stylus2_btn
-
-        # Tablet tool proximity management (ONLY in tablet mode)
-        if is_tablet_mode:
-            tool_code = e.BTN_TOOL_RUBBER if ev.tool_type == TOOL_ERASER else e.BTN_TOOL_PEN
-            if not self._is_in_proximity or self._active_tool != ev.tool_type:
-                if self._is_in_proximity and self._active_tool != ev.tool_type:
+            abs_x, abs_y = self._map_coordinates(self._smooth_x, self._smooth_y)
+            self._last_position = abs_x, abs_y
+            desired = set()
+            for mask, action, old_pressed in (
+                (BUTTON_STYLUS, self.button_primary, self._button_stylus_pressed),
+                (BUTTON_STYLUS2, self.button_secondary, self._button_stylus2_pressed),
+            ):
+                pressed = bool(ev.buttons & mask)
+                if pressed and not old_pressed:
+                    if action == "eraser":
+                        self._eraser_latched = not self._eraser_latched
+                    elif action == "undo":
+                        self._undo()
+                if pressed:
+                    code = self._button_code(action)
+                    if code is not None:
+                        desired.add(code)
+            self._button_stylus_pressed = bool(ev.buttons & BUTTON_STYLUS)
+            self._button_stylus2_pressed = bool(ev.buttons & BUTTON_STYLUS2)
+            self._is_down = ev.action in (ACTION_DOWN, ACTION_MOVE)
+            if self._is_down and self.click_on_touch:
+                desired.add(e.BTN_TOUCH)
+                if self.mode != "tablet":
+                    desired.add(e.BTN_LEFT)
+            # Position precedes the contact edge in each synchronized frame.
+            self.uinput.write(e.EV_ABS, e.ABS_X, abs_x)
+            self.uinput.write(e.EV_ABS, e.ABS_Y, abs_y)
+            effective_tool = TOOL_ERASER if ev.tool_type == TOOL_ERASER or self._eraser_latched else TOOL_STYLUS
+            if self.mode == "tablet":
+                if self._is_in_proximity and self._active_tool != effective_tool:
                     old_code = e.BTN_TOOL_RUBBER if self._active_tool == TOOL_ERASER else e.BTN_TOOL_PEN
                     self.uinput.write(e.EV_KEY, old_code, 0)
-                self.uinput.write(e.EV_KEY, tool_code, 1)
+                if not self._is_in_proximity or self._active_tool != effective_tool:
+                    self.uinput.write(e.EV_KEY, e.BTN_TOOL_RUBBER if effective_tool == TOOL_ERASER else e.BTN_TOOL_PEN, 1)
+                self._active_tool = effective_tool
                 self._is_in_proximity = True
-                self._active_tool = ev.tool_type
+            pressure = self.calibrate_pressure(ev.pressure) if self._is_down else 0
+            if e.BTN_TOUCH in desired:
+                pressure = max(1, pressure)
+            self.uinput.write(e.EV_ABS, e.ABS_PRESSURE, pressure)
+            self.uinput.write(e.EV_ABS, e.ABS_TILT_X, int(ev.tilt_x))
+            self.uinput.write(e.EV_ABS, e.ABS_TILT_Y, int(ev.tilt_y))
+            self._write_buttons(desired)
+            self.uinput.syn()
+            if ev.action == ACTION_UP:
+                self._smooth_x = self._smooth_y = None
+            self._notify(replace(ev, tool_type=effective_tool), pressure)
 
-        # Action Handling
-        if ev.action in (ACTION_HOVER_MOVE, ACTION_HOVER_ENTER):
-            if self._is_down:
-                self.uinput.write(e.EV_ABS, e.ABS_PRESSURE, 0)
-                if self.click_on_touch:
-                    self.uinput.write(e.EV_KEY, e.BTN_TOUCH, 0)
-                    if not is_tablet_mode:
-                        self.uinput.write(e.EV_KEY, e.BTN_LEFT, 0)
-                self._is_down = False
-
-            self.uinput.write(e.EV_ABS, e.ABS_X, abs_x)
-            self.uinput.write(e.EV_ABS, e.ABS_Y, abs_y)
-            self.uinput.write(e.EV_ABS, e.ABS_PRESSURE, 0)
-            self.uinput.write(e.EV_ABS, e.ABS_TILT_X, tilt_x)
-            self.uinput.write(e.EV_ABS, e.ABS_TILT_Y, tilt_y)
-
-        elif ev.action == ACTION_DOWN:
-            self.uinput.write(e.EV_ABS, e.ABS_X, abs_x)
-            self.uinput.write(e.EV_ABS, e.ABS_Y, abs_y)
-            self.uinput.write(e.EV_ABS, e.ABS_PRESSURE, max(1, pressure_val))
-            self.uinput.write(e.EV_ABS, e.ABS_TILT_X, tilt_x)
-            self.uinput.write(e.EV_ABS, e.ABS_TILT_Y, tilt_y)
-            if self.click_on_touch:
-                self.uinput.write(e.EV_KEY, e.BTN_TOUCH, 1)
-                if not is_tablet_mode:
-                    self.uinput.write(e.EV_KEY, e.BTN_LEFT, 1)
-            self._is_down = True
-
-        elif ev.action == ACTION_MOVE:
-            self.uinput.write(e.EV_ABS, e.ABS_X, abs_x)
-            self.uinput.write(e.EV_ABS, e.ABS_Y, abs_y)
-            self.uinput.write(e.EV_ABS, e.ABS_PRESSURE, pressure_val)
-            self.uinput.write(e.EV_ABS, e.ABS_TILT_X, tilt_x)
-            self.uinput.write(e.EV_ABS, e.ABS_TILT_Y, tilt_y)
-            if self.click_on_touch:
-                if not self._is_down and pressure_val > 0:
-                    self.uinput.write(e.EV_KEY, e.BTN_TOUCH, 1)
-                    if not is_tablet_mode:
-                        self.uinput.write(e.EV_KEY, e.BTN_LEFT, 1)
-                    self._is_down = True
-
-        elif ev.action in (ACTION_UP, ACTION_CANCEL):
-            self.uinput.write(e.EV_ABS, e.ABS_PRESSURE, 0)
-            if self.click_on_touch:
-                self.uinput.write(e.EV_KEY, e.BTN_TOUCH, 0)
-                if not is_tablet_mode:
-                    self.uinput.write(e.EV_KEY, e.BTN_LEFT, 0)
-            self._is_down = False
-            self._smooth_x = None
-            self._smooth_y = None
-
-        elif ev.action == ACTION_HOVER_EXIT:
-            if self._is_down:
-                self.uinput.write(e.EV_ABS, e.ABS_PRESSURE, 0)
-                if self.click_on_touch:
-                    self.uinput.write(e.EV_KEY, e.BTN_TOUCH, 0)
-                    if not is_tablet_mode:
-                        self.uinput.write(e.EV_KEY, e.BTN_LEFT, 0)
-                self._is_down = False
-            if is_tablet_mode:
-                tool_code = e.BTN_TOOL_RUBBER if self._active_tool == TOOL_ERASER else e.BTN_TOOL_PEN
-                self.uinput.write(e.EV_KEY, tool_code, 0)
-                self._is_in_proximity = False
-            self._smooth_x = None
-            self._smooth_y = None
-
-        self.uinput.syn()
-
-        # Invoke live callback for UI monitoring
+    def _notify(self, event, pressure):
         if self.on_event_processed:
             try:
-                self.on_event_processed(ev, pressure_val, abs_x, abs_y)
+                self.on_event_processed(event, pressure, *self._last_position)
             except Exception:
-                pass
+                logger.debug("Pen monitoring callback failed", exc_info=True)
 
     def _release_touch(self):
-        """Release BTN_TOUCH/BTN_LEFT without touching self._is_down (matches
-        the original VirtualTablet.update_settings behavior exactly - the
-        caller in TabletBackendBase.update_settings is responsible for that)."""
-        if not self.uinput:
-            return
-        self.uinput.write(e.EV_KEY, e.BTN_TOUCH, 0)
-        if self.mode != "tablet":
-            self.uinput.write(e.EV_KEY, e.BTN_LEFT, 0)
-        self.uinput.syn()
+        with self._lock:
+            if self.uinput is not None:
+                self._write_buttons(self._held_codes - {e.BTN_TOUCH, e.BTN_LEFT})
+                self.uinput.write(e.EV_ABS, e.ABS_PRESSURE, 0)
+                self.uinput.syn()
+            self._is_down = False
+
+    def reset(self, event=None):
+        """Release every output regardless of current mappings or wire flags."""
+        with self._lock:
+            if self.uinput is not None:
+                self._write_buttons(set())
+                for code in (e.BTN_TOOL_PEN, e.BTN_TOOL_RUBBER) if self.mode == "tablet" else ():
+                    self.uinput.write(e.EV_KEY, code, 0)
+                for code in (e.ABS_PRESSURE, e.ABS_TILT_X, e.ABS_TILT_Y):
+                    self.uinput.write(e.EV_ABS, code, 0)
+                self.uinput.syn()
+            self._held_codes.clear()
+            self._is_down = self._is_in_proximity = False
+            self._button_stylus_pressed = self._button_stylus2_pressed = False
+            self._eraser_latched = False
+            self._smooth_x = self._smooth_y = None
+            neutral = replace(event or self._last_event, action=ACTION_CANCEL, buttons=0, pressure=0)
+            self._last_event = neutral
+            self._notify(neutral, 0)
 
     def close(self):
-        """Safely release all buttons and close the uinput device."""
-        if self.uinput is not None:
+        with self._lock:
+            if self.uinput is None:
+                return
+            device = self.uinput
             try:
-                if self._is_down:
-                    self.uinput.write(e.EV_KEY, e.BTN_TOUCH, 0)
-                    if self.mode != "tablet":
-                        self.uinput.write(e.EV_KEY, e.BTN_LEFT, 0)
-                if self.mode == "tablet" and self._is_in_proximity:
-                    tool_code = e.BTN_TOOL_RUBBER if self._active_tool == TOOL_ERASER else e.BTN_TOOL_PEN
-                    self.uinput.write(e.EV_KEY, tool_code, 0)
-                if self._button_stylus_pressed:
-                    btn = e.BTN_STYLUS if self.mode == "tablet" else self._get_button_code(self.button_primary)
-                    if btn is not None:
-                        self.uinput.write(e.EV_KEY, btn, 0)
-                if self._button_stylus2_pressed:
-                    btn = e.BTN_STYLUS2 if self.mode == "tablet" else self._get_button_code(self.button_secondary)
-                    if btn is not None:
-                        self.uinput.write(e.EV_KEY, btn, 0)
-                self.uinput.syn()
-                self.uinput.close()
-            except Exception as err:
-                logger.warning(f"Error during uinput cleanup: {err}")
+                self.reset()
+            except OSError:
+                logger.warning("Unable to release Linux input device", exc_info=True)
             finally:
                 self.uinput = None
-                logger.info("Virtual tablet device closed")
+                try:
+                    device.close()
+                finally:
+                    if self._shortcut_device is not None:
+                        self._shortcut_device.close()
+                        self._shortcut_device = None

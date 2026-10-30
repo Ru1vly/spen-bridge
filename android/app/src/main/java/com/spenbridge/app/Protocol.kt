@@ -7,14 +7,11 @@ object Protocol {
     val MAGIC = byteArrayOf('S'.code.toByte(), 'P'.code.toByte(), 'E'.code.toByte(), 'N'.code.toByte())
     const val HEADER_SIZE = 9
     const val EVENT_RECORD_SIZE = 24
-
-    // Packet Types
+    const val MAX_EVENTS_PER_PACKET = 65535 / EVENT_RECORD_SIZE
     const val PKT_EVENT: Byte = 1
     const val PKT_PING: Byte = 2
     const val PKT_PONG: Byte = 3
     const val PKT_HANDSHAKE: Byte = 4
-
-    // Action Types
     const val ACTION_HOVER_MOVE: Byte = 0
     const val ACTION_HOVER_ENTER: Byte = 1
     const val ACTION_HOVER_EXIT: Byte = 2
@@ -22,68 +19,59 @@ object Protocol {
     const val ACTION_MOVE: Byte = 4
     const val ACTION_UP: Byte = 5
     const val ACTION_CANCEL: Byte = 6
-
-    // Tool Types
     const val TOOL_STYLUS: Byte = 0
     const val TOOL_ERASER: Byte = 1
     const val TOOL_FINGER: Byte = 2
-
-    // Button Flags
-    const val BUTTON_STYLUS: Short = 1 shl 0
-    const val BUTTON_STYLUS2: Short = 1 shl 1
-    const val BUTTON_TOUCH: Short = 1 shl 2
+    const val BUTTON_STYLUS: Short = 1
+    const val BUTTON_STYLUS2: Short = 2
+    const val BUTTON_TOUCH: Short = 4
 
     data class Event(
-        val action: Byte,
-        val toolType: Byte,
-        val buttons: Short,
-        val x: Float,
-        val y: Float,
-        val pressure: Float,
-        val tiltX: Float = 0f,
-        val tiltY: Float = 0f
-    )
+        val action: Byte, val toolType: Byte, val buttons: Short,
+        val x: Float, val y: Float, val pressure: Float,
+        val tiltX: Float = 0f, val tiltY: Float = 0f
+    ) {
+        fun isValid(): Boolean = action.toInt() in 0..6 && toolType.toInt() in 0..2 &&
+            buttons.toInt() in 0..7 && x.isFinite() && y.isFinite() && pressure.isFinite() &&
+            tiltX.isFinite() && tiltY.isFinite() && x in 0f..1f && y in 0f..1f &&
+            pressure in 0f..1f && tiltX in -90f..90f && tiltY in -90f..90f
+    }
+
+    data class Packet(val kind: Byte, val sequence: Short, val payload: ByteArray)
+
+    fun packPacket(kind: Byte, sequence: Short, payload: ByteArray = byteArrayOf()): ByteArray {
+        require(kind in PKT_EVENT..PKT_HANDSHAKE && payload.size <= 65535) { "Invalid packet" }
+        return ByteBuffer.allocate(HEADER_SIZE + payload.size).order(ByteOrder.LITTLE_ENDIAN).apply {
+            put(MAGIC)
+            put(kind)
+            putShort(sequence)
+            putShort(payload.size.toShort())
+            put(payload)
+        }.array()
+    }
 
     fun packEvents(events: List<Event>, seq: Short = 0): ByteArray {
-        val payloadLen = events.size * EVENT_RECORD_SIZE
-        val buffer = ByteBuffer.allocate(HEADER_SIZE + payloadLen).order(ByteOrder.LITTLE_ENDIAN)
-
-        // Header (9 bytes)
-        buffer.put(MAGIC)
-        buffer.put(PKT_EVENT)
-        buffer.putShort(seq)
-        buffer.putShort(payloadLen.toShort())
-
-        // Records (24 bytes each)
-        for (ev in events) {
-            buffer.put(ev.action)
-            buffer.put(ev.toolType)
-            buffer.putShort(ev.buttons)
-            buffer.putFloat(ev.x.coerceIn(0f, 1f))
-            buffer.putFloat(ev.y.coerceIn(0f, 1f))
-            buffer.putFloat(ev.pressure.coerceIn(0f, 1f))
-            buffer.putFloat(ev.tiltX.coerceIn(-90f, 90f))
-            buffer.putFloat(ev.tiltY.coerceIn(-90f, 90f))
+        require(events.isNotEmpty() && events.size <= MAX_EVENTS_PER_PACKET) { "Event batch exceeds protocol bounds" }
+        require(events.all { it.isValid() }) { "Invalid pen event" }
+        val payload = ByteBuffer.allocate(events.size * EVENT_RECORD_SIZE).order(ByteOrder.LITTLE_ENDIAN)
+        for (event in events) {
+            payload.put(event.action).put(event.toolType).putShort(event.buttons)
+            payload.putFloat(event.x).putFloat(event.y).putFloat(event.pressure)
+            payload.putFloat(event.tiltX).putFloat(event.tiltY)
         }
-
-        return buffer.array()
+        return packPacket(PKT_EVENT, seq, payload.array())
     }
 
-    fun packHandshake(seq: Short = 0): ByteArray {
-        val buffer = ByteBuffer.allocate(HEADER_SIZE).order(ByteOrder.LITTLE_ENDIAN)
-        buffer.put(MAGIC)
-        buffer.put(PKT_HANDSHAKE)
-        buffer.putShort(seq)
-        buffer.putShort(0)
-        return buffer.array()
+    fun packEventBatches(events: List<Event>, firstSequence: Short): List<ByteArray> {
+        require(events.all { it.isValid() }) { "Invalid pen event batch" }
+        var sequence = firstSequence
+        return events.chunked(MAX_EVENTS_PER_PACKET).map { batch ->
+            packEvents(batch, sequence).also { sequence = (sequence + 1).toShort() }
+        }
     }
 
-    fun packPing(seq: Short = 0): ByteArray {
-        val buffer = ByteBuffer.allocate(HEADER_SIZE).order(ByteOrder.LITTLE_ENDIAN)
-        buffer.put(MAGIC)
-        buffer.put(PKT_PING)
-        buffer.putShort(seq)
-        buffer.putShort(0)
-        return buffer.array()
-    }
+    fun packHandshake(seq: Short = 0, proof: ByteArray = byteArrayOf()): ByteArray =
+        packPacket(PKT_HANDSHAKE, seq, proof)
+
+    fun packPing(seq: Short = 0): ByteArray = packPacket(PKT_PING, seq)
 }

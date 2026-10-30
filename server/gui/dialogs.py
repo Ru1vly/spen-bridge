@@ -1,5 +1,6 @@
 """Small modal dialogs for profile creation/duplication."""
 
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QDialog,
     QVBoxLayout,
@@ -58,7 +59,9 @@ class DuplicateProfileDialog(QDialog):
         self.new_name = ""
 
         layout = QVBoxLayout(self)
-        layout.addWidget(QLabel(f"Duplicate '{current_name}' as:"))
+        label = QLabel(f"Duplicate '{current_name}' as:")
+        label.setTextFormat(Qt.PlainText)
+        layout.addWidget(label)
 
         self._edit_name = QLineEdit(f"{current_name} copy")
         self._edit_name.selectAll()

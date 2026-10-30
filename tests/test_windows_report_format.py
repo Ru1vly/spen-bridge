@@ -105,7 +105,7 @@ class BackendTests(unittest.TestCase):
     def test_invalid_input_ignored(self):
         for value in (math.nan, math.inf, -math.inf):
             self.event(3, pressure=value)
-        self.event(3, tool_type=2)
+        self.event(3, tool_type=255)
         self.event(99)
         self.connection.submit.assert_not_called()
 
@@ -121,28 +121,29 @@ class BackendTests(unittest.TestCase):
             self.event(3)
         self.connection.submit.side_effect = None
 
+    def test_finger_is_a_single_pen_stream_and_cancel_notifies_diagnostics(self):
+        callback = self.tablet.on_event_processed = unittest.mock.Mock()
+        self.event(3, tool_type=2)
+        self.assertTrue(self.last_pen()[1] & TIP)
+        self.event(6, tool_type=2)
+        self.assertEqual(callback.call_args.args[0].action, 6)
+        self.assertEqual(callback.call_args.args[1], 0)
 
-class DisconnectTests(unittest.IsolatedAsyncioTestCase):
-    async def test_tcp_eof_releases_pen_and_buttons(self):
-        from unittest.mock import AsyncMock, Mock
-        from server.server import SPenServer
-        from server.protocol import pack_events
-        with patch('server.backends.windows_hid.DriverConnection') as transport:
-            tablet = WindowsHidTablet()
-            reader = AsyncMock()
-            reader.read.side_effect = [pack_events([PenEvent(3, 0, 3, .5, .5, .7)]), b'']
-            writer = Mock()
-            writer.get_extra_info.return_value = None
-            writer.wait_closed = AsyncMock()
-            server = SPenServer(tablet)
-            server._running = True
-            await server._handle_client(reader, writer)
-            self.assertFalse(tablet._is_down)
-            reports = [call.args[0] for call in transport.return_value.submit.call_args_list]
-            self.assertGreater(len(reports), 2)
-            self.assertEqual(PEN_REPORT.unpack(reports[-2])[1], 0)
-            self.assertEqual(reports[-1], pack_mouse())
-            tablet.close()
+    def test_eraser_toggle_and_undo_are_edge_triggered(self):
+        self.tablet.update_settings(button_primary="eraser", button_secondary="undo")
+        with patch("server.backends.windows_hid.send_undo") as undo:
+            self.event(3, buttons=3)
+            self.event(4, buttons=3)
+            self.assertTrue(self.last_pen()[1] & ERASER)
+            undo.assert_called_once()
+            self.event(4, buttons=0)
+            self.event(4, buttons=1)
+            self.assertTrue(self.last_pen()[1] & TIP)
+            self.assertFalse(self.last_pen()[1] & ERASER)
+
+    def test_native_second_switch_is_explicitly_unavailable_on_windows(self):
+        with self.assertRaisesRegex(ValueError, "unavailable"):
+            self.tablet.update_settings(button_secondary="stylus2")
 
 
 class WindowsIntegrationTests(unittest.TestCase):

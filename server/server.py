@@ -1,277 +1,306 @@
-"""
-Asynchronous TCP server for S Pen events.
-Receives high-frequency stylus motion events over TCP and forwards them
-to the virtual tablet subsystem with minimal latency (TCP_NODELAY enabled).
-Supports status callbacks for GUI integration.
-"""
-
+"""Bounded TLS protocol-v2 server with exclusive authenticated input ownership."""
 import asyncio
+import hmac
 import logging
+import secrets
 import socket
+import sys
 import time
-from typing import Optional, Callable
 
 from server.protocol import (
-    HEADER_SIZE,
-    PKT_EVENT,
-    PKT_PING,
-    PKT_PONG,
-    PKT_HANDSHAKE,
-    ACTION_HOVER_MOVE,
-    ACTION_MOVE,
-    unpack_header,
-    unpack_events,
-    pack_packet,
+    HEADER_SIZE, EVENT_RECORD_SIZE, PKT_EVENT, PKT_PING, PKT_PONG, PKT_HANDSHAKE,
+    unpack_header, unpack_events, pack_packet,
 )
-from server.backends.base import TabletBackendBase
+from server.security import AUTH_VERSION, NONCE_SIZE, auth_proof
 
 logger = logging.getLogger("SPenServer")
 
 
+class _Budget:
+    def __init__(self, rate):
+        self.rate = rate
+        self.tokens = rate * 2
+        self.updated = time.monotonic()
+
+    def consume(self, amount):
+        now = time.monotonic()
+        self.tokens = min(self.rate * 2, self.tokens + (now - self.updated) * self.rate)
+        self.updated = now
+        if amount > self.tokens:
+            raise ValueError("Connection traffic limit exceeded")
+        self.tokens -= amount
+
+
 class SPenServer:
-    def __init__(
-        self,
-        tablet: TabletBackendBase,
-        host: str = "0.0.0.0",
-        port: int = 40118,
-        on_client_connected: Optional[Callable[[str], None]] = None,
-        on_client_disconnected: Optional[Callable[[str], None]] = None,
-        on_stats: Optional[Callable[[float, int, int], None]] = None,
-    ):
-        self.tablet = tablet
-        self.host = host
-        self.port = port
+    def __init__(self, tablet, host="127.0.0.1", port=40118,
+                 on_client_connected=None, on_client_disconnected=None, on_stats=None,
+                 on_device_error=None,
+                 *, tls_context=None, pairing_code=None, max_connections=4,
+                 handshake_timeout=5.0, idle_timeout=10.0, shutdown_timeout=2.0,
+                 event_rate=10000, byte_rate=1024 * 1024, packet_rate=4000,
+                 ):
+        self.tablet, self.host, self.port = tablet, host, port
         self.on_client_connected = on_client_connected
         self.on_client_disconnected = on_client_disconnected
         self.on_stats = on_stats
-
-        self.server: Optional[asyncio.Server] = None
+        self.on_device_error = on_device_error
+        self._device_failed = False
+        self.tls_context, self.pairing_code = tls_context, pairing_code
+        self.max_connections = max_connections
+        self.handshake_timeout, self.idle_timeout = handshake_timeout, idle_timeout
+        self.shutdown_timeout = shutdown_timeout
+        self.event_rate, self.byte_rate, self.packet_rate = event_rate, byte_rate, packet_rate
+        self.server = None
         self._running = False
         self.active_clients = set()
-
-        # Stats
-        self.stats_events_count = 0
-        self.stats_packets_count = 0
-        self.total_events_count = 0
-        self._last_stats_time = time.time()
+        self._writers = set()
+        self._handlers = set()
+        self._connections = set()
+        self._accept_task = None
+        self._owner = None
+        self._stop_lock = asyncio.Lock()
+        self.stats_events_count = self.stats_packets_count = self.total_events_count = 0
+        self._last_stats_time = time.monotonic()
 
     @property
-    def is_running(self) -> bool:
+    def is_running(self):
         return self._running and self.server is not None
 
-    async def _handle_client(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
-        peer = writer.get_extra_info("peername")
-        peer_str = f"{peer[0]}:{peer[1]}" if peer else "Unknown"
-        logger.info(f"Client connected from {peer_str}")
-        self.active_clients.add(peer_str)
-
-        if self.on_client_connected:
+    @staticmethod
+    def _callback(callback, *args):
+        if callback:
             try:
-                self.on_client_connected(peer_str)
-            except Exception as e:
-                logger.debug(f"Error in on_client_connected callback: {e}")
+                callback(*args)
+            except Exception:
+                logger.debug("Server callback failed", exc_info=True)
 
-        # Configure socket for ultra-low latency
-        sock: Optional[socket.socket] = writer.get_extra_info("socket")
-        if sock is not None:
-            sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+    async def _read_packet(self, reader, timeout, budget):
+        async def read():
+            header = await reader.readexactly(HEADER_SIZE)
+            parsed = unpack_header(header)
+            if parsed is None:
+                raise ValueError("Invalid packet magic")
+            kind, seq, size = parsed
+            if kind == PKT_EVENT:
+                if not size or size % EVENT_RECORD_SIZE:
+                    raise ValueError("Incomplete event payload")
+            elif kind == PKT_HANDSHAKE:
+                if size != len(AUTH_VERSION) + NONCE_SIZE:
+                    raise ValueError("Invalid authentication payload")
+            elif kind == PKT_PING:
+                if size:
+                    raise ValueError("Ping must be empty")
+            else:
+                raise ValueError("Unexpected packet type")
+            budget.consume(HEADER_SIZE + size)
+            return kind, seq, await reader.readexactly(size)
+        # A deadline covers the complete frame, so drip-fed bytes cannot keep
+        # a held pen alive indefinitely.
+        return await asyncio.wait_for(read(), timeout)
 
-        buffer = bytearray()
+    async def _write_packet(self, writer, kind, seq, payload=b""):
+        writer.write(pack_packet(kind, seq, payload))
+        await asyncio.wait_for(writer.drain(), self.handshake_timeout)
 
+    async def _handle_client(self, reader, writer):
+        task = asyncio.current_task()
+        if not self._running or len(self._writers) >= self.max_connections:
+            writer.close()
+            return
+        self._writers.add(writer)
+        self._handlers.add(task)
+        peer = writer.get_extra_info("peername")
+        address = f"{peer[0]}:{peer[1]}" if peer else "Unknown"
+        owned = False
+        bytes_budget, events_budget, packets_budget = (_Budget(self.byte_rate),
+                                                      _Budget(self.event_rate),
+                                                      _Budget(self.packet_rate))
         try:
+            if writer.get_extra_info("ssl_object") is None or self.pairing_code is None:
+                raise ValueError("TLS and pairing are required")
+            sock = writer.get_extra_info("socket")
+            if sock:
+                sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+            nonce = secrets.token_bytes(NONCE_SIZE)
+            await self._write_packet(writer, PKT_HANDSHAKE, 0, AUTH_VERSION + nonce)
+            kind, seq, proof = await self._read_packet(reader, self.handshake_timeout, bytes_budget)
+            if (kind != PKT_HANDSHAKE or seq != 0
+                    or not hmac.compare_digest(proof, auth_proof(self.pairing_code, nonce, "client"))):
+                raise ValueError("Pairing authentication failed")
+            if not self._running or self._owner is not None:
+                raise ValueError("Another paired client owns the tablet")
+            # No await between checking and claiming ownership.
+            self._owner = writer
+            owned = True
+            await self._write_packet(writer, PKT_HANDSHAKE, seq, auth_proof(self.pairing_code, nonce, "server"))
+            self.active_clients.add(address)
+            self._callback(self.on_client_connected, address)
             while self._running:
-                chunk = await reader.read(4096)
-                if not chunk:
-                    logger.info(f"Client {peer_str} disconnected (EOF)")
-                    break
-
-                # Re-arm TCP_QUICKACK after every read. Linux reverts a socket to
-                # delayed ACKs once it's judged the connection idle, and the ~40ms
-                # delayed-ACK timer is a real, avoidable source of jitter for a
-                # live pen-position stream over Wi-Fi. No-op on platforms without it.
-                if sock is not None and hasattr(socket, "TCP_QUICKACK"):
+                kind, seq, payload = await self._read_packet(reader, self.idle_timeout, bytes_budget)
+                packets_budget.consume(1)
+                if kind == PKT_EVENT:
+                    events = unpack_events(payload)
+                    events_budget.consume(len(events))
+                    self.stats_packets_count += 1
                     try:
-                        sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_QUICKACK, 1)
-                    except OSError:
-                        pass
-
-                buffer.extend(chunk)
-
-                # Drain every complete packet currently buffered. PKT_EVENT payloads
-                # are collected rather than dispatched immediately so a Wi-Fi
-                # backlog (several packets arriving in this one read()) can be
-                # coalesced below instead of replayed as visible catch-up lag.
-                #
-                # Parsing walks an `offset` cursor over `buffer` instead of
-                # slicing/deleting per packet: unpack_header reads directly
-                # off `buffer` via unpack_from (no 9-byte copy per packet),
-                # and the whole drained prefix is trimmed with a single
-                # `del buffer[:offset]` once at the end of the pass instead
-                # of one O(remaining-bytes) memmove per packet.
-                event_groups = []
-                offset = 0
-                buf_len = len(buffer)
-                while buf_len - offset >= HEADER_SIZE:
-                    hdr_res = unpack_header(buffer, offset)
-                    if hdr_res is None:
-                        # Corrupted or non-protocol data: skip 1 byte to seek next magic
-                        offset += 1
-                        continue
-
-                    pkt_type, seq, payload_len = hdr_res
-                    total_len = HEADER_SIZE + payload_len
-
-                    if buf_len - offset < total_len:
-                        # Wait for remaining payload bytes
-                        break
-
-                    payload = buffer[offset + HEADER_SIZE : offset + total_len]
-                    offset += total_len
-
-                    # Handle packet type
-                    if pkt_type == PKT_EVENT:
-                        events = unpack_events(payload)
-                        event_groups.append(events)
-                        self.stats_packets_count += 1
-
-                    elif pkt_type == PKT_PING:
-                        # Sent/drained immediately even though PKT_EVENT dispatch below is
-                        # deferred to the end of this drain pass: a PONG here is only an
-                        # a link-liveness ack, not a "prior events applied" guarantee. If a
-                        # PING/PONG-based RTT measurement is ever added, re-check this
-                        # ordering against _dispatch_event_groups()'s deferred dispatch.
-                        pong = pack_packet(PKT_PONG, seq, b"")
-                        writer.write(pong)
-                        await writer.drain()
-
-                    elif pkt_type == PKT_HANDSHAKE:
-                        logger.info(f"Handshake packet received from {peer_str}")
-                        ack = pack_packet(PKT_HANDSHAKE, seq, b"OK")
-                        writer.write(ack)
-                        await writer.drain()
-
-                if offset:
-                    del buffer[:offset]
-
-                if event_groups:
-                    self._dispatch_event_groups(event_groups)
-
-                # Periodic stats logging and callback (every 1.0 second)
-                now = time.time()
+                        self._dispatch_event_groups([events])
+                    except Exception as error:
+                        self._fail_device(error)
+                        raise
+                elif kind == PKT_PING:
+                    await self._write_packet(writer, PKT_PONG, seq)
+                else:
+                    raise ValueError("Authentication cannot be repeated within a session")
+                now = time.monotonic()
                 elapsed = now - self._last_stats_time
-                if elapsed >= 1.0:
-                    rate = self.stats_events_count / elapsed
-                    if self.on_stats:
-                        try:
-                            self.on_stats(rate, self.stats_packets_count, self.total_events_count)
-                        except Exception:
-                            pass
-                    if self.stats_events_count > 0:
-                        logger.info(f"Traffic: {rate:.1f} events/sec ({self.stats_packets_count} packets)")
-                    self.stats_events_count = 0
-                    self.stats_packets_count = 0
+                if elapsed >= 1:
+                    self._callback(self.on_stats, self.stats_events_count / elapsed,
+                                   self.stats_packets_count, self.total_events_count)
+                    self.stats_events_count = self.stats_packets_count = 0
                     self._last_stats_time = now
-
+        except (asyncio.IncompleteReadError, ConnectionError, asyncio.TimeoutError):
+            logger.info("Client connection ended: %s", address)
         except asyncio.CancelledError:
-            pass
-        except Exception as err:
-            logger.error(f"Error handling client {peer_str}: {err}")
+            raise
+        except (OSError, ValueError) as error:
+            logger.warning("Closing client %s: %s", address, error)
+        except Exception:
+            logger.exception("Unexpected input-session failure")
         finally:
-            logger.info(f"Closing client connection {peer_str}")
-            self.active_clients.discard(peer_str)
-            reset = getattr(self.tablet, "reset", None)
-            if not self.active_clients and reset is not None:
-                try:
-                    reset()
-                except OSError:
-                    logger.warning("Failed to release tablet after disconnect", exc_info=True)
-            if self.on_client_disconnected:
-                try:
-                    self.on_client_disconnected(peer_str)
-                except Exception as e:
-                    logger.debug(f"Error in on_client_disconnected callback: {e}")
+            if owned:
+                self._owner = None
+                self.active_clients.discard(address)
+                reset = getattr(self.tablet, "reset", None)
+                if reset:
+                    try:
+                        reset()
+                    except Exception as error:
+                        logger.error("Unable to release input state", exc_info=True)
+                        self._fail_device(error)
+                self._callback(self.on_client_disconnected, address)
             writer.close()
             try:
-                await writer.wait_closed()
+                await asyncio.wait_for(writer.wait_closed(), self.shutdown_timeout)
+            except (OSError, asyncio.TimeoutError):
+                writer.transport.abort()
+            finally:
+                self._writers.discard(writer)
+                self._handlers.discard(task)
+
+    def _fail_device(self, error):
+        if self._device_failed:
+            return
+        self._device_failed = True
+        self._running = False
+        close = getattr(self.tablet, "close", None)
+        if close:
+            try:
+                close()
             except Exception:
-                pass
+                logger.error("Unable to close failed input device", exc_info=True)
+        if self.on_device_error:
+            self._callback(self.on_device_error, str(error))
+        else:
+            # Standalone users have no worker orchestrator to request cleanup.
+            task = asyncio.create_task(self.stop())
+            task.add_done_callback(lambda result: result.exception() if not result.cancelled() else None)
 
     def _dispatch_event_groups(self, groups):
-        """Forward received pen events to the virtual tablet, coalescing a
-        Wi-Fi backlog when one has formed.
+        """Preserve every sample and transition, including pressure extrema.
 
-        Each element of `groups` is the list of PenEvent objects unpacked from
-        one received network packet, in arrival order. Normally there is only
-        ever one packet's worth of events per read() (the Android client
-        flushes on every touch/hover callback), so this is a plain pass-through.
-        But if delivery stalls for a moment - a Wi-Fi hiccup, a brief scheduling
-        delay - the OS can hand us several already-queued packets in a single
-        read(). Replaying every buffered position sample in order in that case
-        makes the on-screen cursor visibly "catch up in slow motion" instead of
-        jumping straight to where the pen actually is right now.
-
-        A pure position/pressure sample (ACTION_MOVE / ACTION_HOVER_MOVE) is
-        safe to drop only when it is the LAST event of its own packet and is
-        immediately superseded by the first event of the NEXT already-arrived
-        packet carrying the same action, the same button state, and the same
-        tool type - i.e. it was already stale the moment we got to it, and
-        skipping it changes nothing but which position sample got acted on.
-        This never skips anything within a single packet (preserving the
-        historical-sample batching Android provides for stroke fidelity),
-        never skips a press/release/proximity transition, a button-state
-        change, or a tool-type change (stylus/eraser), and never skips the
-        very last event overall (the freshest sample always gets delivered).
-
-        stats_events_count/total_events_count are incremented here (per event
-        actually forwarded to the tablet), not while draining the socket, so
-        the GUI's live "events/sec" reflects what the cursor actually did,
-        not how many samples arrived over the wire before coalescing.
+        Backlog control belongs at the session queue/admission boundary; dropping
+        already-received coordinates here silently changes the drawn stroke.
         """
-        if len(groups) == 1:
-            # Common case per the docstring above: normally there's exactly
-            # one packet's worth of events per read(). The coalescing below
-            # only ever fires when a look-ahead event belongs to a
-            # DIFFERENT, already-arrived group - structurally impossible
-            # with a single group - so skip building the flattened
-            # (group_idx, ev) list and the lookahead loop entirely.
-            events = groups[0]
-            for ev in events:
-                self.tablet.handle_event(ev)
-            dispatched = len(events)
-            self.stats_events_count += dispatched
-            self.total_events_count += dispatched
-            return
+        for events in groups:
+            for event in events:
+                self.tablet.handle_event(event)
+                self.stats_events_count += 1
+                self.total_events_count += 1
 
-        flat = [(group_idx, ev) for group_idx, group in enumerate(groups) for ev in group]
-        last_idx = len(flat) - 1
-        dispatched = 0
-        for i, (group_idx, ev) in enumerate(flat):
-            if ev.action in (ACTION_HOVER_MOVE, ACTION_MOVE) and i < last_idx:
-                next_group_idx, next_ev = flat[i + 1]
-                if (
-                    next_group_idx != group_idx
-                    and next_ev.action == ev.action
-                    and next_ev.buttons == ev.buttons
-                    and next_ev.tool_type == ev.tool_type
-                ):
-                    continue  # superseded by an already-arrived newer packet
-            self.tablet.handle_event(ev)
-            dispatched += 1
-        self.stats_events_count += dispatched
-        self.total_events_count += dispatched
+    @property
+    def bound_endpoint(self):
+        return self.server.getsockname()[:2] if self.server else None
+
+    async def _accept(self):
+        loop = asyncio.get_running_loop()
+        while self._running:
+            connection, _ = await loop.sock_accept(self.server)
+            connection.setblocking(False)
+            # Admission happens before any TLS state or handshake task exists.
+            if len(self._handlers) >= self.max_connections:
+                connection.close()
+                await asyncio.sleep(0.01)
+                continue
+            self._connections.add(connection)
+            task = asyncio.create_task(self._serve_socket(connection))
+            self._handlers.add(task)
+
+    async def _serve_socket(self, connection):
+        transport = None
+        task = asyncio.current_task()
+        try:
+            loop = asyncio.get_running_loop()
+            reader = asyncio.StreamReader(limit=65544)
+            protocol = asyncio.StreamReaderProtocol(reader)
+            transport, _ = await loop.connect_accepted_socket(
+                lambda: protocol, connection, ssl=self.tls_context,
+                ssl_handshake_timeout=self.handshake_timeout)
+            writer = asyncio.StreamWriter(transport, protocol, reader, loop)
+            await self._handle_client(reader, writer)
+        except (OSError, asyncio.TimeoutError):
+            logger.debug("TLS handshake closed")
+        finally:
+            if transport:
+                transport.abort()
+            connection.close()
+            self._connections.discard(connection)
+            self._handlers.discard(task)
 
     async def start(self):
-        """Start listening for client connections."""
+        if self.server is not None:
+            return
+        if self.tls_context is None or self.pairing_code is None:
+            raise ValueError("A TLS identity and pairing code are required")
+        auth_proof(self.pairing_code, b"\0" * NONCE_SIZE, "server")
+        loop = asyncio.get_running_loop()
+        addresses = await loop.getaddrinfo(self.host, self.port, type=socket.SOCK_STREAM,
+                                           flags=socket.AI_PASSIVE)
+        family, kind, proto, _, address = addresses[0]
+        listener = socket.socket(family, kind, proto)
+        try:
+            if sys.platform != "win32":
+                listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            listener.setblocking(False)
+            listener.bind(address)
+            listener.listen(16)
+        except BaseException:
+            listener.close()
+            raise
+        self.server = listener
+        self._device_failed = False
         self._running = True
-        self.server = await asyncio.start_server(self._handle_client, self.host, self.port)
-        addrs = ", ".join(str(sock.getsockname()) for sock in self.server.sockets)
-        logger.info(f"SPen Server listening on {addrs}")
+        self._accept_task = asyncio.create_task(self._accept())
+        logger.info("TLS pen server listening on %s:%s", *self.bound_endpoint)
 
     async def stop(self):
-        """Stop server gracefully."""
-        self._running = False
-        if self.server:
-            self.server.close()
-            await self.server.wait_closed()
-            self.server = None
-            logger.info("SPen Server stopped")
+        """Close raw handshakes and authenticated sessions on every supported Python."""
+        async with self._stop_lock:
+            self._running = False
+            listener, self.server = self.server, None
+            if listener:
+                listener.close()
+            if self._accept_task:
+                self._accept_task.cancel()
+                await asyncio.gather(self._accept_task, return_exceptions=True)
+                self._accept_task = None
+            for connection in tuple(self._connections):
+                connection.close()
+            for writer in tuple(self._writers):
+                writer.transport.abort()
+            handlers = self._handlers - {asyncio.current_task()}
+            for task in handlers:
+                task.cancel()
+            if handlers:
+                await asyncio.wait_for(asyncio.gather(*handlers, return_exceptions=True),
+                                       self.shutdown_timeout * 2)
+            self._callback(self.on_stats, 0.0, 0, self.total_events_count)

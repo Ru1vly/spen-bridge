@@ -39,14 +39,26 @@ if ($devcon) {
     $result = $LASTEXITCODE
     if ($result -gt 1) { throw "Driver installation failed (DevCon exit $result). Check signing and setupapi.dev.log." }
     if ($result -eq 1) { Write-Host 'Restart Windows to finish installing the driver.' }
-    else { Write-Host 'Driver installed. Verify device status in Device Manager, then start S Pen Bridge.' }
+
 } else {
-    Write-Host "DevCon not found. Installing via pnputil..."
+    if ($existing.Count -eq 0) {
+        throw 'Initial installation requires DevCon to create root\spenvhid. pnputil only stages packages and cannot create this device. Install the x64 WDK tools, then retry with -DevconPath.'
+    }
+    Write-Host "Updating the existing root device via pnputil..."
     & pnputil.exe /add-driver $inf /install
     $result = $LASTEXITCODE
     if ($result -ne 0 -and $result -ne 259 -and $result -ne 3010) {
         throw "pnputil failed with exit code $result. If the initial root device is missing, pass -DevconPath to create root\spenvhid."
     }
     if ($result -eq 3010) { Write-Host 'Restart Windows to finish installing the driver.' }
-    else { Write-Host 'Driver package added. Verify device status in Device Manager, then start S Pen Bridge.' }
+
 }
+
+$devices = @(Get-PnpDevice -PresentOnly | Where-Object { $_.InstanceId -like 'ROOT\SPENVHID\*' })
+if ($devices.Count -ne 1) {
+    throw 'Driver package processed, but exactly one present SPen root device was not found. Check Device Manager and setupapi.dev.log; restart if requested.'
+}
+if ($devices[0].Status -ne 'OK') {
+    throw "SPen root device is present but reports '$($devices[0].Status)'. Resolve signing/device status or restart before using the application."
+}
+Write-Host 'One present SPen root device reports OK. Application connection and Windows Ink validation are separate checks.'

@@ -35,21 +35,8 @@ if [ "$IS_CLI" -eq 0 ]; then
     exec "$DIR/server/.venv/bin/python" "$DIR/server/main.py" --gui "$@"
 fi
 
-# CLI / Headless Mode
-echo "========================================================"
-echo "          S Pen Bridge: Console Server            "
-echo "========================================================"
-echo " Detected PC IP: $IP"
-echo " Tablet Port:   40118"
-echo ""
-echo "[ON YOUR SAMSUNG TABLET / S22-S24 ULTRA]:"
-echo "   1. Install the 'S Pen Bridge' app (see docs/SETUP.md)."
-echo "   2. Ensure it's on the same Wi-Fi network as this PC."
-echo "   3. Open Settings -> Server IP: $IP (Port: 40118)."
-echo "   4. Tap Save & Reconnect -> Status turns GREEN!"
-echo "   5. Open Krita, GIMP, or Blender on your PC and draw!"
-echo "========================================================"
-echo ""
+# CLI mode uses the validated config and reports the actual listener itself.
+echo 'Starting S Pen Bridge. Pair using --show-pairing; USB is the default.'
 
 # Start virtual tablet server
 exec "$DIR/server/.venv/bin/python" "$DIR/server/main.py" "$@"

@@ -15,6 +15,8 @@ def launch_gui():
     app.setOrganizationName("SPenOnLinux")
 
     window = MainWindow()
+    app.aboutToQuit.connect(window.worker.shutdown)
+    app.aboutToQuit.connect(window.system_tab.connection_panel.stop_usb_monitor)
     window.show()
     sys.exit(app.exec())
 

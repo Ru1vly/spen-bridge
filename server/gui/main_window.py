@@ -10,15 +10,17 @@ import copy
 import sys
 import logging
 import threading
+from collections import deque
 from pathlib import Path
 from typing import Optional, Tuple
 
-from PySide6.QtCore import Qt, QTimer, Signal
+from PySide6.QtCore import QTimer, Signal, QSignalBlocker, Qt
 from PySide6.QtGui import QIcon, QKeySequence, QAction
-from PySide6.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QTabWidget, QMessageBox, QDialog
+from PySide6.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QTabWidget, QMessageBox, QDialog, QLabel
 
 from server.config import AppProfile, TabletConfig, load_config, save_config, CONFIG_FILE_PATH
-from server.protocol import PenEvent
+from server.protocol import PenEvent, ACTION_CANCEL, valid_event
+from server.settings import listener_address
 from server.window_watcher import WindowWatcher
 
 from server.gui import theme
@@ -50,12 +52,15 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.setWindowTitle("S Pen Bridge: Tablet Controller")
         self.resize(1200, 760)
-        self.setMinimumSize(1100, 720)
+        self.setMinimumSize(760, 540)
 
         self.config = load_config()
         self.local_ip = get_local_ip()
         self.gui_state = GuiState()
         self._dirty = False
+        self._closing = False
+        self._startup_timers = []
+        self._initializing = True
         self._last_detected_app: Tuple[str, str] = ("", "")
 
         icon_path = REPO_ROOT / "spen_icon.png"
@@ -68,9 +73,10 @@ class MainWindow(QMainWindow):
         self.worker.sig_client_connected.connect(self.on_client_connected)
         self.worker.sig_client_disconnected.connect(self.on_client_disconnected)
         self.worker.sig_stats.connect(self.on_server_stats)
-        self.worker.sig_pen_event.connect(self.on_pen_event)
+        self.worker.sig_pen_events_ready.connect(self.on_pen_events_ready)
 
         # Latest pen event cache, throttled to ~30 Hz for the diagnostics UI
+        self._preview_events = deque()
         self._latest_pen_event: Optional[PenEvent] = None
         self._latest_cal_p = 0
         self._latest_abs_x = 0
@@ -94,6 +100,13 @@ class MainWindow(QMainWindow):
         self.setStyleSheet(theme.build_stylesheet())
         self._init_ui()
         self.tray = SystemTrayController(self, REPO_ROOT / "spen_icon.png")
+        self.worker.sig_log.connect(self.system_tab.log_panel.log)
+        self._tablet_connected = False
+        self.system_tab.connection_panel.connection_type_changed.connect(self._refresh_connection_type)
+        self._initializing = False
+        if self.config.recovery_notice:
+            self.system_tab.log_panel.log(self.config.recovery_notice)
+            self._mark_dirty()
 
         self._save_shortcut = QAction(self)
         self._save_shortcut.setShortcut(QKeySequence("Ctrl+S"))
@@ -101,13 +114,25 @@ class MainWindow(QMainWindow):
         self.addAction(self._save_shortcut)
 
         if self.config.auto_start_server:
-            QTimer.singleShot(400, self.start_server)
+            self._schedule_startup(400, self.start_server)
         if self.config.auto_adb_forward:
-            QTimer.singleShot(600, lambda: self.system_tab.connection_panel.run_adb_reverse(silent=True))
+            self._schedule_startup(600, lambda: self.system_tab.connection_panel.run_adb_reverse(silent=True))
 
     # ------------------------------------------------------------------
     # UI Setup
     # ------------------------------------------------------------------
+    def _schedule_startup(self, delay, operation):
+        timer = QTimer(self)
+        timer.setSingleShot(True)
+        timer.timeout.connect(lambda: operation() if not self._closing else None)
+        timer.start(delay)
+        self._startup_timers.append(timer)
+
+    def _cancel_startup(self):
+        for timer in self._startup_timers:
+            timer.stop()
+        self._startup_timers.clear()
+
     def _init_ui(self):
         central = QWidget()
         layout = QVBoxLayout(central)
@@ -119,6 +144,11 @@ class MainWindow(QMainWindow):
         self.header_bar.save_clicked.connect(self.save_all_settings)
         self.header_bar.profile_changed.connect(self._on_profile_selection_changed)
         layout.addWidget(self.header_bar)
+        self.recovery_label = QLabel(self.config.recovery_notice)
+        self.recovery_label.setTextFormat(Qt.PlainText)
+        self.recovery_label.setWordWrap(True)
+        self.recovery_label.setVisible(bool(self.config.recovery_notice))
+        layout.addWidget(self.recovery_label)
 
         self.profiles_tab = ProfilesTab(self.config, self.worker)
         self.profiles_tab.profile_selected.connect(self._on_profile_selection_changed)
@@ -130,6 +160,8 @@ class MainWindow(QMainWindow):
 
         self.system_tab = SystemTab(self.local_ip, self.config)
         self.system_tab.startup_panel.reset_requested.connect(self._reset_defaults)
+        self.system_tab.startup_panel.changed.connect(self._on_system_settings_changed)
+        self.system_tab.startup_panel.device_name_changed.connect(lambda: self.worker.apply_config(self.config))
         self.system_tab.scratchpad_panel.test_stroke_requested.connect(self._on_test_stroke_requested)
         self.profiles_tab.editor_panel.mapping_section.monitors_refreshed.connect(
             self.system_tab.startup_panel.set_desktop_size
@@ -154,7 +186,8 @@ class MainWindow(QMainWindow):
         self.system_tab.startup_panel.set_desktop_size(self.profiles_tab.editor_panel.mapping_section.desktop_size)
 
         self._repopulate_profiles()
-        initial_profile = self.gui_state.last_editing_profile
+        initial_profile = (self.gui_state.last_editing_profile if self.config.auto_switch_profiles
+                           else self.config.active_profile_name)
         if initial_profile not in self.config.profiles:
             initial_profile = self.config.active_profile_name
         self.profiles_tab.select_profile(initial_profile)
@@ -193,31 +226,16 @@ class MainWindow(QMainWindow):
         self.profiles_tab.list_panel.btn_del_prof.setEnabled(can_delete)
         self.gui_state.last_editing_profile = name
 
-    def set_active_profile(self, name: str):
+    def set_active_profile(self, name: str, *, user_initiated=True):
         """Make `name` the live profile driving the virtual tablet."""
         profile = self.config.profiles.get(name)
         if profile is None:
             return
+        changed = self.config.active_profile_name != name
         self.config.active_profile_name = name
-        self.worker.set_device_mode(
-            mode=profile.device_mode,
-            direct_mode=profile.direct_mode,
-            device_name=self.config.device_name,
-        )
-        mapping_section = self.profiles_tab.editor_panel.mapping_section
-        sb, desk = self.config.get_screen_bounds_and_desktop(mapping_section.monitors, mapping_section.desktop_size)
-        self.worker.update_tablet_settings(
-            click_on_touch=profile.click_on_touch,
-            pressure_curve_type=profile.pressure_curve_type,
-            pressure_gamma=profile.pressure_gamma,
-            pressure_min=profile.pressure_min,
-            pressure_max=profile.pressure_max,
-            stroke_smoothing=profile.stroke_smoothing,
-            button_primary=profile.button_primary,
-            button_secondary=profile.button_secondary,
-            screen_bounds=sb,
-            desktop_size=desk,
-        )
+        self.worker.apply_config(self.config)
+        if changed and user_initiated and not self._initializing:
+            self._mark_dirty()
         self.header_bar.set_active_profile(name)
         self.profiles_tab.list_panel.refresh_markers(name, self.profiles_tab.editor_panel.current_profile_name)
         self.system_tab.diagnostics_panel.set_click_on_touch(profile.click_on_touch)
@@ -229,6 +247,9 @@ class MainWindow(QMainWindow):
             self.config.active_profile_name, self.profiles_tab.editor_panel.current_profile_name
         )
         self._mark_dirty()
+        if checked:
+            profile = self.config.find_profile_for_app(*self._last_detected_app) or self.config.profiles["Default"]
+            self.set_active_profile(profile.name, user_initiated=False)
 
     def _on_tab_changed(self, index: int):
         self.gui_state.last_tab_index = index
@@ -241,16 +262,16 @@ class MainWindow(QMainWindow):
         display_name = app_id or title or "Desktop"
         if len(display_name) > 28:
             display_name = display_name[:26] + "…"
-        self.profiles_tab.list_panel.lbl_focused_window.setText(f"Active Window: <b>{display_name}</b>")
+        self.profiles_tab.list_panel.lbl_focused_window.setText(f"Active Window: {display_name}")
 
         if self.tabs.currentWidget() is self.profiles_tab:
             self.profiles_tab.editor_panel.update_live_match(app_id, title)
 
-        if self.config.auto_switch_profiles and (app_id or title):
-            matched_profile = self.config.find_profile_for_app(app_id, title)
+        if self.config.auto_switch_profiles:
+            matched_profile = self.config.find_profile_for_app(app_id, title) or self.config.profiles["Default"]
             if matched_profile and matched_profile.name != self.config.active_profile_name:
-                self.set_active_profile(matched_profile.name)
-                self.system_tab.log_panel.log(f"Auto-switched profile to '{matched_profile.name}' for window '{app_id or title}'")
+                self.set_active_profile(matched_profile.name, user_initiated=False)
+                self.system_tab.log_panel.log(f"Active tablet profile: {matched_profile.name}")
 
     # ------------------------------------------------------------------
     # Profile management (new / duplicate / delete)
@@ -339,39 +360,66 @@ class MainWindow(QMainWindow):
         self.header_bar.set_dirty(True)
         self.profiles_tab.list_panel.refresh_customized_badge(self.profiles_tab.editor_panel.current_profile_name)
 
-    def save_all_settings(self):
-        if save_config(self.config):
-            self._dirty = False
-            self.header_bar.set_dirty(False)
-            self.system_tab.log_panel.log("Configuration saved successfully.")
+    def _on_system_settings_changed(self):
+        self._mark_dirty()
+        self.system_tab.connection_panel.refresh_ip_label()
+
+    def save_all_settings(self, checked=False, *, quiet=False):
+        try:
+            self.config.validate()
+        except ValueError as error:
+            QMessageBox.warning(self, "Check Settings", str(error))
+            return False
+        if not save_config(self.config):
+            QMessageBox.warning(self, "Settings Not Saved",
+                                "The settings file could not be replaced. Your changes remain open; check disk space and permissions, then save again.")
+            return False
+        self._dirty = False
+        self.header_bar.set_dirty(False)
+        self.config.recovery_notice = ""
+        self.recovery_label.hide()
+        self.system_tab.log_panel.log("Configuration saved successfully.")
+        if not quiet:
             QMessageBox.information(self, "Saved", f"Settings saved to:\n{CONFIG_FILE_PATH}")
-        else:
-            QMessageBox.warning(self, "Error", "Failed to save configuration file.")
+        return True
 
     def _reset_defaults(self):
         ans = QMessageBox.question(self, "Reset Defaults", "Reset all tablet settings to default values?")
         if ans != QMessageBox.Yes:
             return
-        self.config = TabletConfig()
-        save_config(self.config)
-        self.worker.config = self.config
-        self.system_tab.startup_panel._config = self.config
-        self.system_tab.connection_panel._config = self.config
+        candidate = TabletConfig()
+        self._cancel_startup()
+        try:
+            self.worker.shutdown()
+        except TimeoutError as error:
+            QMessageBox.warning(self, "Reset Not Completed", str(error))
+            return
+        if not save_config(candidate):
+            QMessageBox.warning(self, "Reset Not Saved", "Your previous settings are still active. Check disk space and permissions, then try again.")
+            return
+        self.system_tab.connection_panel.stop_usb_monitor()
+        self.recovery_label.hide()
+        self.config = candidate
+        self.worker.config = candidate
+        self.system_tab.startup_panel._config = candidate
+        self.system_tab.connection_panel._config = candidate
         self.system_tab.startup_panel._sync_from_config()
         self.system_tab.connection_panel.refresh_ip_label()
-        self.profiles_tab.list_panel._config = self.config
-        self.profiles_tab.editor_panel._config = self.config
-        self.profiles_tab.editor_panel.mapping_section._config = self.config
+        self.profiles_tab.list_panel._config = candidate
+        editor = self.profiles_tab.editor_panel
+        editor._config = candidate
+        editor.mapping_section._config = candidate
+        editor.mapping_section._sync_global_controls()
+        checkbox = self.profiles_tab.list_panel.chk_auto_switch
+        with QSignalBlocker(checkbox):
+            checkbox.setChecked(candidate.auto_switch_profiles)
+        self.header_bar.set_auto_switch_mode(candidate.auto_switch_profiles)
         self._repopulate_profiles()
-        self.profiles_tab.select_profile("Default")
-        # select_profile() only pushes to the live tablet when auto-switch is
-        # off (see _on_profile_selection_changed), but a reset must always
-        # resync the running VirtualTablet to the fresh defaults, regardless
-        # of auto-switch state, since the whole config object was replaced.
-        self.set_active_profile(self.config.active_profile_name)
+        self.set_editing_profile("Default")
+        self.set_active_profile("Default")
         self._dirty = False
         self.header_bar.set_dirty(False)
-        QMessageBox.information(self, "Settings Reset", "Settings have been reset to defaults.")
+        QMessageBox.information(self, "Settings Reset", "Settings have been reset and saved. The server is stopped; start it when you are ready.")
 
     # ------------------------------------------------------------------
     # Server control & tests
@@ -383,26 +431,32 @@ class MainWindow(QMainWindow):
             self.start_server()
 
     def start_server(self):
-        self.system_tab.log_panel.log(f"Starting server on {self.config.host}:{self.config.port}...")
+        if self._closing or self.worker.state != "stopped":
+            return
+        self.system_tab.log_panel.log(f"Starting paired TLS server on {listener_address(self.config)}:{self.config.port}...")
         self.header_bar.btn_server_toggle.setText("Starting...")
         self.header_bar.btn_server_toggle.setEnabled(False)
+        self.system_tab.connection_panel.set_transitioning()
         self.worker.start_server()
 
     def stop_server(self):
+        if self.worker.state not in ("running", "starting"):
+            return
+        self.system_tab.connection_panel.set_transitioning()
         self.system_tab.log_panel.log("Stopping server...")
         self.header_bar.btn_server_toggle.setText("Stopping...")
         self.header_bar.btn_server_toggle.setEnabled(False)
         self.worker.stop_server()
 
     def _on_test_stroke_requested(self):
-        if self.worker._is_running:
+        if self.worker._is_running and not self._tablet_connected:
             threading.Thread(target=self._send_synthetic_network_stroke, daemon=True).start()
 
     def _send_synthetic_network_stroke(self):
         try:
             from server.test_synthetic import run_synthetic_network_test
 
-            run_synthetic_network_test(host="127.0.0.1", port=self.config.port, count=1)
+            run_synthetic_network_test(host="127.0.0.1", port=self.worker.listener_endpoint[1], count=1)
         except Exception as e:
             logger.debug(f"Synthetic test error: {e}")
 
@@ -412,65 +466,88 @@ class MainWindow(QMainWindow):
     def on_server_status(self, status: str, message: str):
         self.system_tab.log_panel.log(f"Server Status: {status} ({message})")
         self.header_bar.btn_server_toggle.setEnabled(True)
+        self.system_tab.connection_panel.set_listener(self.worker.listener_endpoint)
 
         if status == "running":
-            self.header_bar.set_server_status("running", f"Listening (Port {self.config.port})")
+            self.header_bar.set_server_status("running", f"Listening (Port {self.worker.listener_endpoint[1] if self.worker.listener_endpoint else self.config.port})")
         elif status == "stopped":
             self.header_bar.set_server_status("stopped", "Server Stopped")
+            self._reset_diagnostics()
         elif status == "error":
             self.header_bar.set_server_status("error", message)
             QMessageBox.critical(self, "Server Error", message)
 
     def on_client_connected(self, client_addr: str):
+        self._tablet_connected = True
+        self.system_tab.scratchpad_panel.btn_synthetic.setEnabled(False)
         self.system_tab.log_panel.log(f"Tablet connected from {client_addr}")
-        self.header_bar.set_server_status("connected", f"Connected: {client_addr}")
+        self.system_tab.connection_panel.set_client(client_addr)
         self.tray.notify("S Pen Connected", f"Tablet connected from {client_addr}")
         self.system_tab.scratchpad_panel.scratchpad.set_live_input_active(True)
 
+    def _refresh_connection_type(self):
+        if self._tablet_connected:
+            kind = self.system_tab.connection_panel.connection_type()
+            if kind:
+                self.header_bar.set_server_status("connected", f"Connected via {kind}")
+
     def on_client_disconnected(self, client_addr: str):
+        self._tablet_connected = False
+        self.system_tab.connection_panel.set_client(None)
+        self.system_tab.scratchpad_panel.btn_synthetic.setEnabled(True)
         self.system_tab.log_panel.log(f"Tablet disconnected: {client_addr}")
         if self.worker._is_running:
-            self.header_bar.set_server_status("running", f"Listening (Port {self.config.port})")
+            self.header_bar.set_server_status("running", f"Listening (Port {self.worker.listener_endpoint[1] if self.worker.listener_endpoint else self.config.port})")
         self.system_tab.scratchpad_panel.scratchpad.set_live_input_active(False)
+        self._reset_diagnostics()
 
     def on_server_stats(self, rate: float, packets: int, total_events: int):
         self.system_tab.diagnostics_panel.update_traffic(rate, packets)
 
+    def on_pen_events_ready(self):
+        for record in self.worker.drain_pen_events():
+            self.on_pen_event(*record)
+
     def on_pen_event(self, ev: PenEvent, cal_p: int, abs_x: int, abs_y: int):
-        # Cache only - rendering (both the diagnostics readout below and the
-        # scratchpad preview) is throttled to diag_timer's ~30Hz cadence in
-        # update_live_diagnostics(), not done here at the full hardware
-        # sample rate (up to 240Hz+). This mirrors how the diagnostics
-        # readout already worked; the scratchpad's add_tablet_point() used
-        # to run unconditionally on every single call to this method,
-        # constructing a fresh QPainter pass per sample regardless of which
-        # tab was even visible.
-        self._latest_pen_event = ev
-        self._latest_cal_p = cal_p
-        self._latest_abs_x = abs_x
-        self._latest_abs_y = abs_y
+        if not valid_event(ev):
+            return
+        self._latest_pen_event, self._latest_cal_p = ev, cal_p
+        self._latest_abs_x, self._latest_abs_y = abs_x, abs_y
+        if self.tabs.currentWidget() is not self.system_tab:
+            self._preview_events.clear()
+            self.system_tab.scratchpad_panel.scratchpad.reset_input()
+            return
+        if len(self._preview_events) >= 2048:
+            self._preview_events.clear()
+            self._preview_events.append((ev.x, ev.y, 0, ACTION_CANCEL))
+        ceiling = 32767 if sys.platform == "win32" else 4095
+        self._preview_events.append((ev.x, ev.y, cal_p / ceiling, ev.action))
 
     def update_live_diagnostics(self):
-        if self._latest_pen_event is None:
-            return
+        ev, self._latest_pen_event = self._latest_pen_event, None
+        if ev is not None:
+            cal_p = self._latest_cal_p
+            self.system_tab.diagnostics_panel.update_pen_event(ev, cal_p, self._latest_abs_x, self._latest_abs_y)
+            ceiling = 32767 if sys.platform == "win32" else 4095
+            pressure = self.profiles_tab.editor_panel.pressure_section
+            pressure.curve_widget.set_current_pressure(ev.pressure, cal_p / ceiling)
+            pressure.bar_raw.setValue(int(ev.pressure * 100))
+            pressure.bar_cal.setValue(int(cal_p / ceiling * 100))
+        if self._preview_events:
+            points = list(self._preview_events)
+            self._preview_events.clear()
+            if self.tabs.currentWidget() is self.system_tab:
+                self.system_tab.scratchpad_panel.scratchpad.add_tablet_points(points)
+            else:
+                self.system_tab.scratchpad_panel.scratchpad.reset_input()
 
-        ev = self._latest_pen_event
-        cal_p = self._latest_cal_p
-        abs_x = self._latest_abs_x
-        abs_y = self._latest_abs_y
-
-        self.system_tab.diagnostics_panel.update_pen_event(ev, cal_p, abs_x, abs_y)
-
-        pressure_section = self.profiles_tab.editor_panel.pressure_section
-        pressure_section.curve_widget.set_current_pressure(ev.pressure, cal_p / (32767.0 if sys.platform == "win32" else 4095.0))
-        pressure_section.bar_raw.setValue(int(ev.pressure * 100))
-        pressure_section.bar_cal.setValue(int((cal_p / (32767.0 if sys.platform == "win32" else 4095.0)) * 100))
-
-        # Same visibility-gate pattern _check_active_window already uses for
-        # the profile editor's live-match label: only pay for the scratchpad
-        # repaint while its tab is actually on screen.
-        if self.tabs.currentWidget() is self.system_tab:
-            self.system_tab.scratchpad_panel.scratchpad.add_tablet_point(ev.x, ev.y, cal_p / (32767.0 if sys.platform == "win32" else 4095.0), ev.action)
+    def _reset_diagnostics(self):
+        self._preview_events.clear()
+        self._latest_pen_event = PenEvent(ACTION_CANCEL, 0, 0, 0, 0, 0)
+        self._latest_cal_p = self._latest_abs_x = self._latest_abs_y = 0
+        self.system_tab.scratchpad_panel.scratchpad.reset_input()
+        self.system_tab.diagnostics_panel.update_traffic(0, 0)
+        self.update_live_diagnostics()
 
     # ------------------------------------------------------------------
     # Window lifecycle
@@ -482,23 +559,37 @@ class MainWindow(QMainWindow):
             self.tray.notify("S Pen Bridge", "Application minimized to system tray.")
             return
 
-        if self._dirty:
-            ans = QMessageBox.question(
-                self,
-                "Unsaved Changes",
-                "You have unsaved changes. Save before quitting?",
-                QMessageBox.Save | QMessageBox.Discard | QMessageBox.Cancel,
-                QMessageBox.Save,
-            )
-            if ans == QMessageBox.Cancel:
-                event.ignore()
-                return
-            if ans == QMessageBox.Save:
-                self.save_all_settings()
+        if not self._confirm_unsaved():
+            event.ignore()
+            return
+        if self.force_quit(discard_confirmed=True) is False:
+            event.ignore()
 
-        self.force_quit()
+    def _confirm_unsaved(self):
+        if not self._dirty:
+            return True
+        answer = QMessageBox.question(
+            self, "Unsaved Changes", "You have unsaved changes. Save before quitting?",
+            QMessageBox.Save | QMessageBox.Discard | QMessageBox.Cancel, QMessageBox.Save)
+        if answer == QMessageBox.Cancel:
+            return False
+        if answer == QMessageBox.Save:
+            return self.save_all_settings(quiet=True)
+        return True
 
-    def force_quit(self):
+    def force_quit(self, checked=False, *, discard_confirmed=False):
+        if not discard_confirmed and not self._confirm_unsaved():
+            return False
+        self._closing = True
+        self._cancel_startup()
         self.window_watcher.stop()
-        self.worker.stop_server()
+        try:
+            self.worker.shutdown()
+        except TimeoutError as error:
+            self._closing = False
+            QMessageBox.critical(self, "Input Cleanup Incomplete", f"{error}. The application will stay open so cleanup can finish. Try quitting again shortly.")
+            return False
+        self.system_tab.connection_panel.stop_usb_monitor()
+        self.diag_timer.stop()
         QApplication.quit()
+        return True

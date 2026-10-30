@@ -6,10 +6,10 @@ Provides an on-screen drawing surface to test S Pen pressure, tilt, and latency 
 import math
 from typing import Optional
 from PySide6.QtCore import Qt, QPointF
-from PySide6.QtGui import QPainter, QColor, QPen, QPixmap, QImage, QPaintEvent
+from PySide6.QtGui import QPainter, QColor, QPen, QPixmap, QPaintEvent
 from PySide6.QtWidgets import QWidget
 
-from server.protocol import ACTION_DOWN, ACTION_MOVE, ACTION_UP, ACTION_CANCEL
+from server.protocol import ACTION_DOWN, ACTION_MOVE
 
 
 class ScratchpadWidget(QWidget):
@@ -73,34 +73,39 @@ class ScratchpadWidget(QWidget):
         if active:
             self._mouse_down = False
 
-    def add_tablet_point(self, norm_x: float, norm_y: float, pressure: float, action: int):
-        """
-        Feed live tablet event to draw on scratchpad.
-        norm_x, norm_y in [0.0, 1.0], pressure in [0.0, 1.0].
-        """
+    def reset_input(self):
+        self._last_point = None
+        self._mouse_down = False
+
+    def add_tablet_point(self, norm_x, norm_y, pressure, action):
+        self.add_tablet_points([(norm_x, norm_y, pressure, action)])
+
+    def add_tablet_points(self, points):
+        """Draw one bounded frame batch with one painter, preserving stroke edges."""
         if self._pixmap is None:
             return
-
-        w = self.width()
-        h = self.height()
-        px = norm_x * w
-        py = norm_y * h
-        curr_pt = QPointF(px, py)
-
-        if action == ACTION_DOWN:
-            self._last_point = curr_pt
-            self._last_pressure = pressure
-            self._draw_dot(curr_pt, pressure)
-        elif action == ACTION_MOVE and pressure > 0.0:
-            if self._last_point is not None:
-                self._draw_segment(self._last_point, curr_pt, (self._last_pressure + pressure) / 2.0)
-            else:
-                self._draw_dot(curr_pt, pressure)
-            self._last_point = curr_pt
-            self._last_pressure = pressure
-        elif action in (ACTION_UP, ACTION_CANCEL):
-            self._last_point = None
-
+        painter = QPainter(self._pixmap)
+        painter.setRenderHint(QPainter.Antialiasing)
+        try:
+            for x, y, pressure, action in points:
+                point = QPointF(x * self.width(), y * self.height())
+                pressure = max(0, min(1, pressure))
+                width = self.min_stroke_width + (self.max_stroke_width - self.min_stroke_width) * pressure
+                if action == ACTION_DOWN or (action == ACTION_MOVE and pressure > 0):
+                    if action == ACTION_DOWN or self._last_point is None:
+                        painter.setPen(Qt.NoPen)
+                        painter.setBrush(self.pen_color)
+                        painter.drawEllipse(point, width / 2, width / 2)
+                    else:
+                        average = (pressure + self._last_pressure) / 2
+                        width = self.min_stroke_width + (self.max_stroke_width - self.min_stroke_width) * average
+                        painter.setPen(QPen(self.pen_color, width, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin))
+                        painter.drawLine(self._last_point, point)
+                    self._last_point, self._last_pressure = point, pressure
+                elif action not in (ACTION_MOVE,):
+                    self._last_point = None
+        finally:
+            painter.end()
         self.update()
 
     def _draw_dot(self, pt: QPointF, pressure: float):

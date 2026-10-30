@@ -1,0 +1,2 @@
+Gradle 8.14.6 Wrapper JAR SHA-256 verified against services.gradle.org
+ad16bca46cb71bb5887c546860d93992aeee35c1fdaf4a242b0a612375d937e0

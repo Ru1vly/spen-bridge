@@ -1,109 +1,210 @@
-"""
-Quick Connect panel: LAN IP + port display (enter these in the Android app's
-Settings screen) and the USB/ADB low-latency forwarding shortcut.
-"""
-
-import logging
+"""Pairing and connection details using the running listener's endpoint."""
 import subprocess
-import sys
+import threading
+import ipaddress
 
-from PySide6.QtCore import Signal, QTimer
+from PySide6.QtCore import Qt, Signal, QTimer
 from PySide6.QtWidgets import (
-    QGroupBox,
-    QVBoxLayout,
-    QHBoxLayout,
-    QLabel,
-    QPushButton,
-    QMessageBox,
-    QApplication,
+    QGroupBox, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
+    QMessageBox, QApplication, QDialog, QFormLayout, QLineEdit, QDialogButtonBox,
 )
-
-from server.config import TabletConfig
-
-logger = logging.getLogger("SPenGUI")
+from server.settings import listener_address
+from server.security import load_identity
 
 
 class ConnectionPanel(QGroupBox):
     log_message = Signal(str)
+    adb_finished = Signal(bool, str, bool)
+    connection_type_changed = Signal()
 
-    def __init__(self, local_ip: str, config: TabletConfig, parent=None):
+    def __init__(self, local_ip, config, parent=None):
         super().__init__("Quick Connect (Tablet Setup)", parent)
-        self._local_ip = local_ip
-        self._config = config
-
+        self._local_ip, self._config = local_ip, config
+        self._endpoint = None
+        self._adb_thread = None
+        self._adb_busy = False
+        self._transitioning = False
+        self._adb_deferred = None
+        self._usb_ready = False
+        self._peer = None
+        self._last_adb_message = None
+        self._usb_timer = QTimer(self)
+        self._usb_timer.setInterval(2000)
+        self._usb_timer.timeout.connect(lambda: self.run_adb_reverse(silent=True, automatic=True))
         layout = QVBoxLayout(self)
-        layout.setSpacing(6)
-
-        ip_row = QHBoxLayout()
+        row = QHBoxLayout()
         self.lbl_ip_info = QLabel()
-        ip_row.addWidget(self.lbl_ip_info)
-        btn_copy_ip = QPushButton("Copy")
-        btn_copy_ip.setMaximumWidth(70)
-        btn_copy_ip.clicked.connect(self._copy_connection_info)
-        ip_row.addWidget(btn_copy_ip)
-        layout.addLayout(ip_row)
-
-        self.lbl_hint = QLabel("Enter this IP and port in the tablet app's Settings screen.")
+        self.lbl_ip_info.setTextFormat(Qt.PlainText)
+        self.lbl_ip_info.setWordWrap(True)
+        row.addWidget(self.lbl_ip_info, 1)
+        self.btn_copy = QPushButton("Copy address")
+        self.btn_copy.clicked.connect(self._copy_connection_info)
+        row.addWidget(self.btn_copy)
+        layout.addLayout(row)
+        self.lbl_hint = QLabel()
         self.lbl_hint.setWordWrap(True)
-        self.lbl_hint.setStyleSheet("color: #a6adc8; font-size: 11px;")
         layout.addWidget(self.lbl_hint)
-
+        self.lbl_transport = QLabel("No tablet connected")
+        self.lbl_transport.setTextFormat(Qt.PlainText)
+        self.lbl_transport.setWordWrap(True)
+        layout.addWidget(self.lbl_transport)
+        self.btn_pair = QPushButton("Pair Tablet")
+        self.btn_pair.clicked.connect(self.show_pairing)
+        layout.addWidget(self.btn_pair)
         self.btn_adb = QPushButton("Enable USB Mode (ADB)")
-        self.btn_adb.setToolTip("Sets up an ultra-low-latency USB cable connection via adb reverse")
-        self.btn_adb.clicked.connect(self.run_adb_reverse)
+        self.btn_adb.clicked.connect(lambda: self.run_adb_reverse())
         layout.addWidget(self.btn_adb)
-
+        self.adb_finished.connect(self._adb_done)
         self.refresh_ip_label()
 
-    def refresh_ip_label(self):
-        self.lbl_ip_info.setText(f"IP: <b>{self._local_ip}</b>   Port: <b>{self._config.port}</b>")
+    def set_transitioning(self):
+        self._transitioning = True
+        self.refresh_ip_label()
 
-    def on_port_changed(self, port: int):
+    def set_listener(self, endpoint):
+        deferred, self._adb_deferred = self._adb_deferred, None
+        self._endpoint = endpoint
+        self._transitioning = False
+        self.refresh_ip_label()
+        if endpoint is None:
+            self.set_client(None)
+        if endpoint is not None and deferred is not None:
+            self.run_adb_reverse(silent=deferred)
+
+    def endpoint(self):
+        return self._endpoint or (listener_address(self._config), self._config.port)
+
+    def address(self):
+        host, port = self.endpoint()
+        host = self._local_ip if host in ("0.0.0.0", "::") else host
+        return f"[{host}]:{port}" if ":" in host else f"{host}:{port}"
+
+    def refresh_ip_label(self):
+        state = "Listener change in progress" if self._transitioning else (
+            "Listening" if self._endpoint else "Configured (server stopped)")
+        self.lbl_ip_info.setText(f"{state}: {self.address()}")
+        self.btn_copy.setEnabled(not self._transitioning)
+        self.btn_adb.setEnabled(not self._transitioning and not self._adb_busy)
+        pending = self._endpoint and self._endpoint != (listener_address(self._config), self._config.port)
+        self.lbl_hint.setText(
+            "Network changes pending. Stop and start the server to apply them."
+            if pending else "Copy this address and the pairing details into the tablet Settings. USB uses 127.0.0.1."
+        )
+
+    def on_port_changed(self, port):
         self.refresh_ip_label()
 
     def _copy_connection_info(self):
-        text = f"{self._local_ip}:{self._config.port}"
-        QApplication.clipboard().setText(text)
-        self.lbl_ip_info.setText(f"IP: <b>{self._local_ip}</b>  (Copied!)")
-        QTimer.singleShot(1500, self.refresh_ip_label)
+        if not self._transitioning:
+            QApplication.clipboard().setText(self.address())
 
-    def run_adb_reverse(self, silent: bool = False):
-        # The Android app in USB mode is told to connect to 127.0.0.1:{port}
-        # (i.e. "localhost" from the DEVICE's perspective), while the desktop
-        # server listens on {port} on the HOST. `adb reverse` is what tunnels
-        # a connection made TO a port ON THE DEVICE to a port ON THE HOST -
-        # `adb forward` does the opposite (host listens, tunnels to device)
-        # and previously made this button fail outright, since it tried to
-        # bind the same host port the Python server already owns.
-        self.log_message.emit(f"Running 'adb reverse tcp:{self._config.port} tcp:{self._config.port}'...")
+    def show_pairing(self):
         try:
-            res = subprocess.run(
-                ["adb", "reverse", f"tcp:{self._config.port}", f"tcp:{self._config.port}"],
-                capture_output=True,
-                text=True,
-                timeout=3.0,
-                check=False,
-            )
-            if res.returncode == 0:
-                self.log_message.emit("ADB reverse successful! USB Mode ready.")
-                self.btn_adb.setText("USB Active (ADB)")
-                self.btn_adb.setStyleSheet("background-color: #a6e3a1; color: #11111b; font-weight: bold;")
-            else:
-                err = res.stderr.strip() or "No device found"
-                self.log_message.emit(f"ADB reverse failed: {err}")
-                if not silent:
-                    QMessageBox.warning(
-                        self,
-                        "ADB Reverse",
-                        f"ADB reverse returned error:\n{err}\n\nMake sure your tablet is connected via USB and USB Debugging is enabled.",
-                    )
-        except FileNotFoundError:
-            self.log_message.emit("ADB command not found.")
-            if not silent:
-                if sys.platform == "win32":
-                    hint = "adb is not on your PATH.\nInstall Android Studio (or just the platform-tools ZIP) and add it to PATH."
+            identity = load_identity()
+        except Exception as error:
+            QMessageBox.warning(self, "Pairing unavailable", str(error))
+            return
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Pair Tablet")
+        form = QFormLayout(dialog)
+        hint = QLabel("Copy these into tablet Settings on your own device. The pairing code grants control of this desktop.")
+        hint.setWordWrap(True)
+        form.addRow(hint)
+        for label, value in (("Certificate fingerprint", identity.fingerprint), ("Pairing code", identity.pairing_code)):
+            row = QHBoxLayout()
+            field = QLineEdit(value)
+            field.setReadOnly(True)
+            field.setAccessibleName(label)
+            button = QPushButton("Copy")
+            button.setAccessibleName(f"Copy {label.lower()}")
+            button.clicked.connect(lambda checked=False, value=value: QApplication.clipboard().setText(value))
+            row.addWidget(field, 1)
+            row.addWidget(button)
+            form.addRow(label, row)
+        close = QDialogButtonBox(QDialogButtonBox.Close)
+        close.rejected.connect(dialog.reject)
+        form.addRow(close)
+        dialog.resize(600, dialog.sizeHint().height())
+        dialog.exec()
+
+    def connection_type(self):
+        if not self._peer:
+            return None
+        host = self._peer.rsplit(":", 1)[0].strip("[]")
+        try:
+            local = ipaddress.ip_address(host).is_loopback
+        except ValueError:
+            local = False
+        return ("USB (ADB)" if self._usb_ready else "Local") if local else "Wi-Fi / network"
+
+    def set_client(self, peer):
+        self._peer = peer
+        self._refresh_transport()
+
+    def _refresh_transport(self):
+        kind = self.connection_type()
+        self.lbl_transport.setText(f"Connected via {kind}" if kind else (
+            "USB ready — waiting for paired tablet" if self._usb_ready else
+            "USB reconnect enabled — waiting for device" if self._usb_timer.isActive() else
+            "No tablet connected"))
+        self.connection_type_changed.emit()
+
+    def stop_usb_monitor(self):
+        self._usb_timer.stop()
+        if self._adb_thread and self._adb_thread.is_alive():
+            # At most two commands, each with a five-second deadline.
+            self._adb_thread.join(11)
+        self._adb_deferred = None
+
+    def run_adb_reverse(self, silent=False, *, automatic=False):
+        if not automatic:
+            self._usb_timer.start()
+        if self._transitioning:
+            if not automatic:
+                self._adb_deferred = silent if self._adb_deferred is None else self._adb_deferred and silent
+            return
+        if self._adb_busy:
+            return
+        port = self.endpoint()[1]
+        self._adb_busy = True
+        self.btn_adb.setEnabled(False)
+        if not automatic:
+            self.log_message.emit(f"Enabling automatic USB forwarding for port {port}...")
+        def run():
+            try:
+                ready = False
+                if automatic:
+                    listed = subprocess.run(["adb", "-d", "reverse", "--list"], capture_output=True,
+                                            text=True, timeout=5, check=False)
+                    if listed.returncode != 0:
+                        self.adb_finished.emit(False, "USB reconnect enabled — waiting for an authorized device.", True)
+                        return
+                    ready = any(line.split()[1:] == [f"tcp:{port}", f"tcp:{port}"]
+                                for line in listed.stdout.splitlines())
+                if ready:
+                    ok = True
                 else:
-                    hint = "adb is not installed on this system.\nInstall with: sudo pacman -S android-tools (or sudo apt install adb)"
-                QMessageBox.warning(self, "ADB Missing", hint)
-        except Exception as e:
-            self.log_message.emit(f"ADB forward error: {e}")
+                    result = subprocess.run(["adb", "-d", "reverse", f"tcp:{port}", f"tcp:{port}"],
+                                            capture_output=True, text=True, timeout=5, check=False)
+                    ok = result.returncode == 0
+                message = (f"USB forwarding ready on port {port}; reconnect is automatic." if ok else
+                           "USB reconnect enabled — waiting for an authorized device. Check the cable and USB debugging.")
+            except FileNotFoundError:
+                ok, message = False, "ADB is not installed or is not on PATH. Install Android Platform Tools, then enable USB mode again."
+            except (OSError, subprocess.TimeoutExpired) as error:
+                ok, message = False, f"USB forwarding failed: {error}"
+            self.adb_finished.emit(ok, message[:2000], silent)
+        self._adb_thread = threading.Thread(target=run, name="SPenADB", daemon=True)
+        self._adb_thread.start()
+
+    def _adb_done(self, ok, message, silent):
+        self._adb_busy = False
+        self._usb_ready = ok
+        self.btn_adb.setEnabled(not self._transitioning)
+        self.btn_adb.setText("Enable USB Mode (ADB)")
+        if message != self._last_adb_message:
+            self.log_message.emit(message)
+            self._last_adb_message = message
+        self._refresh_transport()
+        if not ok and not silent:
+            QMessageBox.warning(self, "USB forwarding", message)

@@ -59,5 +59,6 @@ class SystemTab(QWidget):
         right_scroll.setWidget(right_content)
         layout.addWidget(right_scroll, stretch=6)
 
+        self.startup_panel.changed.connect(self.connection_panel.refresh_ip_label)
         self.startup_panel.port_changed.connect(self.connection_panel.on_port_changed)
         self.connection_panel.log_message.connect(self.log_panel.log)

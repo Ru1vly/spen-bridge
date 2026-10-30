@@ -12,7 +12,7 @@
 set -euo pipefail
 
 # If stdin is not a terminal (e.g. curl | bash), reconnect to /dev/tty for sudo password prompts
-if [ ! -t 0 ] && [ -r /dev/tty ]; then
+if [ ! -t 0 ] && (exec 3</dev/tty) 2>/dev/null; then
     exec </dev/tty
 fi
 
@@ -51,31 +51,36 @@ echo "[*] Setting up uinput permissions (this step may ask for your sudo passwor
 ./server/setup_uinput.sh
 
 echo "[*] Setting up the Python environment..."
+if [ -d server/.venv ] && [ ! -x server/.venv/bin/python ]; then
+    echo "Error: server/.venv exists but its Python interpreter is unusable. Repair or move that environment before retrying." >&2
+    exit 1
+fi
+if [ ! -x server/.venv/bin/python ]; then
+    if command -v uv >/dev/null 2>&1; then
+        uv venv --python '>=3.10,<3.15' server/.venv
+    else
+        if ! python3 -c 'import sys; raise SystemExit(not ((3, 10) <= sys.version_info[:2] < (3, 15)))'; then
+            echo 'Error: Python 3.10–3.14 is required by the pinned Qt runtime. Install a supported Python or uv.' >&2
+            exit 1
+        fi
+        python3 -m venv server/.venv
+    fi
+fi
+if ! server/.venv/bin/python -c 'import sys; raise SystemExit(not ((3, 10) <= sys.version_info[:2] < (3, 15)))'; then
+    echo 'Error: The existing environment needs Python 3.10–3.14. Keep it intact and create a compatible environment before retrying.' >&2
+    exit 1
+fi
 if command -v uv >/dev/null 2>&1; then
-    uv venv server/.venv
-    uv pip install --python server/.venv/bin/python -r server/requirements.txt
+    uv pip install --python server/.venv/bin/python --require-hashes -r server/requirements.txt
 else
-    python3 -m venv server/.venv
-    server/.venv/bin/pip install --upgrade pip
-    server/.venv/bin/pip install -r server/requirements.txt
+    server/.venv/bin/python -m ensurepip --upgrade
+    server/.venv/bin/python -m pip install --require-hashes -r server/requirements.txt
 fi
 
 echo "[*] Installing the application launcher..."
 APPS_DIR="$HOME/.local/share/applications"
 mkdir -p "$APPS_DIR"
-cat > "$APPS_DIR/spen-bridge.desktop" <<EOF
-[Desktop Entry]
-Name=S Pen Bridge
-GenericName=Graphics Tablet Controller
-Comment=Turn Samsung Galaxy Tab and S Pen into a Linux graphics tablet
-Exec=$INSTALL_DIR/start.sh
-Icon=$INSTALL_DIR/spen_icon.png
-Terminal=false
-Type=Application
-Categories=Graphics;2DGraphics;
-Keywords=spen;tablet;wacom;stylus;samsung;krita;gimp;
-StartupNotify=true
-EOF
+server/.venv/bin/python -m server.launcher "$INSTALL_DIR" "$APPS_DIR/spen-bridge.desktop"
 chmod 755 "$APPS_DIR/spen-bridge.desktop"
 
 echo ""
@@ -83,5 +88,5 @@ echo "Install complete."
 echo "Launch S Pen Bridge from your application menu, or run:"
 echo "  $INSTALL_DIR/start.sh"
 echo ""
-echo "uinput permissions are configured with uaccess. If /dev/uinput is not accessible in this session, log out and log back in."
+echo "uinput permissions use the dedicated spen-uinput group and a per-user ACL. If /dev/uinput is not accessible in this session, log out and log back in."
 echo "Next, install the Android app on your tablet: see docs/SETUP.md."

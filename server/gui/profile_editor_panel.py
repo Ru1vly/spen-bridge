@@ -8,7 +8,7 @@ the profile being edited is also the currently active (live) one.
 from typing import Optional
 
 from PySide6.QtCore import Signal, QTimer
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QScrollArea
+from PySide6.QtWidgets import QWidget, QVBoxLayout, QScrollArea, QComboBox, QLabel
 
 from server.config import AppProfile, TabletConfig
 from server.gui.server_worker import ServerWorker
@@ -56,6 +56,15 @@ class ProfileEditorPanel(QWidget):
             content_layout.addWidget(section)
             section.changed.connect(self._on_section_changed)
 
+        # Native controls keep their full values in popups while the editor
+        # fits the viewport instead of forcing horizontal scrolling.
+        for combo in content.findChildren(QComboBox):
+            combo.setSizeAdjustPolicy(QComboBox.AdjustToMinimumContentsLengthWithIcon)
+            combo.setMinimumContentsLength(8)
+            combo.setMinimumWidth(0)
+        for label in content.findChildren(QLabel):
+            if len(label.text()) > 35:
+                label.setWordWrap(True)
         content_layout.addStretch()
         scroll.setWidget(content)
         outer.addWidget(scroll)
@@ -85,6 +94,8 @@ class ProfileEditorPanel(QWidget):
         self.identity_section.update_live_match(app_id, title)
 
     def _on_section_changed(self):
+        if self._profile is not None:
+            self.buttons_section.set_profile(self._profile)
         self._push_timer.start()
         self.profile_dirty.emit()
 
@@ -96,23 +107,4 @@ class ProfileEditorPanel(QWidget):
         profile = self._profile
         if profile is None or profile.name != self._config.active_profile_name:
             return
-        self._worker.set_device_mode(
-            mode=profile.device_mode,
-            direct_mode=profile.direct_mode,
-            device_name=self._config.device_name,
-        )
-        sb, desk = self._config.get_screen_bounds_and_desktop(
-            self.mapping_section.monitors, self.mapping_section.desktop_size
-        )
-        self._worker.update_tablet_settings(
-            click_on_touch=profile.click_on_touch,
-            pressure_curve_type=profile.pressure_curve_type,
-            pressure_gamma=profile.pressure_gamma,
-            pressure_min=profile.pressure_min,
-            pressure_max=profile.pressure_max,
-            stroke_smoothing=profile.stroke_smoothing,
-            button_primary=profile.button_primary,
-            button_secondary=profile.button_secondary,
-            screen_bounds=sb,
-            desktop_size=desk,
-        )
+        self._worker.apply_config(self._config)

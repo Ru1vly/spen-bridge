@@ -10,6 +10,7 @@ dist/
 # Android / Gradle
 .gradle/
 android/.gradle/
+android/.kotlin/
 android/build/
 android/app/build/
 *.apk

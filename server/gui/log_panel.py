@@ -2,6 +2,8 @@
 
 import time
 
+from PySide6.QtGui import QTextCursor
+
 from PySide6.QtWidgets import QApplication, QHBoxLayout, QPushButton, QTextEdit
 
 from server.gui.widgets.collapsible_box import CollapsibleBox
@@ -24,6 +26,8 @@ class LogPanel(CollapsibleBox):
 
         self.text_logs = QTextEdit()
         self.text_logs.setReadOnly(True)
+        self.text_logs.setAcceptRichText(False)
+        self.text_logs.document().setMaximumBlockCount(1001)
         self.text_logs.setMaximumHeight(160)
         self.body_layout().addWidget(self.text_logs)
 
@@ -31,8 +35,12 @@ class LogPanel(CollapsibleBox):
 
     def log(self, message: str):
         timestamp = time.strftime("%H:%M:%S")
-        self.text_logs.append(f"[{timestamp}] {message}")
-        self._line_count += 1
+        message = str(message).replace("\r", " ").replace("\n", " ")[:4096]
+        cursor = self.text_logs.textCursor()
+        cursor.movePosition(QTextCursor.End)
+        cursor.insertText(f"[{timestamp}] {message}\n")
+        self.text_logs.setTextCursor(cursor)
+        self._line_count = max(0, self.text_logs.document().blockCount() - 1)
         self.set_summary(f"{self._line_count} line{'s' if self._line_count != 1 else ''}")
 
     def _on_clear(self):

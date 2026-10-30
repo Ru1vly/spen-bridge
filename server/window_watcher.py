@@ -8,7 +8,6 @@ thread by WindowWatcher, which fires a callback when the focused app changes.
 import logging
 import sys
 import threading
-import time
 from typing import Optional, Callable
 
 logger = logging.getLogger("SPenWindowWatcher")
@@ -29,6 +28,7 @@ class WindowWatcher:
         self.poll_interval = poll_interval
         self._running = False
         self._thread: Optional[threading.Thread] = None
+        self._stop_requested = threading.Event()
         self.last_app_id = ""
         self.last_title = ""
 
@@ -36,21 +36,25 @@ class WindowWatcher:
         if self._running:
             return
         self._running = True
+        self._stop_requested.clear()
         self._thread = threading.Thread(target=self._loop, daemon=True)
         self._thread.start()
 
     def stop(self):
         self._running = False
+        self._stop_requested.set()
+        if self._thread and self._thread is not threading.current_thread():
+            self._thread.join(timeout=1.5)
 
     def _loop(self):
         while self._running:
             try:
                 app_id, title = get_active_window()
-                if (app_id != self.last_app_id or title != self.last_title) and (app_id or title):
+                if (app_id != self.last_app_id or title != self.last_title):
                     self.last_app_id = app_id
                     self.last_title = title
                     if self.callback:
                         self.callback(app_id, title)
             except Exception as e:
                 logger.debug(f"Window watcher loop error: {e}")
-            time.sleep(self.poll_interval)
+            self._stop_requested.wait(self.poll_interval)

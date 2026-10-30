@@ -1,0 +1,42 @@
+[
+  {
+    "case": "first install needs creator",
+    "passed": true,
+    "native_commands_mocked": true
+  },
+  {
+    "case": "package staging is not device creation",
+    "passed": true,
+    "native_commands_mocked": true
+  },
+  {
+    "case": "update present healthy node",
+    "passed": true,
+    "native_commands_mocked": true
+  },
+  {
+    "case": "creator installs first root node",
+    "passed": true,
+    "native_commands_mocked": true
+  },
+  {
+    "case": "duplicate roots rejected",
+    "passed": true,
+    "native_commands_mocked": true
+  },
+  {
+    "case": "unhealthy node rejected",
+    "passed": true,
+    "native_commands_mocked": true
+  },
+  {
+    "case": "creator failure rejected",
+    "passed": true,
+    "native_commands_mocked": true
+  },
+  {
+    "case": "pnputil failure rejected",
+    "passed": true,
+    "native_commands_mocked": true
+  }
+]

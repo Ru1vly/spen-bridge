@@ -1,0 +1,9 @@
+....................................................... [ 47%]
+..............................................................           [100%]
+=============================== warnings summary ===============================
+tests/test_installation.py::LauncherTests::test_real_desktop_launcher_preserves_reserved_path_characters
+  /usr/lib64/python3.14/site-packages/gi/overrides/__init__.py:159: PyGIDeprecationWarning: GLib.unix_signal_add_full is deprecated; use GLibUnix.signal_add_full instead
+    value = getattr(proxy, attr)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+117 passed, 1 warning, 17 subtests passed in 9.42s

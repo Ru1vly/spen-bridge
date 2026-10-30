@@ -1,0 +1,4 @@
+Standalone Kotlin 1.9.22 + JDK 17 compilation: passed (three Short constant warnings).
+Kotlin normal=5350454e012a001800030005000000803e0000403f0000003f0000f0c100003442
+Python normal=5350454e012a001800030005000000803e0000403f0000003f0000f0c100003442
+Kotlin 2731 records: actualPayload=65544 declared=8

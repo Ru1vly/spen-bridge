@@ -21,13 +21,7 @@ class FakeTablet:
 
 
 class TestEventGroupDispatch(unittest.TestCase):
-    """SPenServer._dispatch_event_groups() coalesces a Wi-Fi backlog (several
-    already-buffered packets delivered in one read()) down to the freshest
-    position sample, to avoid the on-screen cursor visibly catching up in
-    slow motion after a network stall. It must never do this within a single
-    packet (Android's own historical-sample batching for stroke fidelity),
-    and must never drop a press/release/proximity transition or a button
-    state change."""
+    """Drawing fidelity preserves positions, pressure and transitions across frames."""
 
     def setUp(self):
         self.tablet = FakeTablet()
@@ -42,15 +36,14 @@ class TestEventGroupDispatch(unittest.TestCase):
         self.server._dispatch_event_groups([group])
         self.assertEqual(len(self.tablet.calls), 3)
 
-    def test_backlog_of_pure_moves_coalesces_to_freshest(self):
+    def test_backlog_preserves_all_position_samples(self):
         groups = [
             [PenEvent(ACTION_MOVE, 0, BUTTON_TOUCH, 0.1, 0.1, 0.5)],
             [PenEvent(ACTION_MOVE, 0, BUTTON_TOUCH, 0.2, 0.2, 0.5)],
             [PenEvent(ACTION_MOVE, 0, BUTTON_TOUCH, 0.3, 0.3, 0.5)],
         ]
         self.server._dispatch_event_groups(groups)
-        self.assertEqual(len(self.tablet.calls), 1)
-        self.assertEqual(self.tablet.calls[0].x, 0.3)
+        self.assertEqual([ev.x for ev in self.tablet.calls], [.1, .2, .3])
 
     def test_button_transition_preserved_across_backlog(self):
         groups = [
@@ -59,9 +52,10 @@ class TestEventGroupDispatch(unittest.TestCase):
             [PenEvent(ACTION_MOVE, 0, BUTTON_TOUCH, 0.3, 0.3, 0.5)],
         ]
         self.server._dispatch_event_groups(groups)
-        self.assertEqual(len(self.tablet.calls), 2)
+        self.assertEqual(len(self.tablet.calls), 3)
         self.assertEqual((self.tablet.calls[0].buttons, self.tablet.calls[0].x), (0, 0.1))
-        self.assertEqual((self.tablet.calls[1].buttons, self.tablet.calls[1].x), (BUTTON_TOUCH, 0.3))
+        self.assertEqual((self.tablet.calls[1].buttons, self.tablet.calls[1].x), (BUTTON_TOUCH, 0.2))
+        self.assertEqual((self.tablet.calls[2].buttons, self.tablet.calls[2].x), (BUTTON_TOUCH, 0.3))
 
     def test_transient_button_blip_survives(self):
         groups = [
@@ -105,11 +99,9 @@ class TestEventGroupDispatch(unittest.TestCase):
             [PenEvent(ACTION_MOVE, 0, BUTTON_TOUCH, 0.3, 0.3, 0.5)],
         ]
         self.server._dispatch_event_groups(groups)
-        # 3 raw events arrived, but only the freshest is actually applied:
-        # stats must reflect what was applied, not what arrived.
-        self.assertEqual(len(self.tablet.calls), 1)
-        self.assertEqual(self.server.stats_events_count, 1)
-        self.assertEqual(self.server.total_events_count, 1)
+        self.assertEqual(len(self.tablet.calls), 3)
+        self.assertEqual(self.server.stats_events_count, 3)
+        self.assertEqual(self.server.total_events_count, 3)
 
 
 if __name__ == "__main__":

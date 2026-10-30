@@ -26,7 +26,7 @@ chmod +x server/setup_uinput.sh
 ```
 
 > [!NOTE]
-> The setup script installs `/etc/udev/rules.d/80-spen-bridge.rules` with `TAG+="uaccess"`, adds your user to the `input` group, and immediately applies an ACL via `setfacl` to `/dev/uinput`. **You do not need to log out or reboot**—the virtual tablet is ready to use immediately.
+> The setup script installs `/etc/udev/rules.d/99-uinput-spen.rules`, adds the initiating desktop user to the dedicated `spen-uinput` group, and applies a per-user ACL to `/dev/uinput`. Install the `acl` package first. It does not add membership in `input`, which also grants access to physical keyboards and mice. If an older install added you to `input`, review that membership separately; setup does not remove memberships used by other software.
 
 ### Step 2: Install Server Dependencies
 
@@ -55,7 +55,7 @@ With no display available, the server starts in headless mode automatically; wit
 | --- | --- | --- |
 | `--gui` | off | Launch the desktop graphical control panel |
 | `--cli` | off | Force headless CLI server mode |
-| `--host <address>` | from config (`0.0.0.0`) | Host or IP address to bind the server to |
+| `--host <address>` | from config (`127.0.0.1`, USB by default) | Host or IP address to bind the server to |
 | `--port <port>` | from config (`40118`) | TCP port to listen on |
 | `--name <name>` | from config | Virtual tablet device name |
 | `--mode {pointer,tablet}` | from config (`pointer`) | `pointer` drives an absolute cursor with clicks; `tablet` exposes a pure tablet-v2 device |
@@ -116,11 +116,13 @@ Running `./start.sh` or `server/.venv/bin/python server/main.py --gui` launches 
 
 ## 4. Connection Modes
 
-You can connect either over **USB cable** (recommended for zero latency) or over **Wi-Fi**.
+First [pair the tablet](PAIRING.md): open desktop **Pair Tablet**, copy its certificate fingerprint and pairing code into Android Settings, and tap **Save & Apply**. Both USB and Wi-Fi require these credentials.
 
-### Mode A: USB Cable (Zero Latency via ADB, Recommended)
+You can connect either over **USB cable** (recommended for a wired connection) or over **Wi-Fi**.
 
-Using USB provides near zero latency and is immune to Wi-Fi jitter.
+### Mode A: USB Cable (Wired Connection via ADB, Recommended)
+
+USB avoids Wi-Fi radio jitter; end-to-end latency depends on the devices and drawing application.
 
 1. Connect the tablet to your PC via USB cable.
 2. Make sure `adb` is installed on your PC (`sudo pacman -S android-tools` or `sudo apt install adb`).
@@ -133,9 +135,11 @@ Using USB provides near zero latency and is immune to Wi-Fi jitter.
    ```
    *(Or simply click **Run ADB Reverse** in the desktop GUI control panel).*
 4. Open the **S Pen Bridge** app on your tablet.
-5. Tap **Settings**, set **Server IP** to `127.0.0.1`, then tap **Save & Reconnect**.
+5. Tap **Settings**, set **Server IP** to `127.0.0.1`, then tap **Save & Apply**.
 
 ### Mode B: Local Wi-Fi
+
+Enable **Allow paired Wi-Fi connections** on desktop and stop/start the server (or use `--wifi` in CLI). Allow its selected TCP port through your private-network firewall; see [network setup](PAIRING.md).
 
 1. Make sure your Linux PC and Samsung tablet are on the same Wi-Fi network (preferably 5GHz).
 2. Find your Linux PC's local IP address:
@@ -144,7 +148,7 @@ Using USB provides near zero latency and is immune to Wi-Fi jitter.
    # Look for 192.168.x.x or 10.x.x.x under your Wi-Fi or Ethernet interface
    ```
 3. Open the **S Pen Bridge** app on your tablet.
-4. Tap **Settings**, enter your PC's IP address and port (default `40118`), then tap **Save & Reconnect**.
+4. Tap **Settings**, enter your PC's IP address and port (default `40118`), then tap **Save & Apply**.
 5. The status dot turns green once connected.
 
 ## 5. Configuring Your Drawing Apps
@@ -191,11 +195,11 @@ To verify your Linux PC and drawing software setup before connecting a tablet:
 ## 7. Troubleshooting & FAQ
 
 ### Permission Denied on `/dev/uinput`
-Run `./server/setup_uinput.sh`. The script configures udev rules and applies immediate ACL permissions (`setfacl`). If running in an environment without `acl` or `systemd-uaccess`, verify that your user belongs to the `input` group:
+Run `./server/setup_uinput.sh`. The script configures udev rules and applies immediate ACL permissions (`setfacl`). Install the `acl` package and verify udev is available. Confirm your user belongs to the `spen-uinput` group:
 ```bash
 groups $USER
 ```
-If you were just added to the group, a new session or `newgrp input` is required.
+If you were just added to the group, a new session or `newgrp spen-uinput` is required.
 
 ### ADB Reverse Fails
 - Ensure USB debugging is enabled under Developer Options on your tablet.

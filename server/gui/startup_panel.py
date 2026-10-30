@@ -5,6 +5,8 @@ global reset-to-defaults action.
 """
 
 import os
+import getpass
+import shlex
 from pathlib import Path
 import subprocess
 import sys
@@ -28,6 +30,8 @@ REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 
 
 class StartupPanel(QGroupBox):
+    changed = Signal()
+    device_name_changed = Signal()
     port_changed = Signal(int)
     reset_requested = Signal()
 
@@ -42,28 +46,37 @@ class StartupPanel(QGroupBox):
         port_row = QHBoxLayout()
         port_row.addWidget(QLabel("Port:"))
         self.spin_port = QSpinBox()
-        self.spin_port.setRange(1024, 65535)
+        self.spin_port.setAccessibleName("Server port")
+        self.spin_port.setRange(1, 65535)
         self.spin_port.valueChanged.connect(self._on_port_changed)
         port_row.addWidget(self.spin_port)
         port_row.addStretch()
         layout.addLayout(port_row)
 
+        self.chk_wifi = QCheckBox("Allow paired Wi-Fi connections")
+        self.chk_wifi.setToolTip("Off: USB loopback only. On: paired tablets may connect over your network.")
+        self.chk_wifi.toggled.connect(self._on_wifi_changed)
+        layout.addWidget(self.chk_wifi)
+
         self.chk_autostart_server = QCheckBox("Auto-start server on app launch")
-        self.chk_autostart_server.toggled.connect(lambda c: setattr(self._config, "auto_start_server", c))
+        self.chk_autostart_server.toggled.connect(lambda c: self._set_preference("auto_start_server", c))
         layout.addWidget(self.chk_autostart_server)
 
         self.chk_auto_adb = QCheckBox("Auto-forward USB ADB on launch")
-        self.chk_auto_adb.toggled.connect(lambda c: setattr(self._config, "auto_adb_forward", c))
+        self.chk_auto_adb.toggled.connect(lambda c: self._set_preference("auto_adb_forward", c))
         layout.addWidget(self.chk_auto_adb)
 
         self.chk_tray = QCheckBox("Minimize to tray on window close")
-        self.chk_tray.toggled.connect(lambda c: setattr(self._config, "minimize_to_tray", c))
+        self.chk_tray.toggled.connect(lambda c: self._set_preference("minimize_to_tray", c))
         layout.addWidget(self.chk_tray)
 
         name_row = QHBoxLayout()
         name_row.addWidget(QLabel("Device Name:"))
         self.edit_dev_name = QLineEdit()
-        self.edit_dev_name.textChanged.connect(lambda t: setattr(self._config, "device_name", t))
+        self.edit_dev_name.setAccessibleName("Virtual device name")
+        self.edit_dev_name.setMaxLength(256)
+        self.edit_dev_name.textChanged.connect(lambda t: self._set_preference("device_name", t))
+        self.edit_dev_name.editingFinished.connect(self.device_name_changed.emit)
         name_row.addWidget(self.edit_dev_name)
         layout.addLayout(name_row)
 
@@ -97,12 +110,26 @@ class StartupPanel(QGroupBox):
         self._updating = True
         try:
             self.spin_port.setValue(self._config.port)
+            self.chk_wifi.setChecked(self._config.wifi_enabled)
             self.chk_autostart_server.setChecked(self._config.auto_start_server)
             self.chk_auto_adb.setChecked(self._config.auto_adb_forward)
             self.chk_tray.setChecked(self._config.minimize_to_tray)
             self.edit_dev_name.setText(self._config.device_name)
         finally:
             self._updating = False
+
+    def _set_preference(self, name, value):
+        if self._updating or getattr(self._config, name) == value:
+            return
+        setattr(self._config, name, value)
+        self.changed.emit()
+
+    def _on_wifi_changed(self, enabled):
+        if self._updating:
+            return
+        self._config.wifi_enabled = enabled
+        self._config.host = "0.0.0.0" if enabled else "127.0.0.1"
+        self.changed.emit()
 
     def set_desktop_size(self, size):
         self.lbl_desktop_size.setText(f"Detected desktop: {size[0]}x{size[1]}")
@@ -112,6 +139,7 @@ class StartupPanel(QGroupBox):
             return
         self._config.port = value
         self.port_changed.emit(value)
+        self.changed.emit()
 
     def _check_uinput_perms(self):
         uinput_path = Path("/dev/uinput")
@@ -135,14 +163,14 @@ class StartupPanel(QGroupBox):
         import shutil
         if shutil.which("pkexec"):
             try:
-                subprocess.Popen(["pkexec", "bash", str(script_path)])
+                subprocess.Popen(["pkexec", "env", f"SPEN_BRIDGE_USER={getpass.getuser()}", "bash", str(script_path)])
                 QMessageBox.information(
                     self,
                     "uinput Setup",
                     "Launched setup with pkexec. After authenticating, click 'Check / Setup uinput Permissions' again.",
                 )
                 return
-            except Exception as e:
+            except Exception:
                 pass
 
         # Try launching in a terminal emulator
@@ -158,7 +186,7 @@ class StartupPanel(QGroupBox):
         for term, args in terminals:
             if shutil.which(term):
                 try:
-                    cmd = [term] + args + ["bash", "-c", f"sudo '{script_path}'; echo 'Done. Press enter to exit.'; read line"]
+                    cmd = [term] + args + ["bash", "-c", f"sudo env {shlex.quote('SPEN_BRIDGE_USER=' + getpass.getuser())} bash {shlex.quote(str(script_path))}; echo 'Press enter to exit.'; read -r line"]
                     subprocess.Popen(cmd)
                     return
                 except Exception:
@@ -169,7 +197,7 @@ class StartupPanel(QGroupBox):
             self,
             "Run Setup Script",
             f"Please run the setup script in your terminal to grant permissions:\n\n"
-            f"sudo '{script_path}'\n\n"
+            f"sudo env {shlex.quote('SPEN_BRIDGE_USER=' + getpass.getuser())} bash {shlex.quote(str(script_path))}\n\n"
             f"Then re-check permissions.",
         )
 
@@ -179,21 +207,9 @@ class StartupPanel(QGroupBox):
         apps_dir.mkdir(parents=True, exist_ok=True)
         desktop_file = apps_dir / "spen-bridge.desktop"
 
-        content = f"""[Desktop Entry]
-Name=S Pen Bridge
-Comment=Turn Samsung Galaxy Tab & S Pen into a Linux graphics tablet
-Exec={REPO_ROOT}/server/.venv/bin/python {REPO_ROOT}/server/main.py --gui
-Icon={REPO_ROOT}/spen_icon.png
-Terminal=false
-Type=Application
-Categories=Graphics;2DGraphics;
-Keywords=spen;tablet;wacom;stylus;samsung;
-StartupNotify=true
-"""
         try:
-            with open(desktop_file, "w", encoding="utf-8") as f:
-                f.write(content)
-            desktop_file.chmod(0o755)
+            from server.launcher import install_launcher
+            install_launcher(REPO_ROOT, desktop_file)
             QMessageBox.information(
                 self,
                 "Desktop Launcher Installed",

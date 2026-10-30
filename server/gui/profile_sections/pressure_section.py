@@ -60,7 +60,8 @@ class PressureSection(QGroupBox):
         self.lbl_gamma_val.setStyleSheet("font-weight: bold; color: #89b4fa;")
         grid.addWidget(self.lbl_gamma_val, 0, 1)
         self.slider_gamma = QSlider(Qt.Horizontal)
-        self.slider_gamma.setRange(20, 300)
+        self.slider_gamma.setAccessibleName("Pressure sensitivity exponent")
+        self.slider_gamma.setRange(10, 500)
         self.slider_gamma.valueChanged.connect(self._on_gamma_changed)
         grid.addWidget(self.slider_gamma, 1, 0, 1, 2)
 
@@ -69,7 +70,8 @@ class PressureSection(QGroupBox):
         self.lbl_min_val.setStyleSheet("font-weight: bold; color: #f38ba8;")
         grid.addWidget(self.lbl_min_val, 2, 1)
         self.slider_min = QSlider(Qt.Horizontal)
-        self.slider_min.setRange(0, 30)
+        self.slider_min.setAccessibleName("Minimum pressure percent")
+        self.slider_min.setRange(0, 50)
         self.slider_min.valueChanged.connect(self._on_min_changed)
         grid.addWidget(self.slider_min, 3, 0, 1, 2)
 
@@ -78,7 +80,8 @@ class PressureSection(QGroupBox):
         self.lbl_max_val.setStyleSheet("font-weight: bold; color: #fab387;")
         grid.addWidget(self.lbl_max_val, 4, 1)
         self.slider_max = QSlider(Qt.Horizontal)
-        self.slider_max.setRange(70, 100)
+        self.slider_max.setAccessibleName("Maximum pressure percent")
+        self.slider_max.setRange(50, 100)
         self.slider_max.valueChanged.connect(self._on_max_changed)
         grid.addWidget(self.slider_max, 5, 0, 1, 2)
 
@@ -166,6 +169,8 @@ class PressureSection(QGroupBox):
             return
         p_min = val / 100.0
         self._profile.pressure_min = p_min
+        if p_min >= self._profile.pressure_max:
+            self.slider_max.setValue(val + 1)
         self.lbl_min_val.setText(f"{val}%")
         self._sync_curve_widget()
         self.changed.emit()
@@ -175,6 +180,8 @@ class PressureSection(QGroupBox):
             return
         p_max = val / 100.0
         self._profile.pressure_max = p_max
+        if p_max <= self._profile.pressure_min:
+            self.slider_min.setValue(val - 1)
         self.lbl_max_val.setText(f"{val}%")
         self._sync_curve_widget()
         self.changed.emit()

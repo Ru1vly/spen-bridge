@@ -1,0 +1,60 @@
+.................................................                        [100%]
+================================ tests coverage ================================
+_______________ coverage: platform linux, python 3.14.8-final-0 ________________
+
+Name                                              Stmts   Miss  Cover
+---------------------------------------------------------------------
+server/__init__.py                                    0      0   100%
+server/backends/__init__.py                           3      0   100%
+server/backends/base.py                              96     14    85%
+server/backends/factory.py                           11      0   100%
+server/backends/linux_uinput.py                     175    175     0%
+server/backends/windows_hid.py                       92      5    95%
+server/backends/windows_report.py                    12      0   100%
+server/backends/windows_transport.py                 52      3    94%
+server/config.py                                    233     57    76%
+server/gui/__init__.py                                4      0   100%
+server/gui/app.py                                    14      8    43%
+server/gui/connection_panel.py                       62     16    74%
+server/gui/diagnostics_panel.py                      51     12    76%
+server/gui/dialogs.py                                55     48    13%
+server/gui/header_bar.py                             80     22    72%
+server/gui/log_panel.py                              30      7    77%
+server/gui/main_window.py                           326    153    53%
+server/gui/network_info.py                           22     10    55%
+server/gui/profile_editor_panel.py                   64      7    89%
+server/gui/profile_list_panel.py                    122      8    93%
+server/gui/profile_sections/__init__.py               0      0   100%
+server/gui/profile_sections/buttons_section.py       79      9    89%
+server/gui/profile_sections/device_section.py        67     13    81%
+server/gui/profile_sections/identity_section.py      70     20    71%
+server/gui/profile_sections/mapping_section.py      204     65    68%
+server/gui/profile_sections/pressure_section.py     131     30    77%
+server/gui/profiles_tab.py                           25      0   100%
+server/gui/scratchpad_panel.py                       32      2    94%
+server/gui/server_worker.py                         103     55    47%
+server/gui/startup_panel.py                         111     38    66%
+server/gui/state.py                                  16      1    94%
+server/gui/system_tab.py                             42      0   100%
+server/gui/theme.py                                  36      0   100%
+server/gui/tray.py                                   34     10    71%
+server/gui/widgets/__init__.py                        0      0   100%
+server/gui/widgets/chip_input.py                    144     44    69%
+server/gui/widgets/collapsible_box.py                58      7    88%
+server/gui/widgets/pill_badge.py                     13      0   100%
+server/main.py                                       94     94     0%
+server/monitors.py                                   99     53    46%
+server/protocol.py                                   52      2    96%
+server/server.py                                    152     55    64%
+server/test_synthetic.py                             59     48    19%
+server/widgets/__init__.py                            0      0   100%
+server/widgets/monitor_layout.py                     91     63    31%
+server/widgets/pressure_curve.py                    117     82    30%
+server/widgets/scratchpad.py                        141    110    22%
+server/window_watcher.py                             38      8    79%
+server/window_watcher_linux.py                       70     40    43%
+server/window_watcher_windows.py                     49     49     0%
+---------------------------------------------------------------------
+TOTAL                                              3631   1443    60%
+Coverage JSON written to file audit/evidence/coverage.json
+49 passed in 10.71s

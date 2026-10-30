@@ -14,7 +14,11 @@ class GuiState:
 
     @property
     def last_tab_index(self) -> int:
-        return int(self._settings.value("last_tab_index", 0))
+        try:
+            index = int(self._settings.value("last_tab_index", 0))
+        except (ValueError, TypeError):
+            return 0
+        return index if index in (0, 1) else 0
 
     @last_tab_index.setter
     def last_tab_index(self, value: int):

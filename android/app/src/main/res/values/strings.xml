@@ -1,5 +1,10 @@
 <resources>
     <string name="app_name">S Pen Bridge</string>
+    <string name="connection_usb">USB</string>
+    <string name="connection_network">Wi-Fi / network</string>
+    <string name="status_connecting_transport">Connecting via %1$s…</string>
+    <string name="status_connected_transport">Connected via %1$s</string>
+    <string name="status_usb_error">USB connection failed. Check the cable, USB debugging, desktop server, and pairing.</string>
     <string name="status_connecting">Connecting…</string>
     <string name="status_connected">Connected to %1$s:%2$d</string>
     <string name="status_disconnected">Disconnected</string>
@@ -32,6 +37,30 @@
     <string name="show_area_shading">Dim Inactive Margins (Letterbox)</string>
     <string name="sidebar_left_option">Place Sidebar on Left Edge</string>
 
-    <string name="usb_mode_hint">For USB Cable Mode (Zero Wi-Fi Latency):\nRun on PC: adb forward tcp:40118 tcp:40118\nThen set Server IP to 127.0.0.1</string>
+    <string name="usb_mode_hint">For USB cable mode:\nRun on PC: adb reverse tcp:%1$d tcp:%1$d\nThen set Server IP to 127.0.0.1</string>
     <string name="save_settings">Save &amp; Apply</string>
+    <string name="desktop_fingerprint">Desktop certificate fingerprint</string>
+    <string name="pairing_code">Pairing code</string>
+    <string name="pairing_hint">On the desktop, open Pair Tablet or run with &#8211;&#8211;show-pairing. Copy its fingerprint and pairing code here. Wi-Fi must also be enabled on the desktop.</string>
+    <string name="invalid_host">Enter an IP address or hostname, without a URL or port.</string>
+    <string name="invalid_port">Enter a port from 1 to 65535.</string>
+    <string name="invalid_fingerprint">Copy the full 64-character certificate fingerprint from your desktop.</string>
+    <string name="invalid_pairing_code">Copy the full 43-character pairing code from your desktop.</string>
+    <string name="status_pairing_required">Pair your desktop in Settings.</string>
+    <string name="status_connection_error">Connection failed. Check pairing, network, and whether another tablet is connected.</string>
+    <string name="status_cleanup_pending">The previous connection is still stopping. Try again shortly.</string>
+    <string name="drawing_surface_description">Drawing surface. Use the stylus to control the paired desktop. Finger input is off unless enabled in Settings.</string>
+    <string name="hide_controls">Hide</string>
+    <string name="show_controls">Show</string>
+    <string name="hide_controls_description">Hide drawing controls</string>
+    <string name="show_controls_description">Show drawing controls</string>
+    <string name="rotate_description">Rotate screen. Press and hold to switch portrait and landscape.</string>
+    <string name="area_width_initial">Active Width: 100%</string>
+    <string name="area_height_initial">Active Height: 100%</string>
+    <string name="area_offset_x_initial">Horizontal Alignment: 50%</string>
+    <string name="area_offset_y_initial">Vertical Alignment: 50%</string>
+    <string name="alignment_presets">Quick Alignment Presets:</string>
+    <string name="hud_area_full">Full Surface</string>
+    <string name="hud_area_aspect">%1$s Active Area</string>
+    <string name="hud_area_custom">Custom Area (%1$d%% × %2$d%%)</string>
 </resources>

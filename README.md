@@ -39,9 +39,9 @@ Your drawing applications recognize the result as a real physical graphics table
 | Full 4096 level pressure sensitivity | Natural, dynamic brush thickness and opacity |
 | Stylus tilt support | X and Y tilt angles mapped to kernel evdev (Linux) and HID reports (Windows) |
 | Hover and proximity tracking | Hover cursor preview before the pen touches the screen |
-| High sampling rate | Processes Android `MotionEvent` historical batches for up to 240Hz+ stroke smoothness |
+| High sampling rate | Processes Android `MotionEvent` historical batches for the sampling rate supplied by the device |
 | Hardware palm rejection | Rejects capacitive finger touch while the stylus is in use |
-| Dual connection modes | USB cable mode (`adb reverse`) for zero latency, or Wi-Fi mode for wireless drawing |
+| Dual connection modes | USB cable mode (`adb reverse`) for a wired connection, or Wi-Fi mode for wireless drawing |
 | Customizable pressure curves | Linear, Soft, Firm, and Sigmoid response curves with real-time visual preview |
 | Per-app profiles | Automatically switches profiles and mappings based on active window title/class |
 | Multi-monitor coordinate mapping | Map the tablet to a specific monitor, custom area, or the full virtual desktop (with negative offset support) |
@@ -52,8 +52,8 @@ Your drawing applications recognize the result as a real physical graphics table
 
 | Platform | Subsystem | Status |
 | --- | --- | --- |
-| **Linux** (X11 & Wayland) | `/dev/uinput` via `evdev`/`libinput` | Fully supported |
-| **Windows 10/11 x64** | Windows Ink via Virtual HID Framework (`spenvhid.sys`) | Supported (driver requires test-signing or self-signing) |
+| **Linux** (X11 & Wayland) | `/dev/uinput` via `evdev`/`libinput` | Implemented; compositor and device behavior vary |
+| **Windows 10/11 x64** | Windows Ink via Virtual HID Framework (`spenvhid.sys`) | Experimental; signed driver and Windows hardware validation required |
 
 ## Architecture
 
@@ -64,7 +64,7 @@ Your drawing applications recognize the result as a real physical graphics table
                v
     [ Android App (Kotlin) ]
                |
-               |  24-byte Binary Protocol (TCP / TCP_NODELAY via USB or Wi-Fi)
+               |  24-byte records over paired TLS (USB or Wi-Fi)
                v
       [ Desktop Server (Python) ]
                |
@@ -84,6 +84,8 @@ Your drawing applications recognize the result as a real physical graphics table
 
 ## Quick Start
 
+Protocol v2 requires pairing for USB and Wi-Fi. Start on USB loopback by default. Open desktop **Pair Tablet** and copy the fingerprint and pairing code into Android Settings. See [pairing and network setup](docs/PAIRING.md), including how to opt into Wi-Fi.
+
 ### 1. Install on Linux
 
 The fastest way to get set up is the one-command installer. It clones the repo into `~/spen-bridge`, sets up uinput permissions (with immediate ACL access), creates the Python virtual environment, and installs a desktop launcher entry. Running it again later updates an existing install in place.
@@ -98,7 +100,7 @@ curl -fsSL https://raw.githubusercontent.com/Ru1vly/spen-bridge/main/install.sh 
 Prefer to do it by hand, or already have the repo cloned? Run the same steps yourself:
 
 ```bash
-# Set up uinput permissions (uses uaccess and setfacl for immediate access)
+# Set up uinput permissions (uses a dedicated uinput group and a per-user ACL)
 ./server/setup_uinput.sh
 
 # Create a virtual environment and install dependencies
@@ -121,7 +123,7 @@ server/.venv/bin/python server/main.py --cli
 
 ### 2. Install on Windows
 
-Requirements: Windows 10/11 x64, Python 3.10+ (with the `py` launcher).
+Requirements: Windows 10/11 x64, Python 3.10–3.14 (with the `py` launcher).
 
 In an administrator PowerShell prompt at the repository root:
 
@@ -184,4 +186,4 @@ See [docs/SETUP.md](docs/SETUP.md) for detailed instructions.
 
 ## License
 
-MIT License.
+[MIT License](LICENSE).

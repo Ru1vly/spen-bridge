@@ -1,0 +1,42 @@
+[
+  {
+    "repo": "actions/checkout",
+    "tag": "v4",
+    "sha": "11d5960a326750d5838078e36cf38b85af677262"
+  },
+  {
+    "repo": "actions/setup-python",
+    "tag": "v5",
+    "sha": "a26af69be951a213d495a4c3e4e4022e16d87065",
+    "error": false
+  },
+  {
+    "repo": "actions/upload-artifact",
+    "tag": "v4",
+    "sha": "ea165f8d65b6e75b540449e92b4886f43607fa02",
+    "error": false
+  },
+  {
+    "repo": "microsoft/setup-msbuild",
+    "tag": "v2",
+    "sha": "6fb02220983dee41ce7ae257b6f4d8f9bf5ed4ce",
+    "error": false
+  },
+  {
+    "repo": "nuget/setup-nuget",
+    "tag": "v2",
+    "sha": "d105a947828025cd7a980103c35ba2bfae586d0f",
+    "error": false
+  },
+  {
+    "repo": "actions/setup-java",
+    "tag": "v4",
+    "sha": "cf277c60eb25467037889841efdb72551f06f6c3",
+    "error": false
+  },
+  {
+    "repo": "gradle/actions",
+    "tag": "v4",
+    "sha": "ed408507eac070d1f99cc633dbcf757c94c7933a"
+  }
+]

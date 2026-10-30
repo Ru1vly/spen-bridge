@@ -20,6 +20,7 @@ Binary packet specification:
 """
 
 import struct
+import math
 from dataclasses import dataclass
 from typing import List, Tuple, Optional
 
@@ -29,6 +30,8 @@ HEADER_SIZE = HEADER_STRUCT.size  # 9 bytes
 
 EVENT_STRUCT = struct.Struct("<BBHfffff")
 EVENT_RECORD_SIZE = EVENT_STRUCT.size  # 24 bytes
+MAX_PAYLOAD_SIZE = 65535
+MAX_EVENTS_PER_PACKET = MAX_PAYLOAD_SIZE // EVENT_RECORD_SIZE
 
 # Packet Types
 PKT_EVENT = 1
@@ -70,14 +73,22 @@ class PenEvent:
 
 def pack_packet(pkt_type: int, seq: int, payload: bytes) -> bytes:
     """Pack a full packet with header and payload."""
+    if pkt_type not in (PKT_EVENT, PKT_PING, PKT_PONG, PKT_HANDSHAKE):
+        raise ValueError("Unknown packet type")
+    if type(seq) is not int or not 0 <= seq <= 65535 or len(payload) > MAX_PAYLOAD_SIZE:
+        raise ValueError("Sequence or payload exceeds protocol bounds")
     header = HEADER_STRUCT.pack(MAGIC, pkt_type, seq, len(payload))
     return header + payload
 
 
 def pack_events(events: List[PenEvent], seq: int = 0) -> bytes:
     """Pack a list of PenEvent objects into a PKT_EVENT packet."""
+    if not events or len(events) > MAX_EVENTS_PER_PACKET:
+        raise ValueError(f"Event batches must contain 1..{MAX_EVENTS_PER_PACKET} records")
     payload = bytearray()
     for ev in events:
+        if not valid_event(ev, check_ranges=False):
+            raise ValueError("Invalid event record")
         # Clamp values
         x = max(0.0, min(1.0, float(ev.x)))
         y = max(0.0, min(1.0, float(ev.y)))
@@ -107,7 +118,7 @@ def unpack_header(data: bytes, offset: int = 0) -> Optional[Tuple[int, int, int]
     a growing bytearray can pass it (and an advancing offset) directly.
     Returns (pkt_type, seq, payload_len) or None if invalid magic.
     """
-    if len(data) - offset < HEADER_SIZE:
+    if type(offset) is not int or offset < 0 or len(data) - offset < HEADER_SIZE:
         return None
     magic, pkt_type, seq, payload_len = HEADER_STRUCT.unpack_from(data, offset)
     if magic != MAGIC:
@@ -115,28 +126,32 @@ def unpack_header(data: bytes, offset: int = 0) -> Optional[Tuple[int, int, int]
     return pkt_type, seq, payload_len
 
 
-def unpack_events(payload: bytes) -> List[PenEvent]:
-    """Unpack event records from payload bytes.
+def valid_event(ev: PenEvent, *, check_ranges: bool = True) -> bool:
+    """Both backends support a finger as a single pointer/pen stream.
 
-    Uses struct.iter_unpack (a C-level iterator, faster than a manual
-    unpack_from loop) which requires the buffer length to be an exact
-    multiple of the record size - unlike a manual loop, it raises on a
-    short trailing fragment instead of silently stopping. Truncating to a
-    whole number of records first preserves the previous lenient behavior
-    against a malformed/truncated payload_len.
+    Android rejects finger input by default; when explicitly enabled it tracks
+    one pointer, never turns a capacitive contact into a multi-touch gesture.
     """
-    whole_len = (len(payload) // EVENT_RECORD_SIZE) * EVENT_RECORD_SIZE
-    return [
-        PenEvent(
-            action=action,
-            tool_type=tool_type,
-            buttons=buttons,
-            x=x,
-            y=y,
-            pressure=pressure,
-            tilt_x=tilt_x,
-            tilt_y=tilt_y,
-        )
-        for action, tool_type, buttons, x, y, pressure, tilt_x, tilt_y
-        in EVENT_STRUCT.iter_unpack(payload[:whole_len])
-    ]
+    if (type(ev.action) is not int or ev.action not in range(7)
+            or type(ev.tool_type) is not int or ev.tool_type not in (TOOL_STYLUS, TOOL_ERASER, TOOL_FINGER)
+            or type(ev.buttons) is not int or not 0 <= ev.buttons <= 7):
+        return False
+    values = (ev.x, ev.y, ev.pressure, ev.tilt_x, ev.tilt_y)
+    try:
+        if not all(type(v) in (int, float) and math.isfinite(v) for v in values):
+            return False
+    except OverflowError:
+        return False
+    return not check_ranges or (
+        all(0 <= v <= 1 for v in values[:3]) and all(-90 <= v <= 90 for v in values[3:])
+    )
+
+
+def unpack_events(payload: bytes) -> List[PenEvent]:
+    """Decode a complete validated event payload; never apply a partial batch."""
+    if not payload or len(payload) % EVENT_RECORD_SIZE:
+        raise ValueError("Event payload must contain complete records")
+    events = [PenEvent(*record) for record in EVENT_STRUCT.iter_unpack(payload)]
+    if not all(valid_event(ev) for ev in events):
+        raise ValueError("Invalid event values")
+    return events

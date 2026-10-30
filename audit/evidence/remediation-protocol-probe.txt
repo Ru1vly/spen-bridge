@@ -1,0 +1,3 @@
+normal=5350454e012a001800030005000000803e0000403f0000003f0000f0c100003442
+oversized batch rejected
+all 2731 records preserved across 2 frames

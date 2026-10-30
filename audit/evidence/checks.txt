@@ -1,0 +1,54 @@
+Baseline: 042c806 minor fix
+Runtime: Linux, Python 3.14.8, system PySide6 6.11.2
+Audit tooling: /tmp/spen-audit-venv (system site packages enabled)
+
+python -m unittest discover -s tests -v
+Result: 56 run, 49 passed, 7 skipped (evdev absent in original interpreter).
+
+QT_QPA_PLATFORM=offscreen /tmp/spen-audit-venv/bin/python -m pytest -q --ignore=tests/test_features_linux_backend.py --cov=server
+Result: 49 passed; 60% statement coverage. Full per-module output in tests.txt.
+coverage.json contains summary metrics, not line-level coverage data.
+
+QT_QPA_PLATFORM=offscreen /tmp/spen-audit-venv/bin/python
+with unittest.mock.patch('evdev.UInput'):
+    pytest.main(['-q', 'tests/test_features_linux_backend.py'])
+Result: 7 passed in 4.16 seconds; no kernel input device created.
+
+/tmp/spen-audit-venv/bin/python audit/reproduce.py /tmp/spen-audit-images
+Result: 22 observations asserted. See reproductions.json.
+
+bash -n install.sh start.sh server/setup_uinput.sh
+python -m compileall -q server tests audit
+Python ElementTree.parse over Android XML and driver project/package XML
+Result: passed.
+
+ruff check --isolated --select E9,F63,F7,F82 server tests audit/reproduce.py
+Result: passed.
+ruff check --isolated --select F server tests
+Result: 17 unused imports/locals. No undefined-name/syntax findings.
+
+pip-audit -r server/requirements.txt
+Result: no known vulnerabilities in freshly resolved dependencies.
+pip-audit --disable-pip --no-deps -r audit/evidence/python-runtime.txt
+Result: no known vulnerabilities for available runtime distribution metadata.
+
+uv 0.12.24: uv venv /tmp/spen-installer-rerun-probe (twice)
+Result: first succeeded; second exited 2 because environment already exists.
+
+Android toolchain setup:
+Gradle 8.7 wrapper --version succeeded under installed JDK 25.
+Full build with JDK 25 failed with version error 25.0.4.1.
+Retried with temporary Temurin JDK 17: project configured, then SDK missing.
+Installed temporary official Android command-line SDK tools, platform 34 and build-tools 34.0.0.
+Final assemble/lint result is recorded separately in android-build.txt.
+
+Kotlin protocol:
+Compiled Protocol.kt with bundled Kotlin compiler 1.9.22 + JDK 17.
+Compiled audit/ProtocolProbe.java against that jar + kotlin-stdlib.
+Result: matching normal Python/Kotlin bytes; oversized Kotlin payload length wraps.
+See protocol.txt.
+
+Android OSV query: 61 resolved debug-runtime/plugin Maven coordinates.
+One package/version advisory match for Kotlin Gradle plugin 1.9.24 (GHSA-r937-wjx7-w2jp).
+Primary source patch concerns KAPT incremental caches; no KAPT configuration is enabled in this app.
+Reachability not established; recorded as a conditional low-priority finding.

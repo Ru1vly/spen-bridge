@@ -27,6 +27,7 @@ class DeviceSection(QGroupBox):
         mode_row = QHBoxLayout()
         mode_row.addWidget(QLabel("Device Type:"))
         self.combo_dev_mode = QComboBox()
+        self.combo_dev_mode.setAccessibleName("Device type")
         self.combo_dev_mode.addItem("Pointer Mode (Absolute Cursor - Wayland & X11)", "pointer")
         self.combo_dev_mode.addItem("Tablet Mode (Wacom Tablet-v2 for Krita/GIMP)", "tablet")
         if sys.platform == "win32":
@@ -38,7 +39,7 @@ class DeviceSection(QGroupBox):
         layout.addLayout(mode_row)
 
         self.chk_click_on_touch = QCheckBox(
-            "Enable Click on Touch (pen contact generates mouse clicks / touch events)"
+            "Generate clicks on pen contact"
         )
         self.chk_click_on_touch.toggled.connect(self._on_click_on_touch_toggled)
         layout.addWidget(self.chk_click_on_touch)
@@ -53,7 +54,7 @@ class DeviceSection(QGroupBox):
         layout.addWidget(desc)
 
         self.advanced_box = CollapsibleBox("Advanced: Direct Input Mode")
-        self.chk_direct_mode = QCheckBox("Enable INPUT_PROP_DIRECT (Display Tablet Mode)")
+        self.chk_direct_mode = QCheckBox("Direct input (display tablet)")
         self.chk_direct_mode.toggled.connect(self._on_direct_mode_toggled)
         self.advanced_box.body_layout().addWidget(self.chk_direct_mode)
         layout.addWidget(self.advanced_box)

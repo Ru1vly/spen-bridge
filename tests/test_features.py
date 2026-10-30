@@ -16,6 +16,19 @@ from server.widgets.pressure_curve import PressureCurveWidget
 
 
 class TestSPenSettingsAndFeatures(unittest.TestCase):
+    def setUp(self):
+        # GUI logic tests must never inherit a user's auto-start/ADB settings,
+        # write their QSettings, or query their focused application.
+        from unittest.mock import Mock, patch
+        config = TabletConfig(auto_start_server=False, auto_adb_forward=False, minimize_to_tray=False)
+        for guard in (
+            patch("server.gui.main_window.load_config", return_value=config),
+            patch("server.gui.main_window.WindowWatcher.start"),
+            patch("server.gui.main_window.GuiState", return_value=Mock(last_tab_index=0, last_editing_profile="Default")),
+        ):
+            guard.start()
+            self.addCleanup(guard.stop)
+
     def test_config_defaults_and_serialization(self):
         cfg = TabletConfig()
         self.assertEqual(cfg.port, 40118)
@@ -154,23 +167,28 @@ class TestSPenSettingsAndFeatures(unittest.TestCase):
     def test_adb_reverse_silent_mode(self):
         """When called with silent=True (e.g. startup auto_adb_forward), adb failure
         must not pop up a blocking modal QMessageBox."""
-        from unittest.mock import patch, MagicMock
+        from unittest.mock import patch
         from server.gui.connection_panel import ConnectionPanel
 
         cfg = TabletConfig()
         panel = ConnectionPanel(local_ip="127.0.0.1", config=cfg)
+        self.addCleanup(panel.stop_usb_monitor)
         with patch("subprocess.run", side_effect=FileNotFoundError), \
              patch("PySide6.QtWidgets.QMessageBox.warning") as mock_box:
             panel.run_adb_reverse(silent=True)
+            panel._adb_thread.join(2)
+            QApplication.processEvents()
             mock_box.assert_not_called()
 
             panel.run_adb_reverse(silent=False)
+            panel._adb_thread.join(2)
+            QApplication.processEvents()
             mock_box.assert_called_once()
 
     def test_close_event_respects_system_tray_availability(self):
         """If system tray is not available on the OS (e.g. GNOME without AppIndicator),
         window close must not minimize to an invisible tray."""
-        from unittest.mock import patch, MagicMock
+        from unittest.mock import patch
         from server.gui import MainWindow
         from PySide6.QtGui import QCloseEvent
 

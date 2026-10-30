@@ -1,0 +1,18 @@
+{
+  "missing_forward_observed": true,
+  "automatically_restored": true,
+  "restore_seconds": 0.836,
+  "physical_cable_unplug_test": true,
+  "method": "Remove live ADB reverse mapping; desktop monitor restores it without a USB button press. Restart phone app to require a new authenticated session.",
+  "phone_status": [
+    "Connected via USB"
+  ],
+  "adb_usb_transport_reset": true,
+  "forward_restored_after_transport_reset": false,
+  "transport_restore_seconds": 15.07,
+  "transport_reset_limit": "The explicit adb reconnect command left the host ADB transport absent while the USB device remained enumerated. Restarting the audit-owned ADB server restored device visibility. This is not a passed physical unplug/replug test.",
+  "adb_daemon_restarted_after_transport_kick": true,
+  "authenticated_desktop_status_after_daemon_restart": "Connected via USB (ADB)",
+  "physical_cable_unplug_evidence": "User confirmed on 2026-10-30 that both updated apps reconnect automatically after unplug/replug.",
+  "physical_cable_unplug_evidence_type": "user confirmation"
+}

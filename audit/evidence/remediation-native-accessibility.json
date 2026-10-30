@@ -1,0 +1,20 @@
+{
+  "desktop": "KDE Wayland with Xwayland",
+  "toolkit": "PySide6 6.11.2 xcb",
+  "screen_reader": "Orca",
+  "backend_started": false,
+  "config_and_ui_state": "in-memory mocks; no saved user settings",
+  "verified": [
+    "Profile list and item names exposed in native AT-SPI tree",
+    "Orca speaks Profiles, List with 4 items, Krita",
+    "AT-SPI checkbox Toggle opens and closes body, matching checked state",
+    "Orca announces expanded and collapsed section state",
+    "QTest Space activates section and arrows/Return select monitor in regression suite"
+  ],
+  "limits": [
+    "No TalkBack or S Pen available",
+    "Keyboard synthesis through Computer Use did not establish native OS-key delivery; QTest keyboard path passes",
+    "Braille device unavailable",
+    "This is a focused smoke check, not a complete assistive-technology review"
+  ]
+}

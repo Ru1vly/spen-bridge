@@ -1,0 +1,4 @@
+evdev==1.9.3; sys_platform == "linux" and python_version < "3.11"
+evdev==2.0.0; sys_platform == "linux" and python_version >= "3.11"
+PySide6==6.11.2
+cryptography==50.0.0

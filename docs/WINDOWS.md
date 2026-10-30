@@ -8,7 +8,7 @@ provided. ARM64 and WinTab are not supported.
 
 ## Application
 
-Install Python 3.10+ with the `py` launcher. In PowerShell at the repository root:
+Install Python 3.10–3.14 with the `py` launcher. In PowerShell at the repository root:
 
 ```powershell
 .\install.ps1
@@ -20,7 +20,7 @@ Install Python 3.10+ with the `py` launcher. In PowerShell at the repository roo
 The installer (`install.ps1`) performs the following:
 1. Creates a local Python virtual environment (`server\.venv`) and installs required packages.
 2. Creates a current-user Start Menu shortcut (`S Pen Bridge`) with the application icon.
-3. Checks for administrative privileges to create an inbound Windows Firewall rule for port 40118 (`S Pen Bridge Server (TCP-In)`), ensuring Wi-Fi tablet connections work seamlessly.
+3. Leaves network access loopback-only by default. Wi-Fi and any firewall opening are separate opt-in steps.
 
 Keep the checkout in place. If local script execution is blocked, use
 `powershell -ExecutionPolicy Bypass -File .\install.ps1` for this invocation.
@@ -82,7 +82,7 @@ one directory. Use an elevated PowerShell:
 ```
 
 This creates the root device on first install and updates it thereafter.
-DevCon is automatically located from WDK install paths or PATH if present; otherwise `pnputil` is used.
+DevCon is required for the first installation and is located from WDK paths or PATH. Without it, the script stops with an instruction to pass `-DevconPath`. `pnputil` can update an existing root device but cannot create one. The script verifies that exactly one present root device reports OK.
 The INF installs VHF as the required lower filter, following Microsoft's
 [VHF installation contract](https://learn.microsoft.com/en-us/windows-hardware/drivers/hid/virtual-hid-framework--vhf-).
 
@@ -109,10 +109,16 @@ and put `adb.exe` on PATH. With the server listening:
 adb reverse tcp:40118 tcp:40118
 ```
 
-Use USB mode in the Android app. For Wi-Fi, enter the PC's LAN IP and ensure the
-inbound port 40118 is allowed through Windows Firewall (configured automatically by
-`install.ps1` if run as administrator, or configurable in Advanced Firewall Settings).
-Use only a trusted LAN.
+In Android Settings, enter **127.0.0.1** and the running server port for USB
+(default 40118). Copy the certificate fingerprint and pairing code from desktop
+**Pair Tablet** (or `--show-pairing`) and tap **Save & Apply**. There is no separate
+USB mode toggle. Use the same selected port on both sides of `adb reverse`.
+
+For Wi-Fi, explicitly enable **Allow paired Wi-Fi connections** on desktop and
+restart the server after changing the listener. Enter the desktop LAN IP on the
+tablet and keep the same pairing details. Firewall rules must match the **running**
+port and the application's Python executable; the installer creates no rule.
+See [pairing and network setup](PAIRING.md) for a private-network rule and verification.
 
 Configure drawing applications for Windows Ink (for example Krita's Windows
 8+ Pointer Input setting). There is no WinTab emulation. Windows controls the

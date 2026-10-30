@@ -5,17 +5,10 @@ a body that hides/shows. Used for every "Advanced: ..." sub-section and for
 the Server Logs panel: one shared mechanism, no parallel "Card" hierarchy.
 """
 
-from PySide6.QtCore import Qt, Signal
-from PySide6.QtWidgets import QGroupBox, QWidget, QVBoxLayout, QHBoxLayout, QLabel
+from PySide6.QtCore import Qt, Signal, QSignalBlocker
+from PySide6.QtWidgets import QGroupBox, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton
 
 
-class _ClickableHeader(QWidget):
-    clicked = Signal()
-
-    def mousePressEvent(self, event):
-        if event.button() == Qt.LeftButton:
-            self.clicked.emit()
-        super().mousePressEvent(event)
 
 
 class CollapsibleBox(QGroupBox):
@@ -31,7 +24,9 @@ class CollapsibleBox(QGroupBox):
         outer.setContentsMargins(0, 0, 0, 0)
         outer.setSpacing(0)
 
-        self._header = _ClickableHeader()
+        self._header = QPushButton()
+        self._header.setCheckable(True)
+        self._header.setAccessibleName(title)
         self._header.setCursor(Qt.PointingHandCursor)
         self._header.setObjectName("CollapsibleBoxHeader")
         header_layout = QHBoxLayout(self._header)
@@ -52,7 +47,7 @@ class CollapsibleBox(QGroupBox):
         self._summary_label.setStyleSheet("color: #a6adc8; font-size: 11px;")
         header_layout.addWidget(self._summary_label)
 
-        self._header.clicked.connect(self._on_header_clicked)
+        self._header.toggled.connect(self._on_header_toggled)
         outer.addWidget(self._header)
 
         self._body = QWidget()
@@ -68,12 +63,16 @@ class CollapsibleBox(QGroupBox):
 
     def set_title(self, text: str):
         self._title_label.setText(text)
+        self._header.setAccessibleName(text)
 
     def set_summary(self, text: str):
         self._summary_label.setText(text)
 
     def set_expanded(self, expanded: bool):
         self._expanded = expanded
+        with QSignalBlocker(self._header):
+            self._header.setChecked(expanded)
+        self._header.setAccessibleDescription("Expanded" if expanded else "Collapsed")
         self._chevron.setText("▾" if expanded else "▸")
         self._body.setVisible(expanded)
 
@@ -81,6 +80,6 @@ class CollapsibleBox(QGroupBox):
     def is_expanded(self) -> bool:
         return self._expanded
 
-    def _on_header_clicked(self):
-        self.set_expanded(not self._expanded)
+    def _on_header_toggled(self, expanded: bool):
+        self.set_expanded(expanded)
         self.toggled_expanded.emit(self._expanded)

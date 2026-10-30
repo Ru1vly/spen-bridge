@@ -1,0 +1,6 @@
+Parsed install.ps1
+Parsed start.ps1
+Parsed windows/install-driver.ps1
+Parsed windows/package-driver.ps1
+Parsed windows/validate-driver.ps1
+Parsed tests/test_driver_installer.ps1

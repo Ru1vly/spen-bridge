@@ -1,0 +1,3 @@
+FROM docker.io/library/alpine@sha256:2e0b81d60597f449baa56dc25d355367869d2dca4cd57e866f1e2b52af3eb55f
+RUN apk add --no-cache bash shadow acl util-linux
+RUN useradd -m -u 1000 tester

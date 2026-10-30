@@ -54,6 +54,7 @@ class ProfileListRow(QWidget):
         layout.addWidget(self._accent_bar)
 
         self._lbl_name = QLabel(name)
+        self._lbl_name.setTextFormat(Qt.PlainText)
         self._lbl_name.setStyleSheet("font-weight: 500;")
         layout.addWidget(self._lbl_name, stretch=1)
         if name == "Default":
@@ -95,6 +96,7 @@ class ProfileListPanel(QWidget):
         layout.addWidget(self.chk_auto_switch)
 
         self.lbl_focused_window = QLabel("Active Window: Detecting...")
+        self.lbl_focused_window.setTextFormat(Qt.PlainText)
         self.lbl_focused_window.setWordWrap(True)
         self.lbl_focused_window.setStyleSheet(
             "background: #181825; color: #89b4fa; padding: 4px 8px; border-radius: 6px; font-size: 11px;"
@@ -102,6 +104,7 @@ class ProfileListPanel(QWidget):
         layout.addWidget(self.lbl_focused_window)
 
         self.list_widget = QListWidget()
+        self.list_widget.setAccessibleName("Profiles")
         self.list_widget.currentItemChanged.connect(self._on_current_item_changed)
         layout.addWidget(self.list_widget, stretch=1)
 
@@ -127,6 +130,7 @@ class ProfileListPanel(QWidget):
             self.list_widget.addItem(item)
             self.list_widget.setItemWidget(item, row)
             item.setData(Qt.UserRole, name)
+            item.setData(Qt.AccessibleTextRole, name)
             self._rows[name] = row
             self._items[name] = item
             row.set_customized(is_profile_customized(profile))
@@ -148,6 +152,14 @@ class ProfileListPanel(QWidget):
         for name, row in self._rows.items():
             row.set_accent(name == editing_profile_name)
             row.set_live(auto_switch and name == active_profile_name)
+            states = []
+            if name == editing_profile_name:
+                states.append("Editing")
+            if auto_switch and name == active_profile_name:
+                states.append("Active for input")
+            if is_profile_customized(self._config.profiles[name]):
+                states.append("Customized")
+            self._items[name].setData(Qt.AccessibleDescriptionRole, ", ".join(states))
 
     def set_current_by_name(self, name: str):
         """Select a row AND fire profile_selected: the entry point for
@@ -176,6 +188,12 @@ class ProfileListPanel(QWidget):
         profile = self._config.profiles.get(name)
         if row is not None and profile is not None:
             row.set_customized(is_profile_customized(profile))
+            item = self._items[name]
+            description = item.data(Qt.AccessibleDescriptionRole) or ""
+            states = [state for state in description.split(", ") if state and state != "Customized"]
+            if is_profile_customized(profile):
+                states.append("Customized")
+            item.setData(Qt.AccessibleDescriptionRole, ", ".join(states))
 
     def selected_profile_name(self) -> Optional[str]:
         item = self.list_widget.currentItem()

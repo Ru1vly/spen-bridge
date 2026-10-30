@@ -1,8 +1,56 @@
-# S Pen Bridge: Network Wire Protocol (v1)
+# S Pen Bridge: Network Wire Protocol (v2)
 
 This document defines the binary wire protocol used to transmit S Pen events between the Android tablet client and the desktop server (Linux and Windows) over TCP.
 
 All integers and floating-point values are encoded in **little-endian** (`<` in Python `struct`).
+
+## Transport, pairing and ownership
+
+Every connection uses TLS 1.2 or newer. The desktop's per-user identity is stored
+in `identity.json` next to its configuration, with an owner-only private key and
+256-bit pairing code. The client must pin the SHA-256 fingerprint of the desktop
+certificate's DER bytes, provisioned out of band together with the pairing code.
+Never learn a pin or code from an unauthenticated network peer. The desktop binds
+loopback for USB by default; Wi-Fi requires explicit opt-in.
+
+Protocol v1 plaintext connections are rejected. Pairing uses the existing packet
+header and packet type 4, before any event may be sent:
+
+1. Desktop sends sequence 0 with payload `SPB2 || nonce`, with a fresh 32-byte
+   cryptographically random nonce for each TLS connection.
+2. Client responds with sequence 0 and payload `SPB2 || HMAC-SHA256(code,
+   "SPB2client\0" || nonce)`. `code` is the ASCII pairing-code string, not its
+   Base64-decoded bytes. The displayed code is 43 URL-safe Base64 characters.
+3. Desktop acknowledges with sequence 0 and payload `SPB2 || HMAC-SHA256(code,
+   "SPB2server\0" || nonce)`. Both sides compare proofs in constant time.
+
+Only one authenticated connection owns the tablet. Other clients cannot inject
+events or reset its input state. Disconnect, cancel, idle timeout and server stop
+release the owner's state. A new session must not replay an earlier session's
+queued strokes. Pairing challenge/proof frames are exactly 36 bytes.
+
+The desktop admits at most four raw/TLS/application connections, with separate
+five-second TLS and authentication
+deadline and ten-second complete-frame idle deadline. Send an empty PING at least
+every two seconds, including while the pen is idle, and verify the matching PONG.
+The entire header and payload must arrive within the frame deadline; slow bytes
+do not reset it. Default token-bucket budgets are 10,000 events, 4,000 packets and
+1 MiB per second, with two-second burst capacity. Limit violations close the
+connection and release input. Shutdown closes accepted streams before waiting
+for the listener and joins all admitted handlers, including incomplete TLS handshakes.
+
+Events must contain complete 24-byte records, at most 2,730 per packet. Unknown
+actions/tools/button bits, nonfinite numbers and values outside the ranges below
+are rejected before applying any record from that packet. Larger local batches
+must be split into complete packets. PING and PONG payloads are empty. Repeated
+authentication frames, unknown packet types and invalid magic terminate a session.
+
+Both backends interpret an explicitly enabled finger as one pen/pointer stream,
+without multi-touch gestures. The Android app rejects fingers by default. Native
+tablet/eraser actions are offered only in device modes that can implement them.
+
+The server preserves all validated samples, including pressure and tilt extrema;
+it does not discard already received positions to conceal queue backlog.
 
 ## Table of Contents
 
@@ -18,7 +66,7 @@ Every packet begins with a fixed 9-byte header:
 | --- | --- | --- | --- | --- |
 | `0` | `magic` | char[4] | 4 | Magic identifier: ASCII `SPEN` (`0x53 0x50 0x45 0x4E`) |
 | `4` | `pkt_type` | uint8 | 1 | Packet type identifier (see table below) |
-| `5` | `seq` | uint16 | 2 | Monotonically increasing sequence number |
+| `5` | `seq` | uint16 | 2 | Client sequence counter, wrapping modulo 65,536 |
 | `7` | `payload_len` | uint16 | 2 | Length of payload in bytes (`N x 24` for events) |
 
 ### Packet Types
@@ -28,7 +76,7 @@ Every packet begins with a fixed 9-byte header:
 | `0x01` | `PKT_EVENT` | Contains one or more pen event records |
 | `0x02` | `PKT_PING` | Heartbeat probe sent by client or server |
 | `0x03` | `PKT_PONG` | Heartbeat response |
-| `0x04` | `PKT_HANDSHAKE` | Initial connection handshake and feature negotiation |
+| `0x04` | `PKT_HANDSHAKE` | Protocol-v2 challenge and mutual pairing proofs |
 
 ## 2. Event Record (24 bytes)
 
@@ -79,4 +127,4 @@ During rapid drawing strokes, Android batches intermediate sensor reports in `Mo
 
 $$\text{payload\_len} = (K_{\text{history}} + 1) \times 24 \text{ bytes}$$
 
-This allows sampling rates up to 240 Hz to 480 Hz with negligible network overhead and zero dropped curves.
+The bridge preserves historical samples supplied by Android. Actual sampling rate depends on the digitizer and device load. Session queues must remain bounded; a stalled or disconnected session is reset rather than replaying offline strokes.
