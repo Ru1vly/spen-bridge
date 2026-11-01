@@ -1,0 +1,7 @@
+gradle.projectsEvaluated {
+    def target = gradle.rootProject.project(':app')
+    target.android.sourceSets.test.java.srcDir(new File(gradle.rootProject.projectDir.parentFile, 'audit/fixtures/latency'))
+    target.tasks.withType(org.gradle.api.tasks.testing.Test).configureEach {
+        systemProperty 'spen.audit.output', new File(gradle.rootProject.projectDir.parentFile, 'audit/evidence/latency-improvements-2026-10-31/android-transport-latency.json').absolutePath
+    }
+}

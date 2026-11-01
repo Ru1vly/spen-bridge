@@ -10,6 +10,7 @@ from PySide6.QtWidgets import QApplication
 # Ensure QApplication exists for Qt widgets
 app = QApplication.instance() or QApplication(sys.argv)
 
+from profile_examples import add_example_profiles
 from server.config import TabletConfig
 from server.monitors import detect_monitors
 from server.widgets.pressure_curve import PressureCurveWidget
@@ -20,7 +21,7 @@ class TestSPenSettingsAndFeatures(unittest.TestCase):
         # GUI logic tests must never inherit a user's auto-start/ADB settings,
         # write their QSettings, or query their focused application.
         from unittest.mock import Mock, patch
-        config = TabletConfig(auto_start_server=False, auto_adb_forward=False, minimize_to_tray=False)
+        config = add_example_profiles(TabletConfig(auto_start_server=False, auto_adb_forward=False, minimize_to_tray=False))
         for guard in (
             patch("server.gui.main_window.load_config", return_value=config),
             patch("server.gui.main_window.WindowWatcher.start"),
@@ -60,17 +61,20 @@ class TestSPenSettingsAndFeatures(unittest.TestCase):
     def test_monitor_detection(self):
         monitors, desk_size = detect_monitors()
         self.assertTrue(len(monitors) >= 1)
-        self.assertTrue(desk_size[0] >= 1920)
-        self.assertTrue(desk_size[1] >= 1080)
+        # Real desktops may use scaling, a smaller mode, or remote sessions.
+        self.assertGreater(desk_size[0], 0)
+        self.assertGreater(desk_size[1], 0)
         for m in monitors:
             self.assertIn("name", m)
             self.assertIn("x", m)
             self.assertIn("y", m)
             self.assertIn("width", m)
             self.assertIn("height", m)
+            self.assertGreater(m["width"], 0)
+            self.assertGreater(m["height"], 0)
 
     def test_profile_matching(self):
-        cfg = TabletConfig()
+        cfg = add_example_profiles(TabletConfig())
 
         # Test osu! window matching
         p_osu = cfg.find_profile_for_app(app_id="osu!", title="osu!")
@@ -97,7 +101,7 @@ class TestSPenSettingsAndFeatures(unittest.TestCase):
 
     def test_systematic_profile_independence(self):
         """Verify that every feature can be independently enabled/disabled on Default and on App Profiles."""
-        cfg = TabletConfig()
+        cfg = add_example_profiles(TabletConfig())
 
         # 1. Default profile modifications
         cfg.active_profile_name = "Default"
@@ -135,7 +139,7 @@ class TestSPenSettingsAndFeatures(unittest.TestCase):
         from server.gui import MainWindow
         win = MainWindow()
         try:
-            self.assertEqual(win.tabs.count(), 2)
+            self.assertEqual(win.tabs.count(), 4)
 
             # Auto-switch off so selecting a profile also drives the live/active
             # profile (deterministic: with auto-switch on, selection only changes

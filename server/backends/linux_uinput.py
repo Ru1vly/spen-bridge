@@ -9,38 +9,90 @@ what lets the rest of the app, including server.gui, be imported on Windows
 before a real Windows backend exists (see server.backends.factory).
 """
 
+import errno
 import logging
-import time
+import struct
 import threading
+import time
 from dataclasses import replace
+from os import write as _write_native
 from typing import Optional
 
 import evdev
 from evdev import ecodes as e
 
-from server.button_actions import validate_actions
 from server.backends.base import (
     ABS_MAX_COORDINATE,
     ABS_MAX_PRESSURE,
-    TILT_MIN,
     TILT_MAX,
+    TILT_MIN,
     TabletBackendBase,
 )
+from server.button_actions import validate_actions
 from server.protocol import (
-    PenEvent,
-    valid_event,
-    ACTION_HOVER_EXIT,
+    ACTION_CANCEL,
     ACTION_DOWN,
+    ACTION_HOVER_EXIT,
     ACTION_MOVE,
     ACTION_UP,
-    ACTION_CANCEL,
-    TOOL_STYLUS,
-    TOOL_ERASER,
     BUTTON_STYLUS,
     BUTTON_STYLUS2,
+    TOOL_ERASER,
+    TOOL_STYLUS,
+    PenEvent,
+    valid_event,
 )
 
 logger = logging.getLogger("SPenTablet")
+
+
+class _ReportWriter:
+    """Submit all native input_event records of one SYN frame in one syscall.
+
+    Timestamps are zero because uinput assigns its own event timestamps. The
+    native layout follows the userspace timeval ABI, as python-evdev does.
+    Only the owning tablet's lock may call write/syn/close.
+    """
+    _event = struct.Struct("@llHHi")
+
+    def __init__(self, raw):
+        self.raw = raw
+        self._buffer = bytearray(self._event.size * 16)
+        self._count = 0
+
+    @property
+    def device(self):
+        return self.raw.device
+
+    @property
+    def devnode(self):
+        return self.raw.devnode
+
+    def write(self, event_type, code, value):
+        end = (self._count + 1) * self._event.size
+        if end > len(self._buffer):
+            self._buffer.extend(bytearray(len(self._buffer)))
+        self._event.pack_into(self._buffer, self._count * self._event.size,
+                              0, 0, event_type, code, value)
+        self._count += 1
+
+    def syn(self):
+        self.write(e.EV_SYN, e.SYN_REPORT, 0)
+        view = memoryview(self._buffer)[:self._count * self._event.size]
+        try:
+            offset = 0
+            while offset < len(view):
+                written = _write_native(self.raw.fd, view[offset:])
+                if written <= 0 or written % self._event.size:
+                    raise OSError(errno.EIO, "Incomplete native input event write")
+                offset += written
+        finally:
+            self._count = 0
+            view.release()
+
+    def close(self):
+        self._count = 0
+        self.raw.close()
 
 
 class LinuxUinputTablet(TabletBackendBase):
@@ -55,7 +107,7 @@ class LinuxUinputTablet(TabletBackendBase):
         self._eraser_latched = False
         self._last_event = PenEvent(ACTION_CANCEL, TOOL_STYLUS, 0, 0, 0, 0)
         self._last_position = (0, 0)
-        self.uinput: Optional[evdev.UInput] = None
+        self.uinput: Optional[_ReportWriter] = None
         self._is_in_proximity = False
         self._active_tool = TOOL_STYLUS
         self._button_stylus_pressed = False
@@ -156,12 +208,12 @@ class LinuxUinputTablet(TabletBackendBase):
         input_props = [e.INPUT_PROP_DIRECT] if self.direct_mode else [e.INPUT_PROP_POINTER]
 
         logger.info(f"Creating device '{self.name}' [mode={self.mode}, direct={self.direct_mode}]")
-        self.uinput = evdev.UInput(
+        self.uinput = _ReportWriter(evdev.UInput(
             events=capabilities,
             name=self.name,
             version=0x01,
             input_props=input_props,
-        )
+        ))
         # UInput.device is None when evdev cannot open the new event node
         # (e.g. udev has not applied permissions yet); the device still works.
         logger.info(f"Device created: {getattr(self.uinput, 'devnode', None) or 'unknown node'}")

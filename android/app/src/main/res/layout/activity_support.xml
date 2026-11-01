@@ -1,0 +1,15 @@
+<?xml version='1.0' encoding='utf-8'?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app="http://schemas.android.com/apk/res-auto" android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical" android:background="@color/page_bg">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical" android:padding="12dp">
+        <com.google.android.material.button.MaterialButton android:id="@+id/btnSupportBack" style="@style/Widget.SPenBridge.ToolbarButton" android:layout_width="48dp" android:layout_height="48dp" android:contentDescription="@string/settings_title" app:icon="@drawable/ic_back" />
+        <TextView android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="@string/support_title" android:textSize="20sp" android:textColor="@color/text_light" android:id="@+id/supportPageTitle" />
+    </LinearLayout>
+    <ScrollView android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:fillViewport="true">
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="24dp" android:id="@+id/supportContent" android:layout_gravity="center_horizontal">
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/support_text" android:textSize="16sp" android:textColor="@color/text_light" />
+            <TextView android:id="@+id/diagnosticPreview" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="24dp" android:textSize="14sp" android:textColor="@color/text_muted" android:textIsSelectable="true" />
+            <com.google.android.material.button.MaterialButton android:id="@+id/btnCopyReport" style="@style/Widget.SPenBridge.OutlinedButton" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp" android:minHeight="48dp" android:text="@string/copy_report" />
+            <TextView android:id="@+id/supportFeedback" android:layout_width="match_parent" android:layout_height="wrap_content" android:textSize="14sp" android:textColor="@color/text_muted" android:accessibilityLiveRegion="polite" />
+        </LinearLayout>
+    </ScrollView>
+</LinearLayout>

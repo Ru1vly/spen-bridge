@@ -39,6 +39,14 @@ do not reset it. Default token-bucket budgets are 10,000 events, 4,000 packets a
 connection and release input. Shutdown closes accepted streams before waiting
 for the listener and joins all admitted handlers, including incomplete TLS handshakes.
 
+USB readiness checks use the same pinned TLS connection and fresh mutual proofs,
+but the client handshake and server acknowledgement use sequence **1** instead
+of 0. The server closes this read-only probe after its acknowledgement. It never
+claims input ownership, accepts event packets, resets the current owner or emits
+client-connected/disconnected callbacks. This allows a Wi-Fi owner to verify the
+paired USB path before an idle handover; older servers can reject the optional
+probe without disturbing the Wi-Fi session.
+
 Events must contain complete 24-byte records, at most 2,730 per packet. Unknown
 actions/tools/button bits, nonfinite numbers and values outside the ranges below
 are rejected before applying any record from that packet. Larger local batches

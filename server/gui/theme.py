@@ -1,418 +1,153 @@
-"""
-Central style tokens and stylesheet for the S Pen Bridge desktop GUI.
-Dark, Catppuccin-Mocha-inspired palette, styled as soft/neumorphic UI: cards
-and controls sit at the same tone as their background and get their depth
-from a light/dark bevel pair instead of flat borders: raised for resting
-controls, inverted (inset) for anything "pressed", active, or selected.
-Every widget module should size/space things using the constants here rather
-than hard-coding new magic numbers.
-"""
+"""One UI visual roles for the native Qt adaptation.
 
-from PySide6.QtGui import QColor
-from PySide6.QtWidgets import QGraphicsDropShadowEffect
+Samsung publishes design guidance, not a Qt SDK. These tokens implement that
+language with native controls; they are shared by QSS and the painted widgets.
+"""
+from pathlib import Path
 
-PALETTE = {
-    "bg": "#1e1e2e",
-    "panel": "#181825",
-    "border": "#313244",
-    "text": "#cdd6f4",
-    "text_muted": "#a6adc8",
-    "accent_blue": "#89b4fa",
-    "accent_blue_hover": "#b4befe",
-    "green": "#a6e3a1",
-    "red": "#f38ba8",
-    "orange": "#fab387",
-    "purple": "#cba6f7",
-    "surface2": "#313244",
-    "surface3": "#45475a",
-    "surface4": "#585b70",
-    # Neumorphic bevel edges: a translucent white/black pair layered on top
-    # of whatever the surface color already is, so the same two tokens give
-    # every surface (bg, panel, or a colored button fill) a consistent
-    # raised/inset edge without needing a bespoke light/dark shade per color.
-    "bevel_light": "rgba(255, 255, 255, 40)",
-    "bevel_dark": "rgba(0, 0, 0, 115)",
-    "inset_bg": "#11111b",
+LIGHT = {
+    "bg": "#f2f2f2", "panel": "#ffffff", "border": "#d7d9de",
+    "text": "#17171b", "text_muted": "#565b65", "accent_blue": "#165dce",
+    "accent_blue_hover": "#104da9", "green": "#187447", "red": "#b3261e",
+    "orange": "#8b5100", "purple": "#6944b5", "surface2": "#e8e9ed",
+    "surface3": "#d5d8df", "surface4": "#747984", "inset_bg": "#f7f7f9",
+    "selection": "#e5edfc", "on_accent": "#ffffff", "disabled": "#787c85",
 }
-
-# Spacing scale (px) used for margins/gaps across every panel/section.
+DARK = {
+    "bg": "#010101", "panel": "#171719", "border": "#3c3c41",
+    "text": "#f5f5f7", "text_muted": "#b1b3bc", "accent_blue": "#8ab4ff",
+    "accent_blue_hover": "#aecbff", "green": "#81d5a6", "red": "#ffb4ab",
+    "orange": "#ffcb8a", "purple": "#d0b5ff", "surface2": "#29292d",
+    "surface3": "#414149", "surface4": "#90909b", "inset_bg": "#222225",
+    "selection": "#203452", "on_accent": "#092653", "disabled": "#92929c",
+}
+PALETTE = dict(LIGHT)
 SPACING = {"XS": 4, "SM": 8, "MD": 16, "LG": 24}
-
-CARD_RADIUS = 18
-CONTROL_RADIUS = 12
+CARD_RADIUS = 24
+CONTROL_RADIUS = 16
 CONTROL_MIN_HEIGHT = 28
-CONTROL_H_PADDING = 8
-
-# objectNames that opt OUT of the automatic card elevation sweep (see
-# apply_elevation) because they are nested inside an already-elevated card:
-# stacking a second soft shadow there just muddies the edge instead of
-# reading as "more raised".
-_NO_SHADOW_OBJECT_NAMES = {"CollapsibleBox"}
-
-# Class names that opt out because their contents repaint continuously
-# (a 30Hz diagnostics timer, or live pen-stroke drawing). A
-# QGraphicsDropShadowEffect makes Qt re-rasterize the whole blurred subtree
-# on every single repaint of any child inside it: fine for a card that only
-# changes on user interaction, but on these it turns every frame of a 30Hz
-# update (or every point of a pen stroke) into a full soft-shadow re-blur,
-# which reads as dropped frames / input lag rather than depth.
-_NO_SHADOW_CLASS_NAMES = {"DiagnosticsCard", "PressureSection", "ScratchpadPanel"}
+CONTROL_H_PADDING = 12
 
 
-def _raised_border(p, width=1):
-    return (
-        f"border-top: {width}px solid {p['bevel_light']};"
-        f"border-left: {width}px solid {p['bevel_light']};"
-        f"border-bottom: {width}px solid {p['bevel_dark']};"
-        f"border-right: {width}px solid {p['bevel_dark']};"
-    )
-
-
-def _inset_border(p, width=1):
-    return (
-        f"border-top: {width}px solid {p['bevel_dark']};"
-        f"border-left: {width}px solid {p['bevel_dark']};"
-        f"border-bottom: {width}px solid {p['bevel_light']};"
-        f"border-right: {width}px solid {p['bevel_light']};"
-    )
-
-
-def apply_elevation(widget, blur=36, y_offset=10, alpha=100):
-    """Give a top-level card a soft ambient drop shadow (the part QSS alone
-    can't do) to pair with its QSS bevel border. Skip widgets whose
-    objectName is in _NO_SHADOW_OBJECT_NAMES (nested cards)."""
-    if widget.objectName() in _NO_SHADOW_OBJECT_NAMES:
-        return
-    effect = QGraphicsDropShadowEffect(widget)
-    effect.setBlurRadius(blur)
-    effect.setOffset(0, y_offset)
-    effect.setColor(QColor(0, 0, 0, alpha))
-    widget.setGraphicsEffect(effect)
+def configure(dark=False):
+    """Select roles before constructing widgets, retaining imported references."""
+    PALETTE.clear()
+    PALETTE.update(DARK if dark else LIGHT)
 
 
 def apply_elevation_to_cards(root):
-    """Walk the widget tree once (called from MainWindow after the UI is
-    built) and elevate every card-like container, instead of every card
-    module wiring up its own shadow effect."""
-    from PySide6.QtWidgets import QGroupBox, QFrame
-
-    for gb in root.findChildren(QGroupBox):
-        if type(gb).__name__ in _NO_SHADOW_CLASS_NAMES:
-            continue
-        apply_elevation(gb)
-    for frame in root.findChildren(QFrame):
-        if frame.objectName() == "HeaderBar":
-            apply_elevation(frame, blur=28, y_offset=6, alpha=110)
+    """One UI groups use tonal separation, without expensive subtree shadows."""
+    return
 
 
 def build_stylesheet() -> str:
     p = PALETTE
-    raised = _raised_border(p)
-    inset = _inset_border(p)
+    assets = Path(__file__).parent / "assets"
+    dark = p["bg"] == DARK["bg"]
+    check = (assets / ("check-dark.svg" if dark else "check.svg")).as_posix()
+    down = (assets / ("down-dark.svg" if dark else "down-light.svg")).as_posix()
+    up = (assets / ("up-dark.svg" if dark else "up-light.svg")).as_posix()
     return f"""
-        QMainWindow, QWidget {{
-            background-color: {p['bg']};
-            color: {p['text']};
-            font-family: 'Inter', 'Segoe UI', 'Ubuntu', sans-serif;
-            font-size: 13px;
+        QMainWindow, QDialog, QWidget {{
+            background-color: {p['bg']}; color: {p['text']};
+            font-family: 'SamsungOne', 'SamsungOne UI', 'Segoe UI', 'Noto Sans', sans-serif;
         }}
-        QTabWidget::pane {{
-            {inset}
-            background: {p['panel']};
-            border-radius: {CARD_RADIUS}px;
-            top: -1px;
-        }}
+        QLabel {{ background: transparent; }}
+        QLabel#pageTitle {{ font-size: 26px; font-weight: 700; }}
+        QLabel#workspaceTitle {{ font-size: 23px; font-weight: 600; margin-bottom: 8px; }}
+        QListWidget#workspaceList {{ background: transparent; padding: 0; }}
+        QListWidget#workspaceList::item {{ padding: 10px 14px; margin-bottom: 8px; }}
+        QLabel#supportingText {{ color: {p['text_muted']}; }}
+        QFrame#HeaderBar {{ background: transparent; border: none; }}
+        QTabWidget::pane {{ border: none; background: {p['bg']}; }}
         QTabBar::tab {{
-            background: transparent;
-            color: {p['text_muted']};
-            padding: 9px 18px;
-            margin-right: 4px;
-            border-top-left-radius: {CONTROL_RADIUS}px;
-            border-top-right-radius: {CONTROL_RADIUS}px;
-            font-weight: 500;
-        }}
-        QTabBar::tab:selected {{
-            background: {p['panel']};
-            color: {p['accent_blue']};
-            border-top: 2px solid {p['accent_blue']};
+            background: transparent; color: {p['text_muted']};
+            padding: 12px 22px; margin: 0 8px 8px 0; border-radius: 18px;
             font-weight: 600;
         }}
-        QTabBar::tab:hover:!selected {{
-            background: rgba(255, 255, 255, 12);
-            color: {p['text']};
-        }}
+        QTabBar::tab:selected {{ background: {p['selection']}; color: {p['accent_blue']}; }}
+        QTabBar::tab:hover:!selected {{ background: {p['surface2']}; }}
         QGroupBox {{
-            {raised}
-            border-radius: {CARD_RADIUS}px;
-            margin-top: 14px;
-            padding: {SPACING['MD']}px;
-            background-color: {p['bg']};
-            font-weight: 600;
+            border: none; border-radius: {CARD_RADIUS}px; margin-top: 28px;
+            padding: 20px 16px 16px 16px; background: {p['panel']};
         }}
         QGroupBox::title {{
-            subcontrol-origin: margin;
-            subcontrol-position: top left;
-            padding: 0 6px;
-            color: {p['accent_blue']};
-            font-size: 14px;
-            font-weight: 700;
+            subcontrol-origin: margin; subcontrol-position: top left;
+            left: 16px; padding: 0 0 8px 0; color: {p['text_muted']}; font-weight: 600;
         }}
-        QGroupBox#CollapsibleBox {{
-            margin-top: 0px;
-            padding: 0px;
-            border: none;
-            background: transparent;
-            border-radius: {CONTROL_RADIUS}px;
-        }}
-        QFrame#HeaderBar {{
-            background: {p['panel']};
-            {raised}
-            border-radius: {CARD_RADIUS}px;
-            padding: 6px;
-        }}
-        QWidget#CollapsibleBoxHeader {{
-            border-radius: {CONTROL_RADIUS}px;
-        }}
-        QWidget#CollapsibleBoxHeader:hover {{
-            background-color: rgba(255, 255, 255, 12);
-        }}
+        QGroupBox#CollapsibleBox {{ margin: 0; padding: 0; border: none; background: transparent; }}
         QPushButton {{
-            background-color: {p['bg']};
-            color: {p['text']};
-            {raised}
-            border-radius: {CONTROL_RADIUS}px;
-            padding: 7px 14px;
-            font-weight: 500;
-            min-height: {CONTROL_MIN_HEIGHT}px;
+            background: {p['surface2']}; color: {p['text']};
+            border: 2px solid transparent; border-radius: {CONTROL_RADIUS}px;
+            padding: 6px 14px; min-height: {CONTROL_MIN_HEIGHT}px; font-weight: 600;
         }}
-        QPushButton:hover {{
-            background-color: rgba(255, 255, 255, 10);
+        QPushButton:hover {{ background: {p['surface3']}; }}
+        QPushButton:pressed {{ background: {p['selection']}; color: {p['accent_blue']}; }}
+        QPushButton:checked {{ background: {p['selection']}; color: {p['accent_blue']}; }}
+        QPushButton:disabled {{ color: {p['disabled']}; background: {p['surface2']}; }}
+        QPushButton#primaryBtn, QPushButton#successBtn {{
+            background: {p['accent_blue']}; color: {p['on_accent']};
         }}
-        QPushButton:pressed {{
-            background-color: {p['panel']};
-            {inset}
+        QPushButton#primaryBtn:hover, QPushButton#successBtn:hover {{ background: {p['accent_blue_hover']}; }}
+        QPushButton#dangerBtn {{ background: {p['panel']}; color: {p['red']}; border-color: {p['border']}; }}
+        QPushButton#dangerBtn:disabled, QPushButton#primaryBtn:disabled, QPushButton#successBtn:disabled {{ color: {p['disabled']}; background: {p['surface2']}; border-color: {p['border']}; }}
+        QPushButton#dangerBtn:hover {{ border-color: {p['red']}; }}
+        QPushButton:focus, QToolButton:focus {{ border: 2px solid {p['accent_blue']}; }}
+        QPushButton#CollapsibleBoxHeader {{ background: {p['inset_bg']}; text-align: left; }}
+        QToolButton {{ background: transparent; color: {p['text_muted']}; border: 2px solid transparent; border-radius: 10px; padding: 4px; }}
+        QToolButton:hover {{ background: {p['surface2']}; }}
+        QLineEdit, QComboBox, QSpinBox, QDoubleSpinBox {{
+            background: {p['inset_bg']}; color: {p['text']}; border: 1px solid {p['border']};
+            border-radius: 12px; padding: 8px {CONTROL_H_PADDING}px;
+            min-height: {CONTROL_MIN_HEIGHT}px; selection-background-color: {p['selection']};
+            selection-color: {p['text']};
         }}
-        QPushButton:checked {{
-            background-color: {p['bg']};
-            color: {p['accent_blue']};
-            {inset}
-            font-weight: 700;
-        }}
-        QPushButton:checked:hover {{
-            color: {p['accent_blue_hover']};
-        }}
-        QPushButton:disabled {{
-            color: #6c7086;
-            background-color: {p['panel']};
-            border: 1px solid {p['border']};
-        }}
-        QPushButton#primaryBtn {{
-            background-color: {p['accent_blue']};
-            color: #11111b;
-            font-weight: 600;
-            {raised}
-        }}
-        QPushButton#primaryBtn:hover {{
-            background-color: {p['accent_blue_hover']};
-        }}
-        QPushButton#primaryBtn:pressed {{
-            background-color: {p['accent_blue']};
-            {inset}
-        }}
-        QPushButton#dangerBtn {{
-            background-color: {p['red']};
-            color: #11111b;
-            font-weight: 600;
-            {raised}
-        }}
-        QPushButton#dangerBtn:hover {{
-            background-color: #eba0ac;
-        }}
-        QPushButton#dangerBtn:pressed {{
-            background-color: {p['red']};
-            {inset}
-        }}
-        QPushButton#successBtn {{
-            background-color: {p['green']};
-            color: #11111b;
-            font-weight: 600;
-            {raised}
-        }}
-        QPushButton#successBtn:hover {{
-            background-color: #94e2d5;
-        }}
-        QPushButton#successBtn:pressed {{
-            background-color: {p['green']};
-            {inset}
-        }}
-        QToolButton {{
-            background: transparent;
-            border: none;
-            border-radius: {CONTROL_RADIUS}px;
-            color: {p['text_muted']};
-        }}
-        QToolButton:hover {{
-            color: {p['text']};
-            background-color: rgba(255, 255, 255, 10);
-        }}
-        QLineEdit, QComboBox, QSpinBox {{
-            background-color: {p['inset_bg']};
-            color: {p['text']};
-            {inset}
-            border-radius: {CONTROL_RADIUS}px;
-            padding: 5px {CONTROL_H_PADDING}px;
-            min-height: {CONTROL_MIN_HEIGHT}px;
-        }}
-        QLineEdit:focus, QComboBox:focus, QSpinBox:focus {{
-            border: 1px solid {p['accent_blue']};
-        }}
-        QComboBox::drop-down {{
-            border: none;
-            width: 20px;
-        }}
-        QSlider::groove:horizontal {{
-            {inset}
-            height: 8px;
-            background: {p['inset_bg']};
-            border-radius: 4px;
-        }}
-        QSlider::sub-page:horizontal {{
-            background: {p['accent_blue']};
-            border-radius: 4px;
-        }}
-        QSlider::handle:horizontal {{
-            background: {p['bg']};
-            {raised}
-            width: 18px;
-            margin-top: -6px;
-            margin-bottom: -6px;
-            border-radius: 9px;
-        }}
-        QSlider::handle:horizontal:hover {{
-            background: {p['surface3']};
-        }}
-        QProgressBar {{
-            {inset}
-            border-radius: 8px;
-            text-align: center;
-            background-color: {p['inset_bg']};
-            color: {p['text']};
-            font-size: 11px;
-            height: 16px;
-        }}
-        QProgressBar::chunk {{
-            background-color: {p['accent_blue']};
-            border-radius: 7px;
-        }}
-        QCheckBox {{
-            spacing: 8px;
-        }}
-        QCheckBox::indicator {{
-            width: 16px;
-            height: 16px;
-            border-radius: 5px;
-            {inset}
-            background-color: {p['inset_bg']};
-        }}
-        QCheckBox::indicator:checked {{
-            background-color: {p['accent_blue']};
-            border-color: {p['accent_blue']};
-        }}
-        QRadioButton {{
-            spacing: 8px;
-        }}
-        QRadioButton::indicator {{
-            width: 16px;
-            height: 16px;
-            border-radius: 8px;
-            {inset}
-            background-color: {p['inset_bg']};
-        }}
-        QRadioButton::indicator:checked {{
-            background-color: {p['accent_blue']};
-            border-color: {p['accent_blue']};
-        }}
-        QTextEdit {{
-            background-color: {p['inset_bg']};
-            {inset}
-            border-radius: {CONTROL_RADIUS}px;
-            color: {p['text_muted']};
-            font-family: 'JetBrains Mono', 'Fira Code', 'Monospace';
-            font-size: 11px;
-        }}
-        QListWidget {{
-            background-color: {p['panel']};
-            border: none;
-            border-radius: {CONTROL_RADIUS + 2}px;
-            color: {p['text']};
-            padding: 6px;
-        }}
-        QListWidget::item {{
-            padding: 0px;
-            border-radius: {CONTROL_RADIUS}px;
-            margin-bottom: 4px;
-        }}
-        QListWidget::item:selected {{
-            background-color: {p['bg']};
-            {inset}
-        }}
-        QListWidget::item:hover:!selected {{
-            background-color: rgba(255, 255, 255, 10);
-        }}
-        QScrollArea {{
-            border: none;
-            background: transparent;
-        }}
-        QLabel[pillState="ok"] {{
-            background-color: {p['bg']};
-            color: {p['green']};
-            font-weight: bold;
-            padding: 3px 10px;
-            border-radius: 10px;
-            font-size: 11px;
-            {inset}
-        }}
-        QLabel[pillState="bad"] {{
-            background-color: {p['bg']};
-            color: {p['red']};
-            font-weight: bold;
-            padding: 3px 10px;
-            border-radius: 10px;
-            font-size: 11px;
-            {inset}
-        }}
-        QLabel[pillState="warn"] {{
-            background-color: {p['bg']};
-            color: {p['orange']};
-            font-weight: bold;
-            padding: 3px 10px;
-            border-radius: 10px;
-            font-size: 11px;
-            {inset}
-        }}
-        QLabel[pillState="idle"] {{
-            background-color: {p['bg']};
-            color: #6c7086;
-            padding: 3px 10px;
-            border-radius: 10px;
-            font-size: 11px;
-            {inset}
-        }}
-        QLabel[pillState="customized"] {{
-            background-color: {p['bg']};
-            color: {p['purple']};
-            font-weight: bold;
-            padding: 2px 8px;
-            border-radius: 9px;
-            font-size: 10px;
-            {inset}
-        }}
-        QWidget#MatchChip {{
-            background-color: {p['bg']};
-            {raised}
-            border-radius: 11px;
-        }}
-        QWidget#MatchChip[activeMatch="true"] {{
-            border: 1px solid {p['green']};
-        }}
+        QLineEdit:focus, QComboBox:focus, QSpinBox:focus, QDoubleSpinBox:focus {{ border: 1px solid {p['accent_blue']}; }}
+        QLineEdit:disabled, QComboBox:disabled, QSpinBox:disabled {{ color: {p['disabled']}; }}
+        QComboBox::drop-down {{ border: none; width: 24px; }}
+        QComboBox::down-arrow {{ image: url({down}); width: 20px; height: 20px; }}
+        QSpinBox::up-button, QDoubleSpinBox::up-button {{ subcontrol-origin: border; subcontrol-position: top right; width: 26px; border: none; }}
+        QSpinBox::down-button, QDoubleSpinBox::down-button {{ subcontrol-origin: border; subcontrol-position: bottom right; width: 26px; border: none; }}
+        QSpinBox::up-arrow, QDoubleSpinBox::up-arrow {{ image: url({up}); width: 14px; height: 14px; }}
+        QSpinBox::down-arrow, QDoubleSpinBox::down-arrow {{ image: url({down}); width: 14px; height: 14px; }}
+        QComboBox QAbstractItemView {{ background: {p['panel']}; color: {p['text']}; selection-background-color: {p['selection']}; selection-color: {p['accent_blue']}; border: 1px solid {p['border']}; padding: 8px; }}
+        QSlider {{ background: transparent; }}
+        QSlider::groove:horizontal {{ height: 6px; background: {p['surface3']}; border-radius: 3px; }}
+        QSlider::sub-page:horizontal {{ background: {p['accent_blue']}; border-radius: 3px; }}
+        QSlider::handle:horizontal {{ background: {p['accent_blue']}; width: 20px; margin: -7px 0; border-radius: 10px; }}
+        QSlider::handle:horizontal:focus {{ border: 2px solid {p['text']}; }}
+        QProgressBar {{ border: none; border-radius: 6px; text-align: center; background: {p['surface2']}; color: {p['text']}; min-height: 12px; }}
+        QProgressBar::chunk {{ background: {p['accent_blue']}; border-radius: 6px; }}
+        QCheckBox, QRadioButton {{ spacing: 10px; padding: 4px 0; background: transparent; }}
+        QCheckBox::indicator, QRadioButton::indicator {{ width: 20px; height: 20px; border: 2px solid {p['surface4']}; background: {p['panel']}; border-radius: 6px; }}
+        QRadioButton::indicator {{ border-radius: 12px; }}
+        QCheckBox::indicator:checked {{ background: {p['accent_blue']}; border-color: {p['accent_blue']}; image: url({check}); }}
+        QRadioButton::indicator:checked {{ border: 6px solid {p['accent_blue']}; width: 12px; height: 12px; background: {p['panel']}; }}
+        QCheckBox:focus, QRadioButton:focus {{ color: {p['accent_blue']}; }}
+        QTextEdit, QPlainTextEdit {{ background: {p['inset_bg']}; color: {p['text_muted']}; border: 1px solid {p['border']}; border-radius: 12px; padding: 8px; font-family: 'Cascadia Mono', 'DejaVu Sans Mono', monospace; }}
+        QListWidget {{ background: {p['panel']}; border: none; border-radius: 20px; padding: 8px; outline: none; }}
+        QListWidget::item {{ padding: 2px; border: 2px solid transparent; border-radius: 12px; margin: 2px 0; }}
+        QListWidget::item:selected {{ background: {p['selection']}; color: {p['accent_blue']}; }}
+        QListWidget::item:focus {{ border-color: {p['accent_blue']}; }}
+        QListWidget::item:hover:!selected {{ background: {p['inset_bg']}; }}
+        QScrollArea {{ border: none; background: transparent; }}
+        QScrollBar:vertical {{ background: transparent; width: 10px; margin: 0; }}
+        QScrollBar::handle:vertical {{ background: {p['surface4']}; min-height: 28px; border-radius: 4px; margin: 2px; }}
+        QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{ height: 0; }}
+        QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {{ background: none; }}
+        QScrollBar:horizontal {{ background: transparent; height: 10px; }}
+        QScrollBar::handle:horizontal {{ background: {p['surface4']}; min-width: 28px; border-radius: 4px; }}
+        QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {{ width: 0; }}
+        QSplitter::handle {{ background: transparent; width: 16px; }}
+        QMenu {{ background: {p['panel']}; color: {p['text']}; border: 1px solid {p['border']}; padding: 8px; }}
+        QMenu::item {{ padding: 8px 24px; border-radius: 8px; }}
+        QMenu::item:selected {{ background: {p['selection']}; color: {p['accent_blue']}; }}
+        QToolTip {{ background: {p['panel']}; color: {p['text']}; border: 1px solid {p['border']}; padding: 8px; }}
+        QLabel[pillState] {{ background: {p['surface2']}; color: {p['text_muted']}; padding: 5px 10px; border-radius: 11px; font-weight: 600; }}
+        QLabel[pillState="ok"] {{ color: {p['green']}; }}
+        QLabel[pillState="bad"] {{ color: {p['red']}; }}
+        QLabel[pillState="warn"] {{ color: {p['orange']}; }}
+        QLabel[pillState="customized"] {{ color: {p['purple']}; }}
+        QWidget#MatchChip {{ background: {p['surface2']}; border-radius: 12px; }}
+        QWidget#MatchChip[activeMatch="true"] {{ border: 1px solid {p['green']}; }}
     """

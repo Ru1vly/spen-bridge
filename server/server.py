@@ -12,6 +12,7 @@ from server.protocol import (
     unpack_header, unpack_events, pack_packet,
 )
 from server.security import AUTH_VERSION, NONCE_SIZE, auth_proof
+from server.input_trace import get_controller
 
 logger = logging.getLogger("SPenServer")
 
@@ -40,6 +41,9 @@ class SPenServer:
                  event_rate=10000, byte_rate=1024 * 1024, packet_rate=4000,
                  ):
         self.tablet, self.host, self.port = tablet, host, port
+        self.input_trace = get_controller()
+        if self.input_trace is not None:
+            self.input_trace.backend_name = type(tablet).__name__
         self.on_client_connected = on_client_connected
         self.on_client_disconnected = on_client_disconnected
         self.on_stats = on_stats
@@ -124,9 +128,15 @@ class SPenServer:
             nonce = secrets.token_bytes(NONCE_SIZE)
             await self._write_packet(writer, PKT_HANDSHAKE, 0, AUTH_VERSION + nonce)
             kind, seq, proof = await self._read_packet(reader, self.handshake_timeout, bytes_budget)
-            if (kind != PKT_HANDSHAKE or seq != 0
+            if (kind != PKT_HANDSHAKE or seq not in (0, 1)
                     or not hmac.compare_digest(proof, auth_proof(self.pairing_code, nonce, "client"))):
                 raise ValueError("Pairing authentication failed")
+            if seq == 1:
+                # Authenticated, read-only readiness probe: never claim input,
+                # reset the owner, or accept subsequent event packets.
+                await self._write_packet(writer, PKT_HANDSHAKE, 1,
+                                         auth_proof(self.pairing_code, nonce, "server"))
+                return
             if not self._running or self._owner is not None:
                 raise ValueError("Another paired client owns the tablet")
             # No await between checking and claiming ownership.
@@ -135,20 +145,36 @@ class SPenServer:
             await self._write_packet(writer, PKT_HANDSHAKE, seq, auth_proof(self.pairing_code, nonce, "server"))
             self.active_clients.add(address)
             self._callback(self.on_client_connected, address)
+            trace_session = time.perf_counter_ns()
             while self._running:
                 kind, seq, payload = await self._read_packet(reader, self.idle_timeout, bytes_budget)
                 packets_budget.consume(1)
                 if kind == PKT_EVENT:
+                    trace = self.input_trace
+                    received = time.perf_counter_ns() if trace is not None and trace.enabled else 0
                     events = unpack_events(payload)
                     events_budget.consume(len(events))
                     self.stats_packets_count += 1
+                    decoded = time.perf_counter_ns() if received else 0
+                    success = False
                     try:
                         self._dispatch_event_groups([events])
+                        success = True
                     except Exception as error:
                         self._fail_device(error)
                         raise
+                    finally:
+                        if received:
+                            trace.packet(trace_session, seq, len(events), received, decoded,
+                                         time.perf_counter_ns(), payload, success=success)
                 elif kind == PKT_PING:
+                    trace = self.input_trace
+                    received = time.perf_counter_ns() if trace is not None and trace.enabled else 0
+                    sending = time.perf_counter_ns() if received else 0
                     await self._write_packet(writer, PKT_PONG, seq)
+                    if received:
+                        trace.packet(trace_session, seq, 0, received, sending,
+                                     time.perf_counter_ns(), payload, kind=6)
                 else:
                     raise ValueError("Authentication cannot be repeated within a session")
                 now = time.monotonic()
@@ -287,12 +313,17 @@ class SPenServer:
         async with self._stop_lock:
             self._running = False
             listener, self.server = self.server, None
-            if listener:
-                listener.close()
-            if self._accept_task:
-                self._accept_task.cancel()
-                await asyncio.gather(self._accept_task, return_exceptions=True)
-                self._accept_task = None
+            try:
+                if self._accept_task:
+                    self._accept_task.cancel()
+                    await asyncio.gather(self._accept_task, return_exceptions=True)
+                    self._accept_task = None
+            finally:
+                # Await sock_accept cancellation before releasing the listener
+                # FD, even when stop itself is cancelled. Deferred reader
+                # cleanup must not unregister a new pipe/child watcher using it.
+                if listener:
+                    listener.close()
             for connection in tuple(self._connections):
                 connection.close()
             for writer in tuple(self._writers):

@@ -1,0 +1,15 @@
+<resources>
+    <color name="canvas_bg">#010101</color>
+    <color name="page_bg">#010101</color>
+    <color name="surface">#171719</color>
+    <color name="surface_variant">#29292D</color>
+    <color name="outline">#3C3C41</color>
+    <color name="status_connected">#81D5A6</color>
+    <color name="status_disconnected">#FFB4AB</color>
+    <color name="status_connecting">#FFCB8A</color>
+    <color name="text_light">#F5F5F7</color>
+    <color name="text_muted">#B1B3BC</color>
+    <color name="primary">#8AB4FF</color>
+    <color name="on_primary">#092653</color>
+    <color name="selection">#203452</color>
+</resources>

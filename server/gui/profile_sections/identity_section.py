@@ -4,6 +4,9 @@ profile automatically, plus a live indicator of whether the currently focused
 window matches any of them.
 """
 
+from server.gui.theme import PALETTE
+
+
 from typing import Optional
 
 from PySide6.QtCore import Signal, Qt
@@ -19,8 +22,8 @@ GUIDE_TEXT = (
     "- Application Profiles override settings when a matching application is focused.\n"
     "- Enter window class / process name substrings above; when any matching application is\n"
     "  focused, this profile activates automatically (if Auto-Switch is enabled).\n"
-    "- Every field in this panel (device mode, pressure, buttons, mapping) is fully independent\n"
-    "  per profile: changing one profile never affects another.\n\n"
+    "- Pen settings stores device behavior, pressure, button actions, and screen mapping\n"
+    "  per profile. Aspect-ratio lock applies globally to all profiles.\n\n"
     "Platform Notes:\n"
     "- Windows: matches process executable name (e.g. 'krita.exe') and window title.\n"
     "- Linux: supports Sway, Hyprland, driftwm, and X11/XWayland. On GNOME/KDE Wayland, compositor\n"
@@ -32,7 +35,7 @@ class IdentitySection(QGroupBox):
     changed = Signal()
 
     def __init__(self, parent=None):
-        super().__init__("Profile Identity && Matching", parent)
+        super().__init__("Profile matching", parent)
         self._profile: Optional[AppProfile] = None
         self._updating = False
 
@@ -46,7 +49,7 @@ class IdentitySection(QGroupBox):
         btn_help.setText("?")
         btn_help.setFixedSize(24, 24)
         btn_help.setAccessibleName("How profile matching works")
-        btn_help.setStyleSheet("border: 1px solid #45475a; border-radius: 9px;")
+        btn_help.setStyleSheet(f"border: 1px solid {PALETTE['surface3']}; border-radius: 9px;")
         btn_help.setToolTip(GUIDE_TEXT)
         header_row.addWidget(btn_help)
         layout.addLayout(header_row)
@@ -59,11 +62,11 @@ class IdentitySection(QGroupBox):
             "Used when no other profile matches. Default has no match rules of its own."
         )
         self.lbl_default_note.setWordWrap(True)
-        self.lbl_default_note.setStyleSheet("color: #a6adc8; font-style: italic;")
+        self.lbl_default_note.setStyleSheet(f"color: {PALETTE['text_muted']}; font-style: italic;")
         layout.addWidget(self.lbl_default_note)
 
         live_row = QHBoxLayout()
-        self.lbl_live_match = QLabel("Detected active window right now: (none yet)")
+        self.lbl_live_match = QLabel("Active window: (none yet)")
         self.lbl_live_match.setTextFormat(Qt.PlainText)
         self.lbl_live_match.setWordWrap(True)
         live_row.addWidget(self.lbl_live_match, stretch=1)
@@ -106,5 +109,5 @@ class IdentitySection(QGroupBox):
         display = app_id or title or "Desktop"
         if len(display) > 40:
             display = display[:38] + "…"
-        self.lbl_live_match.setText(f'Detected active window right now: "{display}"')
+        self.lbl_live_match.setText(f'Active window: "{display}"')
         self.badge_live_match.set_state("ok" if matched else "idle", "Match" if matched else "No match")

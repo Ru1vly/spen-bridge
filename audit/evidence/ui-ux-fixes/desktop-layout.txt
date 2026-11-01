@@ -1,0 +1,16 @@
+qt.core.qobject.connect: QObject::connect: No such signal QPlatformNativeInterface::systemTrayWindowChanged(QScreen*)
+This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+qt.core.qobject.connect: QObject::connect: No such signal QPlatformNativeInterface::systemTrayWindowChanged(QScreen*)
+qt.core.qobject.connect: QObject::connect: No such signal QPlatformNativeInterface::systemTrayWindowChanged(QScreen*)
+qt.core.qobject.connect: QObject::connect: No such signal QPlatformNativeInterface::systemTrayWindowChanged(QScreen*)
+This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+qt.core.qobject.connect: QObject::connect: No such signal QPlatformNativeInterface::systemTrayWindowChanged(QScreen*)
+qt.core.qobject.connect: QObject::connect: No such signal QPlatformNativeInterface::systemTrayWindowChanged(QScreen*)
+light 1200 11 all workspaces and pen categories fit
+light 760 11 all workspaces and pen categories fit
+light 960 16 all workspaces and pen categories fit
+dark 1200 11 all workspaces and pen categories fit
+dark 760 11 all workspaces and pen categories fit
+dark 960 16 all workspaces and pen categories fit

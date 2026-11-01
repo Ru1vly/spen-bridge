@@ -15,7 +15,7 @@ class SystemTrayController:
         else:
             self.tray_icon.setIcon(window.style().standardIcon(window.style().StandardPixmap.SP_ComputerIcon))
 
-        menu = QMenu()
+        menu = QMenu(window)
         act_show = menu.addAction("Show Dashboard")
         act_show.triggered.connect(self.show_and_activate)
 

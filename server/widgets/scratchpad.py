@@ -3,6 +3,9 @@ Interactive Drawing Scratchpad widget using PySide6.
 Provides an on-screen drawing surface to test S Pen pressure, tilt, and latency in real-time.
 """
 
+from server.gui.theme import PALETTE
+
+
 import math
 from typing import Optional
 from PySide6.QtCore import Qt, QPointF
@@ -21,7 +24,7 @@ class ScratchpadWidget(QWidget):
         self._pixmap: Optional[QPixmap] = None
         self._last_point: Optional[QPointF] = None
         self._last_pressure: float = 0.5
-        self.pen_color = QColor("#89b4fa")  # Soft blue
+        self.pen_color = QColor(PALETTE["accent_blue"])  # Soft blue
         self.max_stroke_width = 12.0
         self.min_stroke_width = 1.5
 
@@ -44,7 +47,7 @@ class ScratchpadWidget(QWidget):
         old_pix = self._pixmap
 
         new_pix = QPixmap(new_size)
-        new_pix.fill(QColor("#11111b"))
+        new_pix.fill(QColor(PALETTE["inset_bg"]))
 
         if old_pix is not None:
             painter = QPainter(new_pix)
@@ -56,7 +59,7 @@ class ScratchpadWidget(QWidget):
     def clear_canvas(self):
         """Clear scratchpad to background color."""
         if self._pixmap is not None:
-            self._pixmap.fill(QColor("#11111b"))
+            self._pixmap.fill(QColor(PALETTE["inset_bg"]))
             self._last_point = None
             self.update()
 
@@ -196,13 +199,13 @@ class ScratchpadWidget(QWidget):
         if self._pixmap is not None:
             painter.drawPixmap(0, 0, self._pixmap)
         else:
-            painter.fillRect(self.rect(), QColor("#11111b"))
+            painter.fillRect(self.rect(), QColor(PALETTE["inset_bg"]))
 
         # Frame border
-        border_pen = QPen(QColor("#313244"), 1.5)
+        border_pen = QPen(QColor(PALETTE["border"]), 1.5)
         painter.setPen(border_pen)
         painter.drawRect(0, 0, self.width() - 1, self.height() - 1)
 
         # Hint text if blank
-        painter.setPen(QColor("#45475a"))
+        painter.setPen(QColor(PALETTE["text_muted"]))
         painter.drawText(12, self.height() - 12, "Test Canvas: Draw here with S Pen or mouse")

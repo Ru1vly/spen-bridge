@@ -50,20 +50,44 @@ object Protocol {
         }.array()
     }
 
-    fun packEvents(events: List<Event>, seq: Short = 0): ByteArray {
-        require(events.isNotEmpty() && events.size <= MAX_EVENTS_PER_PACKET) { "Event batch exceeds protocol bounds" }
-        require(events.all { it.isValid() }) { "Invalid pen event" }
-        val payload = ByteBuffer.allocate(events.size * EVENT_RECORD_SIZE).order(ByteOrder.LITTLE_ENDIAN)
-        for (event in events) {
-            payload.put(event.action).put(event.toolType).putShort(event.buttons)
-            payload.putFloat(event.x).putFloat(event.y).putFloat(event.pressure)
-            payload.putFloat(event.tiltX).putFloat(event.tiltY)
+    /** Single-writer reusable frame storage; bytes remain owned until send returns. */
+    class EventEncoder {
+        var bytes = ByteArray(HEADER_SIZE + 16 * EVENT_RECORD_SIZE)
+            private set
+        private var frame = ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN)
+
+        fun encode(events: List<Event>, offset: Int, count: Int, sequence: Short): Int {
+            require(count in 1..MAX_EVENTS_PER_PACKET && offset >= 0 && offset <= events.size - count) {
+                "Event batch exceeds protocol bounds"
+            }
+            val size = HEADER_SIZE + count * EVENT_RECORD_SIZE
+            if (bytes.size < size) {
+                bytes = ByteArray(minOf(HEADER_SIZE + MAX_EVENTS_PER_PACKET * EVENT_RECORD_SIZE,
+                    maxOf(size, bytes.size * 2)))
+                frame = ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN)
+            }
+            frame.clear()
+            frame.put(MAGIC).put(PKT_EVENT).putShort(sequence).putShort((size - HEADER_SIZE).toShort())
+            for (index in offset until offset + count) {
+                val event = events[index]
+                require(event.isValid()) { "Invalid pen event" }
+                frame.put(event.action).put(event.toolType).putShort(event.buttons)
+                frame.putFloat(event.x).putFloat(event.y).putFloat(event.pressure)
+                frame.putFloat(event.tiltX).putFloat(event.tiltY)
+            }
+            return size
         }
-        return packPacket(PKT_EVENT, seq, payload.array())
+    }
+
+    fun packEvents(events: List<Event>, seq: Short = 0): ByteArray {
+        val encoder = EventEncoder()
+        val size = encoder.encode(events, 0, events.size, seq)
+        return encoder.bytes.copyOf(size)
     }
 
     fun packEventBatches(events: List<Event>, firstSequence: Short): List<ByteArray> {
-        require(events.all { it.isValid() }) { "Invalid pen event batch" }
+        if (events.isEmpty()) return emptyList()
+        if (events.size <= MAX_EVENTS_PER_PACKET) return listOf(packEvents(events, firstSequence))
         var sequence = firstSequence
         return events.chunked(MAX_EVENTS_PER_PACKET).map { batch ->
             packEvents(batch, sequence).also { sequence = (sequence + 1).toShort() }

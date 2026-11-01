@@ -3,6 +3,9 @@ Live S Pen input diagnostics card: pressure/position/tilt readouts, traffic
 rate, and hover/touch/barrel/eraser/click status badges.
 """
 
+from server.gui.theme import PALETTE
+
+
 import sys
 
 from PySide6.QtWidgets import QGroupBox, QVBoxLayout, QHBoxLayout, QGridLayout, QLabel, QProgressBar
@@ -12,7 +15,7 @@ from server.gui.widgets.pill_badge import PillBadge
 
 class DiagnosticsCard(QGroupBox):
     def __init__(self, parent=None):
-        super().__init__("Live S Pen Input Diagnostics", parent)
+        super().__init__("Live input", parent)
 
         layout = QVBoxLayout(self)
         layout.setSpacing(6)
@@ -23,31 +26,33 @@ class DiagnosticsCard(QGroupBox):
 
         self.bar_pressure = QProgressBar()
         self.bar_pressure.setRange(0, self.pressure_max)
+        self.bar_pressure.setTextVisible(False)
+        self.bar_pressure.setAccessibleName("Calibrated pen pressure")
         layout.addWidget(self.bar_pressure)
 
         coords_layout = QGridLayout()
         coords_layout.addWidget(QLabel("Position:"), 0, 0)
         self.lbl_pos_val = QLabel("0.000, 0.000")
-        self.lbl_pos_val.setStyleSheet("font-weight: bold; color: #89b4fa;")
+        self.lbl_pos_val.setStyleSheet(f"font-weight: bold; color: {PALETTE['accent_blue']};")
         coords_layout.addWidget(self.lbl_pos_val, 0, 1)
 
-        coords_layout.addWidget(QLabel("Tilt:"), 0, 2)
+        coords_layout.addWidget(QLabel("Tilt:"), 1, 0)
         self.lbl_tilt_val = QLabel("0.0°, 0.0°")
-        coords_layout.addWidget(self.lbl_tilt_val, 0, 3)
+        coords_layout.addWidget(self.lbl_tilt_val, 1, 1)
 
-        coords_layout.addWidget(QLabel("Traffic:"), 1, 0)
+        coords_layout.addWidget(QLabel("Traffic:"), 2, 0)
         self.lbl_traffic_val = QLabel("0 events/sec")
-        coords_layout.addWidget(self.lbl_traffic_val, 1, 1)
+        coords_layout.addWidget(self.lbl_traffic_val, 2, 1)
         layout.addLayout(coords_layout)
 
-        badges_layout = QHBoxLayout()
+        badges_layout = QGridLayout()
         self.badge_hover = PillBadge("Hover", state="idle")
         self.badge_touch = PillBadge("Touch", state="idle")
         self.badge_barrel = PillBadge("Barrel Btn", state="idle")
         self.badge_eraser = PillBadge("Eraser", state="idle")
         self.badge_click = PillBadge("Click: ON", state="ok")
-        for b in (self.badge_hover, self.badge_touch, self.badge_barrel, self.badge_eraser, self.badge_click):
-            badges_layout.addWidget(b)
+        for index, b in enumerate((self.badge_hover, self.badge_touch, self.badge_barrel, self.badge_eraser, self.badge_click)):
+            badges_layout.addWidget(b, index // 3, index % 3)
         layout.addLayout(badges_layout)
 
     def update_pen_event(self, ev, cal_p: int, abs_x: int, abs_y: int):

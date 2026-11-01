@@ -20,6 +20,11 @@ android {
     }
 
     buildTypes {
+        create("audit") {
+            initWith(getByName("debug"))
+            applicationIdSuffix = ".uiaudit"
+            matchingFallbacks += listOf("debug")
+        }
         release {
             isMinifyEnabled = false
             proguardFiles(
@@ -28,6 +33,7 @@ android {
             )
         }
     }
+    sourceSets.getByName("audit").java.srcDir("src/debug/java")
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_1_8
         targetCompatibility = JavaVersion.VERSION_1_8

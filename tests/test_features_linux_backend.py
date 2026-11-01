@@ -37,8 +37,11 @@ class TestLinuxUinputBackend(unittest.TestCase):
         identity = load_identity(directory.name)
         devices = patch("evdev.UInput", side_effect=lambda *args, **kwargs: Mock())
         identities = patch("server.gui.server_worker.load_identity", return_value=identity)
+        writes = patch("server.backends.linux_uinput._write_native", side_effect=lambda _fd, data: len(data))
         devices.start()
+        writes.start()
         identities.start()
+        self.addCleanup(writes.stop)
         self.addCleanup(devices.stop)
         self.addCleanup(identities.stop)
 

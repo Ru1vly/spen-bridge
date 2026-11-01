@@ -1,7 +1,10 @@
 """
-Device Behavior profile section: pointer vs tablet device mode, click-on-touch,
+Device behavior profile section: pointer vs tablet device mode, click-on-touch,
 and (advanced) INPUT_PROP_DIRECT mode: all per-profile.
 """
+
+from server.gui.theme import PALETTE
+
 
 import sys
 from typing import Optional
@@ -17,7 +20,7 @@ class DeviceSection(QGroupBox):
     changed = Signal()
 
     def __init__(self, parent=None):
-        super().__init__("Device Behavior", parent)
+        super().__init__("Device behavior", parent)
         self._profile: Optional[AppProfile] = None
         self._updating = False
 
@@ -25,14 +28,14 @@ class DeviceSection(QGroupBox):
         layout.setSpacing(10)
 
         mode_row = QHBoxLayout()
-        mode_row.addWidget(QLabel("Device Type:"))
+        mode_row.addWidget(QLabel("Device type:"))
         self.combo_dev_mode = QComboBox()
         self.combo_dev_mode.setAccessibleName("Device type")
-        self.combo_dev_mode.addItem("Pointer Mode (Absolute Cursor - Wayland & X11)", "pointer")
-        self.combo_dev_mode.addItem("Tablet Mode (Wacom Tablet-v2 for Krita/GIMP)", "tablet")
+        self.combo_dev_mode.addItem("Pointer (absolute cursor)", "pointer")
+        self.combo_dev_mode.addItem("Tablet (Wacom tablet protocol)", "tablet")
         if sys.platform == "win32":
-            self.combo_dev_mode.setItemText(0, "Windows Ink Pen")
-            self.combo_dev_mode.setItemText(1, "Windows Ink Pen")
+            self.combo_dev_mode.setItemText(0, "Windows Ink pen")
+            self.combo_dev_mode.setItemText(1, "Windows Ink pen")
             self.combo_dev_mode.setEnabled(False)
         self.combo_dev_mode.currentIndexChanged.connect(self._on_dev_mode_changed)
         mode_row.addWidget(self.combo_dev_mode, stretch=1)
@@ -45,15 +48,14 @@ class DeviceSection(QGroupBox):
         layout.addWidget(self.chk_click_on_touch)
 
         desc = QLabel(
-            "When disabled, hovering, movement, and pressure are tracked without emitting mouse "
-            "click events, ideal for keyboard-tapping rhythm games, custom gesture controls, or "
-            "hover-only navigation."
+            "Turn off to move the pointer without clicking when the pen touches the tablet. "
+            "Pressure and hover events are still sent."
         )
         desc.setWordWrap(True)
-        desc.setStyleSheet("color: #a6adc8; font-size: 11px;")
+        desc.setStyleSheet(f"color: {PALETTE['text_muted']}; font-size: 11px;")
         layout.addWidget(desc)
 
-        self.advanced_box = CollapsibleBox("Advanced: Direct Input Mode")
+        self.advanced_box = CollapsibleBox("Advanced: direct input")
         self.chk_direct_mode = QCheckBox("Direct input (display tablet)")
         self.chk_direct_mode.toggled.connect(self._on_direct_mode_toggled)
         self.advanced_box.body_layout().addWidget(self.chk_direct_mode)

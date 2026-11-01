@@ -54,12 +54,17 @@ class SocketProtocolLinkTest {
                     output.write(Protocol.packHandshake(proof = PairingProtocol.proof(code, nonce, "server")))
                     val ping = read(input)
                     check(ping.kind == Protocol.PKT_PING && ping.payload.isEmpty())
+                    socket.soTimeout = 100
+                    assertThrows(java.net.SocketTimeoutException::class.java) { input.readByte() }
                     output.write(Protocol.packPacket(Protocol.PKT_PONG, ping.sequence, byteArrayOf()))
                 }
             }
             try {
                 SocketProtocolLink.open(ConnectionEndpoint("127.0.0.1", server.localPort, fingerprint(), code)) { true }.use { link ->
-                    link.send(Protocol.packPing(42))
+                    val storage = ByteArray(128) { 0x7f }
+                    val ping = Protocol.packPing(42)
+                    ping.copyInto(storage)
+                    link.send(storage, ping.size)
                     val reply = link.receive(1000)
                     assertEquals(Protocol.PKT_PONG, reply.kind)
                     assertEquals(42, reply.sequence.toInt())
@@ -68,6 +73,75 @@ class SocketProtocolLinkTest {
             } catch (failure: Throwable) {
                 try { task.get(4, TimeUnit.SECONDS) } catch (serverFailure: Exception) { failure.addSuppressed(serverFailure) }
                 throw failure
+            } finally { executor.shutdownNow() }
+        }
+    }
+
+    @Test fun pinnedTlsWorksOverCancellableStreamsWithoutATcpSocketDescriptor() {
+        listener().use { server ->
+            val executor = Executors.newSingleThreadExecutor()
+            val task = executor.submit {
+                server.accept().use { socket ->
+                    socket.soTimeout = 3000
+                    val input = DataInputStream(socket.getInputStream())
+                    val output = socket.getOutputStream()
+                    val nonce = ByteArray(32) { (it + 3).toByte() }
+                    output.write(Protocol.packHandshake(proof = PairingProtocol.VERSION + nonce))
+                    val request = read(input)
+                    check(PairingProtocol.verifyProof(code, nonce, "client", request.payload))
+                    output.write(Protocol.packHandshake(proof = PairingProtocol.proof(code, nonce, "server")))
+                    val ping = read(input)
+                    check(ping.kind == Protocol.PKT_PING && ping.payload.isEmpty())
+                    output.write(Protocol.packPacket(Protocol.PKT_PONG, ping.sequence))
+                }
+            }
+            val tcp = java.net.Socket("127.0.0.1", server.localPort)
+            val transport = object : DuplexByteTransport {
+                override fun read(bytes: ByteArray, offset: Int, size: Int, timeoutMillis: Int): Int {
+                    tcp.soTimeout = timeoutMillis
+                    return tcp.getInputStream().read(bytes, offset, size)
+                }
+                override fun write(bytes: ByteArray, offset: Int, size: Int) { tcp.getOutputStream().write(bytes, offset, size) }
+                override fun close() { tcp.close() }
+            }
+            val stream = StreamSocket(transport)
+            try {
+                SocketProtocolLink.openStream(ConnectionEndpoint("127.0.0.1", server.localPort, fingerprint(), code), stream, publish = { true }).use { link ->
+                    link.send(Protocol.packPing(77))
+                    val pong = link.receive(1000)
+                    assertEquals(Protocol.PKT_PONG, pong.kind)
+                    assertEquals(77, pong.sequence.toInt())
+                }
+                assertTrue(stream.isClosed)
+                assertTrue(tcp.isClosed)
+                task.get(4, TimeUnit.SECONDS)
+            } catch (failure: Throwable) {
+                try { task.get(4, TimeUnit.SECONDS) } catch (peer: Exception) { failure.addSuppressed(peer) }
+                throw failure
+            } finally { stream.close(); executor.shutdownNow() }
+        }
+    }
+
+    @Test fun readinessProbeAuthenticatesWithoutSendingInputOrClaimingAStream() {
+        listener().use { server ->
+            val executor = Executors.newSingleThreadExecutor()
+            val task = executor.submit {
+                server.accept().use { socket ->
+                    socket.soTimeout = 3000
+                    val input = DataInputStream(socket.getInputStream())
+                    val output = socket.getOutputStream()
+                    val nonce = ByteArray(32) { (it + 1).toByte() }
+                    output.write(Protocol.packHandshake(proof = PairingProtocol.VERSION + nonce))
+                    val request = read(input)
+                    check(request.kind == Protocol.PKT_HANDSHAKE && request.sequence.toInt() == 1)
+                    check(PairingProtocol.verifyProof(code, nonce, "client", request.payload))
+                    output.write(Protocol.packHandshake(seq = 1, proof = PairingProtocol.proof(code, nonce, "server")))
+                    check(input.read() == -1)
+                }
+            }
+            try {
+                assertTrue(SocketProtocolLink.probe(ConnectionEndpoint("127.0.0.1", server.localPort, fingerprint(), code)) { true })
+                task.get(4, TimeUnit.SECONDS)
             } finally { executor.shutdownNow() }
         }
     }
@@ -81,6 +155,7 @@ class SocketProtocolLinkTest {
                     try {
                         assertEquals(-1, socket.getInputStream().read())
                     } catch (_: javax.net.ssl.SSLException) { }
+                    catch (_: java.net.SocketException) { /* Peer may reset during TLS rejection. */ }
                 }
             }
             try {

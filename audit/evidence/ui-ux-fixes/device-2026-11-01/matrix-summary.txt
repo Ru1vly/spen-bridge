@@ -1,0 +1,6 @@
+Performing Streamed Install
+Success
+phone-light-portrait native checks and captures passed
+phone-dark-landscape-large native checks and captures passed
+tablet-light-portrait native checks and captures passed
+tablet-dark-landscape-large native checks and captures passed

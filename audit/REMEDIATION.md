@@ -103,7 +103,7 @@ The local user's auto-forward preference was enabled for the requested setup.
 
 Desktop labels use the authenticated peer and USB-forward state; the Android
 app labels its selected USB or network transport and gives USB-specific retry
-errors. No silent Wi-Fi fallback changes the selected paired endpoint.
+errors. That first follow-up still selected a single endpoint; the automatic dual-transport correction below supersedes that behavior.
 
 The updated apps were installed/opened. Removing an active reverse mapping
 proved automatic restoration in 0.836 seconds; restarting the phone app then
@@ -129,3 +129,61 @@ authorized committing the update. Existing Windows source/installer fixes and
 portable checks are included; native build, signing, installation, PnP, power,
 Driver Verifier and Ink checks remain unverified. This deferral is not a claim
 that those checks passed or that the full audit is complete.
+
+## Automatic dual-transport correction — 2026-10-30
+
+The user clarified the required retry policy: USB first, Wi-Fi immediately if
+USB fails, then a five-second cooldown only after both fail. The sender now
+implements that cycle in its single owner worker. Both attempts use the same
+paired desktop identity and port. The Wi-Fi address is retained in Settings;
+USB uses loopback automatically and does not overwrite it. Session generations,
+queue clearing and fresh capture acknowledgement also apply across fallback.
+Status and the Wi-Fi lock use the actual attempted/authenticated route.
+
+The desktop's paired LAN listener was enabled alongside USB on the user's
+machine. LAN discovery now selects physical interfaces before Internet routes,
+avoiding the VPN's 172.20.0.1 address. The saved phone Wi-Fi target is the actual
+192.168.1.15 LAN host. Existing firewall permissions already allowed the port;
+no firewall change was made.
+
+Native testing confirmed USB authentication, followed by user unplugging the
+cable and reporting automatic Wi-Fi connection. The desktop independently
+confirmed an authenticated peer at 192.168.1.3 over its LAN listener. Background
+cleanup also exposed an interrupted watchdog shutdown; cleanup was moved out
+of inlined return paths and interruption is contained. Two phone background/
+resume cycles then kept the process alive and returned to USB when cabled.
+See `evidence/remediation-dual-transport-native.json`.
+
+Validation: 35 Android JVM tests pass, including USB-first order, immediate
+Wi-Fi fallback, the actual default five-second retry delay, clean route changes,
+cooldown interruption, and repeated interrupted shutdown. Strict debug build
+and lint pass. Python: 121 passed, one optional Gio skip, 17 subtests passed;
+this includes physical-LAN-versus-VPN address selection. Evidence is retained in
+`evidence/remediation-dual-transport-*`. Windows verification remains deferred.
+
+## Prefer USB after cable insertion — 2026-10-30
+
+The user requested handover from an already connected Wi-Fi session when USB
+becomes available and the pen is idle. Wi-Fi sessions now check the paired USB
+path every two seconds with a bounded, read-only TLS/pairing probe. The optional
+handshake sequence 1 authenticates readiness without claiming input, resetting
+the current owner, accepting events or issuing connection callbacks.
+
+Once readiness is verified, transfer waits for 750 ms without pen events, an
+empty input queue and no held tip or barrel button. Accepted input and the idle
+handover barrier share one lock. Input remains on Wi-Fi while readiness is
+checked; a new contact during a probe defers the switch. Wi-Fi is closed before
+the new USB owner connects, and USB capture requires a fresh UI acknowledgement.
+Absent/failed probes leave healthy Wi-Fi input untouched. Probe sockets are
+cancelled on stop, reset or settings changes, and the bounded executor is joined.
+
+Both updated apps were installed/restarted. The running desktop passed an
+actual pinned-TLS read-only probe, and the phone remained authenticated over
+Wi-Fi at 192.168.1.3. The user reported a broken cable, so physical Wi-Fi-to-USB
+handover could not be confirmed. This verification is pending a working cable.
+
+Validation: 41 Android JVM tests pass, including a real pinned TLS readiness
+exchange and active-stroke/idle-handover/cancellation regressions. Strict debug
+build and lint pass. Python: 123 passed, one optional Gio skip, 17 subtests passed;
+read-only probes are tested both with and without an existing input owner.
+Evidence: `evidence/remediation-usb-handover-*`. Windows remains deferred.

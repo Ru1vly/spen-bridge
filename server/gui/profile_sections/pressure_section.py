@@ -3,6 +3,9 @@ Pressure Sensitivity Curve & Deadzone profile section: presets, gamma/min/max
 sliders, the live pressure-curve graph, and raw/calibrated pressure meters.
 """
 
+from server.gui.theme import PALETTE
+
+
 from typing import Optional
 
 from PySide6.QtCore import Qt, Signal
@@ -33,7 +36,7 @@ class PressureSection(QGroupBox):
     changed = Signal()
 
     def __init__(self, parent=None):
-        super().__init__("Pressure Sensitivity Curve && Deadzone", parent)
+        super().__init__("Pressure response", parent)
         self._profile: Optional[AppProfile] = None
         self._updating = False
 
@@ -55,9 +58,9 @@ class PressureSection(QGroupBox):
         grid = QGridLayout()
         grid.setSpacing(6)
 
-        grid.addWidget(QLabel("Sensitivity Exponent (Gamma):"), 0, 0)
+        grid.addWidget(QLabel("Sensitivity (gamma):"), 0, 0)
         self.lbl_gamma_val = QLabel("1.00")
-        self.lbl_gamma_val.setStyleSheet("font-weight: bold; color: #89b4fa;")
+        self.lbl_gamma_val.setStyleSheet(f"font-weight: bold; color: {PALETTE['accent_blue']};")
         grid.addWidget(self.lbl_gamma_val, 0, 1)
         self.slider_gamma = QSlider(Qt.Horizontal)
         self.slider_gamma.setAccessibleName("Pressure sensitivity exponent")
@@ -65,9 +68,9 @@ class PressureSection(QGroupBox):
         self.slider_gamma.valueChanged.connect(self._on_gamma_changed)
         grid.addWidget(self.slider_gamma, 1, 0, 1, 2)
 
-        grid.addWidget(QLabel("Minimum Pressure Threshold (Deadzone):"), 2, 0)
+        grid.addWidget(QLabel("Minimum pressure (deadzone):"), 2, 0)
         self.lbl_min_val = QLabel("0%")
-        self.lbl_min_val.setStyleSheet("font-weight: bold; color: #f38ba8;")
+        self.lbl_min_val.setStyleSheet(f"font-weight: bold; color: {PALETTE['red']};")
         grid.addWidget(self.lbl_min_val, 2, 1)
         self.slider_min = QSlider(Qt.Horizontal)
         self.slider_min.setAccessibleName("Minimum pressure percent")
@@ -75,9 +78,9 @@ class PressureSection(QGroupBox):
         self.slider_min.valueChanged.connect(self._on_min_changed)
         grid.addWidget(self.slider_min, 3, 0, 1, 2)
 
-        grid.addWidget(QLabel("Maximum Pressure Ceiling (100% Force):"), 4, 0)
+        grid.addWidget(QLabel("Maximum pressure:"), 4, 0)
         self.lbl_max_val = QLabel("100%")
-        self.lbl_max_val.setStyleSheet("font-weight: bold; color: #fab387;")
+        self.lbl_max_val.setStyleSheet(f"font-weight: bold; color: {PALETTE['orange']};")
         grid.addWidget(self.lbl_max_val, 4, 1)
         self.slider_max = QSlider(Qt.Horizontal)
         self.slider_max.setAccessibleName("Maximum pressure percent")
@@ -92,7 +95,7 @@ class PressureSection(QGroupBox):
 
         meter_grid = QGridLayout()
         meter_grid.setSpacing(4)
-        meter_grid.addWidget(QLabel("Raw Input:"), 0, 0)
+        meter_grid.addWidget(QLabel("Raw input:"), 0, 0)
         self.bar_raw = QProgressBar()
         self.bar_raw.setRange(0, 100)
         meter_grid.addWidget(self.bar_raw, 0, 1)

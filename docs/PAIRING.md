@@ -3,21 +3,36 @@
 Use the matching Android app and desktop server from this checkout. Protocol v2
 requires TLS and pairing; older unauthenticated senders cannot connect.
 
-1. On desktop, open System & Diagnostics → **Pair Tablet**, or run
+1. On desktop, open **Connection** → **Pair tablet**, or run
    `python server/main.py --show-pairing`. This explicit action displays a public
    certificate fingerprint and a secret pairing code. Copy them only to your tablet.
-2. In Android Settings, paste both fields. Save & Apply validates all fields.
+2. In Android **Settings → Connection → Manual pairing details**, paste both fields. **Apply connection** validates the connection fields. Tablet area and input settings apply independently.
    The fingerprint pins the desktop certificate; the code authenticates each fresh
    session. A changed identity requires pairing again. Settings are excluded from
    Android backup and device transfer.
-3. For USB, start the desktop server (loopback is the default), connect a debugging
-   authorized USB device, and use **Enable USB Mode (ADB)**. While the desktop app stays open, it checks every two seconds and restores forwarding after a cable reconnect. Forwarding targets USB devices explicitly, so a wireless ADB connection cannot be mistaken for a cable. Enable **Auto-forward USB ADB on launch** to resume this monitoring on future launches. The button uses the
-   running port. On Android enter **127.0.0.1** and that port. For CLI, run
-   `adb reverse tcp:40118 tcp:40118`, substituting your selected port in both places.
-4. For Wi-Fi, enable **Allow paired Wi-Fi connections** and stop/start the server,
-   or launch CLI with `--wifi`. Use the desktop LAN IP and running port on Android.
-   Listener changes show as pending until restart. Allow only the selected port
-   through your private-network firewall. USB requires no inbound LAN firewall rule.
+3. For Wi-Fi, in Android Settings keep the desktop's **Desktop Wi-Fi address** and selected
+   port saved. USB does not replace this address: the app automatically uses
+   `127.0.0.1` and the same port for the cable attempt. The Wi-Fi address can be empty for USB-only use.
+4. Start the desktop server. Enable **Allow paired Wi-Fi connections** and
+   restart it so both USB loopback and LAN connections can reach the same paired
+   server. Use the desktop's LAN address, not a VPN/tunnel address, on Android.
+   Allow the selected port through your private-network firewall.
+5. Connect a USB-debugging-authorized device and use **Set up USB connection**.
+   While the desktop app stays open, it checks every two seconds and restores
+   forwarding after a cable reconnect. Enable **Set up USB automatically on launch**
+   to restore this monitor on future launches. CLI users can run
+   `adb -d reverse tcp:40118 tcp:40118`, replacing both ports as needed.
+
+Every connection cycle tries **USB first**, then **Wi-Fi immediately** if USB
+fails. Only when both attempts fail does it wait **five seconds**, then start
+again with USB. While connected over Wi-Fi, the app checks USB readiness every two seconds using
+an authenticated read-only probe. Once USB is ready, it hands over after at least
+750 ms without pen events, with no held tip/barrel button and an empty input queue.
+Active strokes remain on Wi-Fi. A new USB session requires fresh capture
+acknowledgement; old input is never replayed. After a connection drops, the sender
+continues the USB-first retry sequence. Status text and the
+Wi-Fi latency lock follow the route that actually authenticated. Pairing is
+required for both routes.
 
 One authenticated tablet owns the input device at a time. Backgrounding Android,
 losing focus, changing endpoints or losing the connection cancels the stroke.
@@ -51,5 +66,5 @@ varies by distribution; allow the chosen TCP port from your tablet's local netwo
 Pairing identity lives in `identity.json` next to the desktop config. It is created
 owner-only and must stay private. Back it up securely if retaining an existing
 pairing. If compromised, stop the server, remove that identity locally, then open
-Pair Tablet to generate a new identity and re-pair your own devices. Existing pins
+Pair tablet to generate a new identity and re-pair your own devices. Existing pins
 and codes will stop working. Never share the identity file or paste the code in logs.

@@ -1,0 +1,8 @@
+INSTRUMENTATION_STATUS: live_pen_status=READY: isolated blank surface; waiting for actual hardware pen
+INSTRUMENTATION_STATUS_CODE: 1
+INSTRUMENTATION_RESULT: chrome_violations=0
+INSTRUMENTATION_RESULT: hardware_actions={}
+INSTRUMENTATION_RESULT: hardware_devices=
+INSTRUMENTATION_RESULT: idle_restored=false
+INSTRUMENTATION_RESULT: live_pen=NOT VERIFIED: complete physical stroke was not observed
+INSTRUMENTATION_CODE: 0

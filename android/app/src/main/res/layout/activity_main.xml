@@ -1,117 +1,15 @@
-<?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/mainRoot"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
->
-
-    <!-- Active S Pen Drawing & Capture Surface -->
-    <com.spenbridge.app.PenSurfaceView
-        android:id="@+id/penSurfaceView"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent" />
-
-    <!-- Dynamic Status & Toolbar Overlay (Side in landscape, Top in portrait) -->
-    <LinearLayout
-        android:id="@+id/topBar"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="top"
-        android:layout_margin="8dp"
-        android:background="@drawable/bar_background"
-        android:gravity="center"
-        android:orientation="horizontal"
-        android:paddingStart="12dp"
-        android:paddingTop="6dp"
-        android:paddingEnd="12dp"
-        android:paddingBottom="6dp">
-
-        <LinearLayout
-            android:id="@+id/statusContainer"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:gravity="center"
-            android:orientation="horizontal">
-
-            <View
-                android:id="@+id/statusIndicator"
-                android:layout_width="10dp"
-                android:layout_height="10dp"
-                android:layout_margin="6dp"
-                android:background="@drawable/status_dot" />
-
-            <TextView
-                android:id="@+id/statusText"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:ellipsize="end"
-                android:maxLines="1"
-                android:text="@string/status_disconnected"
-                android:textColor="@color/text_light"
-                android:textSize="12sp" />
-        </LinearLayout>
-
-        <!-- Spacer used in horizontal / portrait mode -->
-        <View
-            android:id="@+id/barSpacer"
-            android:layout_width="0dp"
-            android:layout_height="0dp"
-            android:layout_weight="1" />
-
-        <Button
-            android:id="@+id/btnRotate"
-            style="@style/Widget.MaterialComponents.Button.TextButton"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:minWidth="40dp"
-            android:paddingStart="6dp"
-            android:paddingEnd="6dp"
-            android:text="@string/btn_rotate"
-            android:textColor="@color/text_light"
-            android:textSize="12sp" />
-
-        <Button
-            android:id="@+id/btnSettings"
-            style="@style/Widget.MaterialComponents.Button.TextButton"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:minWidth="40dp"
-            android:paddingStart="6dp"
-            android:paddingEnd="6dp"
-            android:text="@string/settings_title"
-            android:textColor="@color/text_light"
-            android:textSize="12sp" />
-
-        <Button
-            android:id="@+id/btnCollapse"
-            style="@style/Widget.MaterialComponents.Button.TextButton"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:minWidth="32dp"
-            android:paddingStart="4dp"
-            android:paddingEnd="4dp"
-            android:text="@string/hide_controls"
-            android:textColor="@color/text_muted"
-            android:textSize="13sp" />
-    </LinearLayout>
-
-    <!-- Minimized floating expand button when toolbar is collapsed -->
-    <Button
-        android:id="@+id/btnExpand"
-        style="@style/Widget.MaterialComponents.Button"
-        android:layout_width="48dp"
-        android:layout_height="48dp"
-        android:layout_gravity="start|top"
-        android:layout_margin="10dp"
-        android:backgroundTint="#A014161C"
-        android:insetTop="0dp"
-        android:insetBottom="0dp"
-        android:insetLeft="0dp"
-        android:insetRight="0dp"
-        android:padding="0dp"
-        android:text="@string/show_controls"
-        android:textColor="@color/text_light"
-        android:textSize="13sp"
-        android:visibility="gone" />
-
+<?xml version='1.0' encoding='utf-8'?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app="http://schemas.android.com/apk/res-auto" android:id="@+id/mainRoot" android:background="@color/canvas_bg" android:layout_width="match_parent" android:layout_height="match_parent">
+  <com.spenbridge.app.PenSurfaceView android:id="@+id/penSurfaceView" android:layout_width="match_parent" android:layout_height="match_parent" />
+  <LinearLayout android:id="@+id/statusContainer" android:layout_width="wrap_content" android:layout_height="wrap_content" android:gravity="center" android:orientation="horizontal" android:layout_gravity="top|center_horizontal" android:layout_margin="12dp" android:background="@drawable/bar_background" android:paddingStart="12dp" android:paddingEnd="16dp" android:paddingTop="8dp" android:paddingBottom="8dp" android:minHeight="48dp" android:clickable="true" android:focusable="true">
+    <View android:id="@+id/statusIndicator" android:layout_width="10dp" android:layout_height="10dp" android:layout_margin="6dp" android:background="@drawable/status_dot" />
+    <TextView android:id="@+id/statusText" android:layout_width="wrap_content" android:layout_height="wrap_content" android:ellipsize="end" android:maxLines="1" android:text="@string/status_disconnected" android:textColor="@color/text_light" android:textSize="14sp" android:accessibilityLiveRegion="polite" />
+  </LinearLayout>
+  <LinearLayout android:id="@+id/topBar" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_gravity="top" android:layout_margin="8dp" android:background="@drawable/bar_background" android:gravity="center" android:orientation="horizontal" android:paddingStart="8dp" android:paddingTop="6dp" android:paddingEnd="8dp" android:paddingBottom="6dp" android:elevation="4dp">
+    <View android:id="@+id/barSpacer" android:layout_width="0dp" android:layout_height="0dp" android:layout_weight="1" />
+    <com.google.android.material.button.MaterialButton android:id="@+id/btnRotate" android:layout_marginStart="4dp" android:layout_marginEnd="4dp" style="@style/Widget.SPenBridge.ToolbarButton" android:layout_width="48dp" android:layout_height="48dp" android:minWidth="48dp" android:text="" android:textColor="@color/text_light" android:textSize="12sp" android:minHeight="48dp" android:padding="12dp" app:icon="@drawable/ic_rotate" />
+    <com.google.android.material.button.MaterialButton android:id="@+id/btnSettings" android:layout_marginStart="4dp" android:layout_marginEnd="4dp" style="@style/Widget.SPenBridge.ToolbarButton" android:layout_width="48dp" android:layout_height="48dp" android:minWidth="48dp" android:text="" android:textColor="@color/text_light" android:textSize="12sp" android:minHeight="48dp" android:padding="12dp" app:icon="@drawable/ic_settings" android:contentDescription="@string/settings_title" />
+    <com.google.android.material.button.MaterialButton android:id="@+id/btnCollapse" android:layout_marginStart="4dp" android:layout_marginEnd="4dp" style="@style/Widget.SPenBridge.ToolbarButton" android:layout_width="48dp" android:layout_height="48dp" android:minWidth="48dp" android:text="" android:textColor="@color/text_muted" android:textSize="13sp" android:minHeight="48dp" android:padding="12dp" app:icon="@drawable/ic_hide" />
+  </LinearLayout>
+  <com.google.android.material.button.MaterialButton android:id="@+id/btnExpand" style="@style/Widget.SPenBridge.ToolbarButton" android:layout_width="48dp" android:layout_height="48dp" android:layout_gravity="start|top" android:layout_margin="10dp" android:insetTop="0dp" android:insetBottom="0dp" android:insetLeft="0dp" android:insetRight="0dp" android:padding="12dp" android:text="" android:textColor="@color/text_light" android:textSize="13sp" android:visibility="gone" android:minWidth="48dp" android:minHeight="48dp" app:icon="@drawable/ic_show" app:backgroundTint="@color/surface" android:elevation="4dp" />
 </FrameLayout>

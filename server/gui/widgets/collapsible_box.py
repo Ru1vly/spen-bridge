@@ -5,6 +5,11 @@ a body that hides/shows. Used for every "Advanced: ..." sub-section and for
 the Server Logs panel: one shared mechanism, no parallel "Card" hierarchy.
 """
 
+from server.gui.theme import PALETTE
+
+
+from pathlib import Path
+from PySide6.QtGui import QIcon
 from PySide6.QtCore import Qt, Signal, QSignalBlocker
 from PySide6.QtWidgets import QGroupBox, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton
 
@@ -33,7 +38,7 @@ class CollapsibleBox(QGroupBox):
         header_layout.setContentsMargins(8, 6, 8, 6)
         header_layout.setSpacing(8)
 
-        self._chevron = QLabel("▸")
+        self._chevron = QLabel()
         self._chevron.setFixedWidth(12)
         header_layout.addWidget(self._chevron)
 
@@ -44,7 +49,7 @@ class CollapsibleBox(QGroupBox):
         header_layout.addStretch()
 
         self._summary_label = QLabel("")
-        self._summary_label.setStyleSheet("color: #a6adc8; font-size: 11px;")
+        self._summary_label.setStyleSheet(f"color: {PALETTE['text_muted']}; font-size: 11px;")
         header_layout.addWidget(self._summary_label)
 
         self._header.toggled.connect(self._on_header_toggled)
@@ -73,7 +78,10 @@ class CollapsibleBox(QGroupBox):
         with QSignalBlocker(self._header):
             self._header.setChecked(expanded)
         self._header.setAccessibleDescription("Expanded" if expanded else "Collapsed")
-        self._chevron.setText("▾" if expanded else "▸")
+        scheme = "dark" if PALETTE["bg"] == "#010101" else "light"
+        icon = "down" if expanded else "right"
+        path = Path(__file__).resolve().parents[1] / "assets" / f"{icon}-{scheme}.svg"
+        self._chevron.setPixmap(QIcon(str(path)).pixmap(12, 12))
         self._body.setVisible(expanded)
 
     @property

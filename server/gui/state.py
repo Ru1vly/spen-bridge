@@ -15,14 +15,18 @@ class GuiState:
     @property
     def last_tab_index(self) -> int:
         try:
-            index = int(self._settings.value("last_tab_index", 0))
+            current = self._settings.value("last_workspace_index", None)
+            if current is None:
+                old = int(self._settings.value("last_tab_index", 1))
+                return 1 if old == 0 else 0
+            index = int(current)
         except (ValueError, TypeError):
             return 0
-        return index if index in (0, 1) else 0
+        return index if index in (0, 1, 2, 3) else 0
 
     @last_tab_index.setter
     def last_tab_index(self, value: int):
-        self._settings.setValue("last_tab_index", int(value))
+        self._settings.setValue("last_workspace_index", int(value))
 
     @property
     def last_editing_profile(self) -> str:

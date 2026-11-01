@@ -4,6 +4,9 @@ identity, uinput permission check, desktop launcher installer, and the
 global reset-to-defaults action.
 """
 
+from server.gui.theme import PALETTE
+
+
 import os
 import getpass
 import shlex
@@ -36,7 +39,7 @@ class StartupPanel(QGroupBox):
     reset_requested = Signal()
 
     def __init__(self, config: TabletConfig, parent=None):
-        super().__init__("System && Startup Preferences", parent)
+        super().__init__("System and startup", parent)
         self._config = config
         self._updating = False
 
@@ -62,7 +65,7 @@ class StartupPanel(QGroupBox):
         self.chk_autostart_server.toggled.connect(lambda c: self._set_preference("auto_start_server", c))
         layout.addWidget(self.chk_autostart_server)
 
-        self.chk_auto_adb = QCheckBox("Auto-forward USB ADB on launch")
+        self.chk_auto_adb = QCheckBox("Set up USB automatically on launch")
         self.chk_auto_adb.toggled.connect(lambda c: self._set_preference("auto_adb_forward", c))
         layout.addWidget(self.chk_auto_adb)
 
@@ -71,7 +74,7 @@ class StartupPanel(QGroupBox):
         layout.addWidget(self.chk_tray)
 
         name_row = QHBoxLayout()
-        name_row.addWidget(QLabel("Device Name:"))
+        name_row.addWidget(QLabel("Device name:"))
         self.edit_dev_name = QLineEdit()
         self.edit_dev_name.setAccessibleName("Virtual device name")
         self.edit_dev_name.setMaxLength(256)
@@ -81,7 +84,7 @@ class StartupPanel(QGroupBox):
         layout.addLayout(name_row)
 
         self.lbl_desktop_size = QLabel()
-        self.lbl_desktop_size.setStyleSheet("color: #a6adc8; font-size: 11px;")
+        self.lbl_desktop_size.setStyleSheet(f"color: {PALETTE['text_muted']}; font-size: 11px;")
         layout.addWidget(self.lbl_desktop_size)
 
         # uinput permissions and the .desktop launcher are Linux-only concerns:
@@ -90,15 +93,15 @@ class StartupPanel(QGroupBox):
         # by the installer too, so surfacing either button there would just be
         # confusing (or create a duplicate/conflicting launcher entry).
         if sys.platform != "win32":
-            btn_uinput = QPushButton("Check / Setup uinput Permissions")
+            btn_uinput = QPushButton("Check input permissions")
             btn_uinput.clicked.connect(self._check_uinput_perms)
             layout.addWidget(btn_uinput)
 
-            btn_desktop_entry = QPushButton("Install Desktop Launcher (.desktop)")
+            btn_desktop_entry = QPushButton("Install desktop launcher")
             btn_desktop_entry.clicked.connect(self._install_desktop_entry)
             layout.addWidget(btn_desktop_entry)
 
-        btn_reset = QPushButton("Reset All to Defaults")
+        btn_reset = QPushButton("Reset all settings")
         btn_reset.setObjectName("dangerBtn")
         btn_reset.setStyleSheet("margin-top: 12px;")
         btn_reset.clicked.connect(self.reset_requested.emit)
@@ -167,7 +170,7 @@ class StartupPanel(QGroupBox):
                 QMessageBox.information(
                     self,
                     "uinput Setup",
-                    "Launched setup with pkexec. After authenticating, click 'Check / Setup uinput Permissions' again.",
+                    "Launched setup with pkexec. After authenticating, click 'Check input permissions' again.",
                 )
                 return
             except Exception:

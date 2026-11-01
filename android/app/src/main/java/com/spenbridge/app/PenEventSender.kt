@@ -17,7 +17,7 @@ class PenEventSender(
     pairingCode: String = ""
 ) {
     companion object { private const val TAG = "PenEventSender" }
-    enum class Status { DISCONNECTED, CONNECTING, CONNECTED, ERROR, PAIRING_REQUIRED }
+    enum class Status { DISCONNECTED, CONNECTING, CONNECTED, ERROR, COOLDOWN, PAIRING_REQUIRED }
     interface StatusListener { fun onStatusChanged(status: Status, message: String) }
 
     private val handler = Handler(Looper.getMainLooper())
@@ -37,17 +37,19 @@ class PenEventSender(
         }
         if (update != null && transport.isCurrent(update)) {
             val status = Status.valueOf(update.state.name)
-            if (foreground && status == Status.CONNECTED && !transport.endpoint().isLoopback()) acquireWifiLock()
+            if (foreground && status == Status.CONNECTED && update.mode == PenTransport.Mode.WIFI) acquireWifiLock()
             else releaseWifiLock()
             val endpoint = transport.endpoint()
             val connectionType = appContext.getString(
-                if (endpoint.isLoopback()) R.string.connection_usb else R.string.connection_network)
+                if (update.mode == PenTransport.Mode.USB) R.string.connection_usb else R.string.connection_network)
             val message = when (status) {
                 Status.DISCONNECTED -> appContext.getString(R.string.status_disconnected)
                 Status.CONNECTING -> appContext.getString(R.string.status_connecting_transport, connectionType)
                 Status.CONNECTED -> appContext.getString(R.string.status_connected_transport, connectionType)
+                Status.COOLDOWN -> appContext.getString(if (ConnectionEndpoint.validHost(endpoint.host) && !endpoint.isLoopback())
+                    R.string.status_both_failed else R.string.status_wifi_address_required)
                 Status.PAIRING_REQUIRED -> appContext.getString(R.string.status_pairing_required)
-                Status.ERROR -> appContext.getString(if (endpoint.isLoopback()) R.string.status_usb_error else R.string.status_connection_error)
+                Status.ERROR -> appContext.getString(if (update.mode == PenTransport.Mode.USB) R.string.status_usb_error else R.string.status_connection_error)
             }
             listener?.onStatusChanged(status, message)
         }

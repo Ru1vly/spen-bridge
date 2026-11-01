@@ -18,7 +18,7 @@ class ConnectionPanel(QGroupBox):
     connection_type_changed = Signal()
 
     def __init__(self, local_ip, config, parent=None):
-        super().__init__("Quick Connect (Tablet Setup)", parent)
+        super().__init__("Connect your tablet", parent)
         self._local_ip, self._config = local_ip, config
         self._endpoint = None
         self._adb_thread = None
@@ -48,10 +48,11 @@ class ConnectionPanel(QGroupBox):
         self.lbl_transport.setTextFormat(Qt.PlainText)
         self.lbl_transport.setWordWrap(True)
         layout.addWidget(self.lbl_transport)
-        self.btn_pair = QPushButton("Pair Tablet")
+        self.btn_pair = QPushButton("Pair tablet")
+        self.btn_pair.setObjectName("primaryBtn")
         self.btn_pair.clicked.connect(self.show_pairing)
         layout.addWidget(self.btn_pair)
-        self.btn_adb = QPushButton("Enable USB Mode (ADB)")
+        self.btn_adb = QPushButton("Set up USB connection")
         self.btn_adb.clicked.connect(lambda: self.run_adb_reverse())
         layout.addWidget(self.btn_adb)
         self.adb_finished.connect(self._adb_done)
@@ -81,14 +82,14 @@ class ConnectionPanel(QGroupBox):
 
     def refresh_ip_label(self):
         state = "Listener change in progress" if self._transitioning else (
-            "Listening" if self._endpoint else "Configured (server stopped)")
+            "Listening" if self._endpoint else "Not running")
         self.lbl_ip_info.setText(f"{state}: {self.address()}")
         self.btn_copy.setEnabled(not self._transitioning)
         self.btn_adb.setEnabled(not self._transitioning and not self._adb_busy)
         pending = self._endpoint and self._endpoint != (listener_address(self._config), self._config.port)
         self.lbl_hint.setText(
             "Network changes pending. Stop and start the server to apply them."
-            if pending else "Copy this address and the pairing details into the tablet Settings. USB uses 127.0.0.1."
+            if pending else "Connect your tablet by USB, or enable Wi-Fi in Preferences. Pair it to allow pen input."
         )
 
     def on_port_changed(self, port):
@@ -105,8 +106,11 @@ class ConnectionPanel(QGroupBox):
             QMessageBox.warning(self, "Pairing unavailable", str(error))
             return
         dialog = QDialog(self)
-        dialog.setWindowTitle("Pair Tablet")
+        dialog.setWindowTitle("Pair tablet")
         form = QFormLayout(dialog)
+        form.setContentsMargins(24, 24, 24, 24)
+        form.setSpacing(16)
+        form.setRowWrapPolicy(QFormLayout.WrapLongRows)
         hint = QLabel("Copy these into tablet Settings on your own device. The pairing code grants control of this desktop.")
         hint.setWordWrap(True)
         form.addRow(hint)
@@ -201,7 +205,7 @@ class ConnectionPanel(QGroupBox):
         self._adb_busy = False
         self._usb_ready = ok
         self.btn_adb.setEnabled(not self._transitioning)
-        self.btn_adb.setText("Enable USB Mode (ADB)")
+        self.btn_adb.setText("Set up USB connection")
         if message != self._last_adb_message:
             self.log_message.emit(message)
             self._last_adb_message = message

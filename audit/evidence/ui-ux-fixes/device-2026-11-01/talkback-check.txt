@@ -1,0 +1,8 @@
+INSTRUMENTATION_RESULT: accessibility_range=PASS: named range node and nonvisual set-progress action update the live preview
+INSTRUMENTATION_RESULT: clipboard_readback=PASS
+INSTRUMENTATION_RESULT: keyboard_insets=PASS: focused input remains fully visible above the actual Android keyboard
+INSTRUMENTATION_RESULT: settings_flows=PASS: native drag, center/reset, explicit Apply, recreation drafts, and discard
+INSTRUMENTATION_RESULT: stylus_dispatch=PASS: system-injected edge hover, contact/move/up, palm pointers, cancel, transport stop/start, and delayed restore
+INSTRUMENTATION_RESULT: talkback_focus=PASS: actual touch exploration active and named slider receives accessibility focus
+INSTRUMENTATION_RESULT: ui_ux_checks=PASS: local apply without pairing, shared preview, accessible sliders, hidden chrome, blank surface
+INSTRUMENTATION_CODE: -1

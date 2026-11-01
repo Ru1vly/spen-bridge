@@ -1,14 +1,13 @@
-"""
-The full editor for whichever profile is currently selected: stacks the 5
-profile sections (identity, device, pressure, buttons, mapping) in one
-scrollable page, and pushes live edits to the running ServerWorker whenever
-the profile being edited is also the currently active (live) one.
+"""One authoritative profile model, four focused pen-tuning categories.
+
+The identity/matching section is hosted by App profiles. All sections bind the
+same profile; the existing debounced live-apply path remains the owner of edits.
 """
 
 from typing import Optional
 
 from PySide6.QtCore import Signal, QTimer
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QScrollArea, QComboBox, QLabel
+from PySide6.QtWidgets import QWidget, QVBoxLayout, QScrollArea, QComboBox, QLabel, QTabWidget
 
 from server.config import AppProfile, TabletConfig
 from server.gui.server_worker import ServerWorker
@@ -33,41 +32,37 @@ class ProfileEditorPanel(QWidget):
         outer = QVBoxLayout(self)
         outer.setContentsMargins(0, 0, 0, 0)
 
-        scroll = QScrollArea()
-        scroll.setWidgetResizable(True)
-        content = QWidget()
-        content_layout = QVBoxLayout(content)
-        content_layout.setContentsMargins(4, 4, 4, 4)
-        content_layout.setSpacing(16)
-
         self.identity_section = IdentitySection()
         self.device_section = DeviceSection()
         self.pressure_section = PressureSection()
         self.buttons_section = ButtonsSection()
         self.mapping_section = MappingSection(config)
-
-        for section in (
-            self.identity_section,
-            self.device_section,
-            self.pressure_section,
-            self.buttons_section,
-            self.mapping_section,
-        ):
+        self.categories = QTabWidget()
+        self.categories.setAccessibleName("Pen settings categories")
+        self.category_scrolls = {}
+        for title, section in (("Pressure", self.pressure_section), ("Mapping", self.mapping_section),
+                               ("Buttons", self.buttons_section), ("Device", self.device_section)):
+            scroll = QScrollArea()
+            scroll.setWidgetResizable(True)
+            content = QWidget()
+            content_layout = QVBoxLayout(content)
+            content_layout.setContentsMargins(0, 0, 8, 8)
             content_layout.addWidget(section)
+            content_layout.addStretch()
+            scroll.setWidget(content)
+            self.categories.addTab(scroll, title)
+            self.category_scrolls[title] = scroll
+        outer.addWidget(self.categories)
+        for section in (self.identity_section, self.device_section, self.pressure_section,
+                        self.buttons_section, self.mapping_section):
             section.changed.connect(self._on_section_changed)
-
-        # Native controls keep their full values in popups while the editor
-        # fits the viewport instead of forcing horizontal scrolling.
-        for combo in content.findChildren(QComboBox):
-            combo.setSizeAdjustPolicy(QComboBox.AdjustToMinimumContentsLengthWithIcon)
-            combo.setMinimumContentsLength(8)
-            combo.setMinimumWidth(0)
-        for label in content.findChildren(QLabel):
-            if len(label.text()) > 35:
-                label.setWordWrap(True)
-        content_layout.addStretch()
-        scroll.setWidget(content)
-        outer.addWidget(scroll)
+            for combo in section.findChildren(QComboBox):
+                combo.setSizeAdjustPolicy(QComboBox.AdjustToMinimumContentsLengthWithIcon)
+                combo.setMinimumContentsLength(8)
+                combo.setMinimumWidth(0)
+            for label in section.findChildren(QLabel):
+                if len(label.text()) > 35:
+                    label.setWordWrap(True)
 
         self._push_timer = QTimer(self)
         self._push_timer.setSingleShot(True)

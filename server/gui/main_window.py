@@ -1,6 +1,6 @@
 """
 Main application window: thin orchestrator that wires the header, the two
-tabs (Profiles / System && Diagnostics), the background server worker, and
+tabs (Profiles / Connection), the background server worker, and
 the system tray together. Screen/section widgets own their own controls;
 this module owns cross-cutting state (which profile is being edited vs.
 live, dirty tracking, save/quit flows).
@@ -9,14 +9,12 @@ live, dirty tracking, save/quit flows).
 import copy
 import sys
 import logging
-import threading
-from collections import deque
 from pathlib import Path
 from typing import Optional, Tuple
 
 from PySide6.QtCore import QTimer, Signal, QSignalBlocker, Qt
 from PySide6.QtGui import QIcon, QKeySequence, QAction
-from PySide6.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QTabWidget, QMessageBox, QDialog, QLabel
+from PySide6.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QTabWidget, QMessageBox, QDialog, QLabel, QScrollArea
 
 from server.config import AppProfile, TabletConfig, load_config, save_config, CONFIG_FILE_PATH
 from server.protocol import PenEvent, ACTION_CANCEL, valid_event
@@ -30,7 +28,8 @@ from server.gui.network_info import get_local_ip
 from server.gui.header_bar import HeaderBar
 from server.gui.tray import SystemTrayController
 from server.gui.dialogs import NewProfileDialog, DuplicateProfileDialog
-from server.gui.profiles_tab import ProfilesTab
+from server.gui.profiles_tab import ProfilesTab, ProfileManager
+from server.gui.widgets.workspace_navigation import WorkspaceNavigation
 from server.gui.system_tab import SystemTab
 
 logger = logging.getLogger("SPenGUI")
@@ -76,7 +75,6 @@ class MainWindow(QMainWindow):
         self.worker.sig_pen_events_ready.connect(self.on_pen_events_ready)
 
         # Latest pen event cache, throttled to ~30 Hz for the diagnostics UI
-        self._preview_events = deque()
         self._latest_pen_event: Optional[PenEvent] = None
         self._latest_cal_p = 0
         self._latest_abs_x = 0
@@ -97,6 +95,7 @@ class MainWindow(QMainWindow):
         )
         self.window_watcher.start()
 
+        theme.configure(QApplication.styleHints().colorScheme() == Qt.ColorScheme.Dark)
         self.setStyleSheet(theme.build_stylesheet())
         self._init_ui()
         self.tray = SystemTrayController(self, REPO_ROOT / "spen_icon.png")
@@ -136,7 +135,7 @@ class MainWindow(QMainWindow):
     def _init_ui(self):
         central = QWidget()
         layout = QVBoxLayout(central)
-        layout.setContentsMargins(14, 12, 14, 12)
+        layout.setContentsMargins(24, 16, 24, 16)
         layout.setSpacing(10)
 
         self.header_bar = HeaderBar()
@@ -162,16 +161,36 @@ class MainWindow(QMainWindow):
         self.system_tab.startup_panel.reset_requested.connect(self._reset_defaults)
         self.system_tab.startup_panel.changed.connect(self._on_system_settings_changed)
         self.system_tab.startup_panel.device_name_changed.connect(lambda: self.worker.apply_config(self.config))
-        self.system_tab.scratchpad_panel.test_stroke_requested.connect(self._on_test_stroke_requested)
         self.profiles_tab.editor_panel.mapping_section.monitors_refreshed.connect(
             self.system_tab.startup_panel.set_desktop_size
         )
 
-        self.tabs = QTabWidget()
-        self.tabs.addTab(self.profiles_tab, "Profiles")
-        self.tabs.addTab(self.system_tab, "System && Diagnostics")
+        self.profile_manager = ProfileManager(self.profiles_tab)
+        self.preferences_page = QScrollArea()
+        self.preferences_page.setWidgetResizable(True)
+        preferences = QWidget()
+        preferences_layout = QVBoxLayout(preferences)
+        preferences_layout.setContentsMargins(0, 0, 8, 8)
+        title = QLabel("Preferences")
+        title.setObjectName("workspaceTitle")
+        preferences_layout.addWidget(title)
+        preferences_layout.addWidget(self.system_tab.startup_panel)
+        from server.gui.support_panel import SupportPanel
+        self.support_panel = SupportPanel(self.config)
+        self.support_panel.body_layout().addWidget(self.system_tab.log_panel)
+        preferences_layout.addWidget(self.support_panel)
+        preferences_layout.addStretch()
+        self.preferences_page.setWidget(preferences)
+        self.tabs = WorkspaceNavigation()
+        self.tabs.addTab(self.system_tab, "Connection")
+        self.tabs.addTab(self.profiles_tab, "Pen settings")
+        self.tabs.addTab(self.profile_manager, "App profiles")
+        self.tabs.addTab(self.preferences_page, "Preferences")
+        self.tabs.setFooter(self.header_bar.profile_context)
         self.tabs.currentChanged.connect(self._on_tab_changed)
-        layout.addWidget(self.tabs)
+        self.profiles_tab.manage_requested.connect(lambda: self.tabs.setCurrentIndex(2))
+        self.profile_manager.tune_requested.connect(lambda: self.tabs.setCurrentIndex(1))
+        layout.addWidget(self.tabs, 1)
 
         self.setCentralWidget(central)
         theme.apply_elevation_to_cards(self)
@@ -213,6 +232,7 @@ class MainWindow(QMainWindow):
         profile = self.config.profiles.get(name)
         if profile is None:
             return
+        self.profiles_tab.sync_selection(name)
         self.profiles_tab.editor_panel.bind_profile(profile)
         self.header_bar.set_active_profile(self.config.active_profile_name)
         # Keep the list's own selection in sync no matter what triggered the
@@ -253,6 +273,8 @@ class MainWindow(QMainWindow):
 
     def _on_tab_changed(self, index: int):
         self.gui_state.last_tab_index = index
+        if self.tabs.currentWidget() in (self.profiles_tab, self.profile_manager):
+            self.profiles_tab.editor_panel.update_live_match(*self._last_detected_app)
 
     def _check_active_window(self, app_id: str, title: str):
         if (app_id, title) == self._last_detected_app:
@@ -264,7 +286,7 @@ class MainWindow(QMainWindow):
             display_name = display_name[:26] + "…"
         self.profiles_tab.list_panel.lbl_focused_window.setText(f"Active Window: {display_name}")
 
-        if self.tabs.currentWidget() is self.profiles_tab:
+        if self.tabs.currentWidget() in (self.profiles_tab, self.profile_manager):
             self.profiles_tab.editor_panel.update_live_match(app_id, title)
 
         if self.config.auto_switch_profiles:
@@ -279,6 +301,7 @@ class MainWindow(QMainWindow):
     def _repopulate_profiles(self):
         names = list(self.config.profiles.keys())
         self.header_bar.populate_profiles(names, self.config.active_profile_name)
+        self.profiles_tab.populate(names, self.profiles_tab.editor_panel.current_profile_name)
         self.profiles_tab.list_panel.repopulate(
             self.config.active_profile_name, self.profiles_tab.editor_panel.current_profile_name
         )
@@ -379,8 +402,7 @@ class MainWindow(QMainWindow):
         self.config.recovery_notice = ""
         self.recovery_label.hide()
         self.system_tab.log_panel.log("Configuration saved successfully.")
-        if not quiet:
-            QMessageBox.information(self, "Saved", f"Settings saved to:\n{CONFIG_FILE_PATH}")
+        self.header_bar.save_feedback.setText("Settings saved")
         return True
 
     def _reset_defaults(self):
@@ -401,6 +423,7 @@ class MainWindow(QMainWindow):
         self.recovery_label.hide()
         self.config = candidate
         self.worker.config = candidate
+        self.support_panel.refresh_report(candidate)
         self.system_tab.startup_panel._config = candidate
         self.system_tab.connection_panel._config = candidate
         self.system_tab.startup_panel._sync_from_config()
@@ -448,21 +471,6 @@ class MainWindow(QMainWindow):
         self.header_bar.btn_server_toggle.setEnabled(False)
         self.worker.stop_server()
 
-    def _on_test_stroke_requested(self):
-        if self.worker._is_running and not self._tablet_connected:
-            threading.Thread(target=self._send_synthetic_network_stroke, daemon=True).start()
-
-    def _send_synthetic_network_stroke(self):
-        try:
-            from server.test_synthetic import run_synthetic_network_test
-
-            run_synthetic_network_test(host="127.0.0.1", port=self.worker.listener_endpoint[1], count=1)
-        except Exception as e:
-            logger.debug(f"Synthetic test error: {e}")
-
-    # ------------------------------------------------------------------
-    # Server / worker callbacks
-    # ------------------------------------------------------------------
     def on_server_status(self, status: str, message: str):
         self.system_tab.log_panel.log(f"Server Status: {status} ({message})")
         self.header_bar.btn_server_toggle.setEnabled(True)
@@ -471,7 +479,7 @@ class MainWindow(QMainWindow):
         if status == "running":
             self.header_bar.set_server_status("running", f"Listening (Port {self.worker.listener_endpoint[1] if self.worker.listener_endpoint else self.config.port})")
         elif status == "stopped":
-            self.header_bar.set_server_status("stopped", "Server Stopped")
+            self.header_bar.set_server_status("stopped", "Server stopped")
             self._reset_diagnostics()
         elif status == "error":
             self.header_bar.set_server_status("error", message)
@@ -479,11 +487,9 @@ class MainWindow(QMainWindow):
 
     def on_client_connected(self, client_addr: str):
         self._tablet_connected = True
-        self.system_tab.scratchpad_panel.btn_synthetic.setEnabled(False)
         self.system_tab.log_panel.log(f"Tablet connected from {client_addr}")
         self.system_tab.connection_panel.set_client(client_addr)
         self.tray.notify("S Pen Connected", f"Tablet connected from {client_addr}")
-        self.system_tab.scratchpad_panel.scratchpad.set_live_input_active(True)
 
     def _refresh_connection_type(self):
         if self._tablet_connected:
@@ -494,11 +500,9 @@ class MainWindow(QMainWindow):
     def on_client_disconnected(self, client_addr: str):
         self._tablet_connected = False
         self.system_tab.connection_panel.set_client(None)
-        self.system_tab.scratchpad_panel.btn_synthetic.setEnabled(True)
         self.system_tab.log_panel.log(f"Tablet disconnected: {client_addr}")
         if self.worker._is_running:
             self.header_bar.set_server_status("running", f"Listening (Port {self.worker.listener_endpoint[1] if self.worker.listener_endpoint else self.config.port})")
-        self.system_tab.scratchpad_panel.scratchpad.set_live_input_active(False)
         self._reset_diagnostics()
 
     def on_server_stats(self, rate: float, packets: int, total_events: int):
@@ -513,15 +517,6 @@ class MainWindow(QMainWindow):
             return
         self._latest_pen_event, self._latest_cal_p = ev, cal_p
         self._latest_abs_x, self._latest_abs_y = abs_x, abs_y
-        if self.tabs.currentWidget() is not self.system_tab:
-            self._preview_events.clear()
-            self.system_tab.scratchpad_panel.scratchpad.reset_input()
-            return
-        if len(self._preview_events) >= 2048:
-            self._preview_events.clear()
-            self._preview_events.append((ev.x, ev.y, 0, ACTION_CANCEL))
-        ceiling = 32767 if sys.platform == "win32" else 4095
-        self._preview_events.append((ev.x, ev.y, cal_p / ceiling, ev.action))
 
     def update_live_diagnostics(self):
         ev, self._latest_pen_event = self._latest_pen_event, None
@@ -533,19 +528,10 @@ class MainWindow(QMainWindow):
             pressure.curve_widget.set_current_pressure(ev.pressure, cal_p / ceiling)
             pressure.bar_raw.setValue(int(ev.pressure * 100))
             pressure.bar_cal.setValue(int(cal_p / ceiling * 100))
-        if self._preview_events:
-            points = list(self._preview_events)
-            self._preview_events.clear()
-            if self.tabs.currentWidget() is self.system_tab:
-                self.system_tab.scratchpad_panel.scratchpad.add_tablet_points(points)
-            else:
-                self.system_tab.scratchpad_panel.scratchpad.reset_input()
 
     def _reset_diagnostics(self):
-        self._preview_events.clear()
         self._latest_pen_event = PenEvent(ACTION_CANCEL, 0, 0, 0, 0, 0)
         self._latest_cal_p = self._latest_abs_x = self._latest_abs_y = 0
-        self.system_tab.scratchpad_panel.scratchpad.reset_input()
         self.system_tab.diagnostics_panel.update_traffic(0, 0)
         self.update_live_diagnostics()
 

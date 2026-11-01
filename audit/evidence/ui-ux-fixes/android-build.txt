@@ -1,0 +1,134 @@
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/8.14.6/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build
+
+> Configure project :app
+WARNING: The option setting 'android.experimental.lint.version=9.4.1' is experimental.
+
+> Task :app:preBuild UP-TO-DATE
+> Task :app:preAuditBuild UP-TO-DATE
+> Task :app:mergeAuditNativeDebugMetadata NO-SOURCE
+> Task :app:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :app:dataBindingMergeDependencyArtifactsAudit UP-TO-DATE
+> Task :app:generateAuditResValues UP-TO-DATE
+> Task :app:generateAuditResources UP-TO-DATE
+> Task :app:mergeAuditResources UP-TO-DATE
+> Task :app:packageAuditResources UP-TO-DATE
+> Task :app:parseAuditLocalResources UP-TO-DATE
+> Task :app:dataBindingGenBaseClassesAudit UP-TO-DATE
+> Task :app:checkAuditAarMetadata UP-TO-DATE
+> Task :app:mapAuditSourceSetPaths UP-TO-DATE
+> Task :app:createAuditCompatibleScreenManifests UP-TO-DATE
+> Task :app:extractDeepLinksAudit UP-TO-DATE
+> Task :app:processAuditMainManifest UP-TO-DATE
+> Task :app:processAuditManifest UP-TO-DATE
+> Task :app:processAuditManifestForPackage UP-TO-DATE
+> Task :app:processAuditResources UP-TO-DATE
+> Task :app:javaPreCompileAudit UP-TO-DATE
+> Task :app:mergeAuditShaders UP-TO-DATE
+> Task :app:compileAuditShaders NO-SOURCE
+> Task :app:generateAuditAssets UP-TO-DATE
+> Task :app:mergeAuditAssets UP-TO-DATE
+> Task :app:compressAuditAssets UP-TO-DATE
+> Task :app:checkAuditDuplicateClasses UP-TO-DATE
+> Task :app:desugarAuditFileDependencies UP-TO-DATE
+> Task :app:mergeAuditStartupProfile UP-TO-DATE
+> Task :app:mergeExtDexAudit UP-TO-DATE
+> Task :app:mergeLibDexAudit UP-TO-DATE
+> Task :app:mergeAuditJniLibFolders UP-TO-DATE
+> Task :app:mergeAuditNativeLibs NO-SOURCE
+> Task :app:stripAuditDebugSymbols NO-SOURCE
+> Task :app:validateSigningAudit UP-TO-DATE
+> Task :app:writeAuditAppMetadata UP-TO-DATE
+> Task :app:writeAuditSigningConfigVersions UP-TO-DATE
+> Task :app:preDebugBuild UP-TO-DATE
+> Task :app:mergeDebugNativeDebugMetadata NO-SOURCE
+> Task :app:dataBindingMergeDependencyArtifactsDebug UP-TO-DATE
+> Task :app:generateDebugResValues UP-TO-DATE
+> Task :app:generateDebugResources UP-TO-DATE
+> Task :app:mergeDebugResources UP-TO-DATE
+> Task :app:packageDebugResources UP-TO-DATE
+> Task :app:parseDebugLocalResources UP-TO-DATE
+> Task :app:dataBindingGenBaseClassesDebug UP-TO-DATE
+> Task :app:checkDebugAarMetadata UP-TO-DATE
+> Task :app:mapDebugSourceSetPaths UP-TO-DATE
+> Task :app:createDebugCompatibleScreenManifests UP-TO-DATE
+> Task :app:extractDeepLinksDebug UP-TO-DATE
+> Task :app:processDebugMainManifest UP-TO-DATE
+> Task :app:processDebugManifest UP-TO-DATE
+> Task :app:processDebugManifestForPackage UP-TO-DATE
+> Task :app:processDebugResources UP-TO-DATE
+
+> Task :app:compileAuditKotlin
+w: file:///home/r1/Projects/spen-bridge/android/app/src/debug/java/com/spenbridge/app/UiUxAuditInstrumentation.kt:45:81 'static field FLAG_SHOW_WHEN_LOCKED: Int' is deprecated. Deprecated in Java.
+w: file:///home/r1/Projects/spen-bridge/android/app/src/debug/java/com/spenbridge/app/UiUxAuditInstrumentation.kt:46:53 'static field FLAG_TURN_SCREEN_ON: Int' is deprecated. Deprecated in Java.
+
+> Task :app:compileDebugKotlin
+w: file:///home/r1/Projects/spen-bridge/android/app/src/debug/java/com/spenbridge/app/UiUxAuditInstrumentation.kt:45:81 'static field FLAG_SHOW_WHEN_LOCKED: Int' is deprecated. Deprecated in Java.
+w: file:///home/r1/Projects/spen-bridge/android/app/src/debug/java/com/spenbridge/app/UiUxAuditInstrumentation.kt:46:53 'static field FLAG_TURN_SCREEN_ON: Int' is deprecated. Deprecated in Java.
+
+> Task :app:compileAuditJavaWithJavac UP-TO-DATE
+> Task :app:processAuditJavaRes UP-TO-DATE
+> Task :app:mergeAuditJavaResource UP-TO-DATE
+> Task :app:dexBuilderAudit
+> Task :app:javaPreCompileDebug UP-TO-DATE
+> Task :app:compileDebugJavaWithJavac UP-TO-DATE
+> Task :app:mergeDebugShaders UP-TO-DATE
+> Task :app:compileDebugShaders NO-SOURCE
+> Task :app:generateDebugAssets UP-TO-DATE
+> Task :app:mergeDebugAssets UP-TO-DATE
+> Task :app:compressDebugAssets UP-TO-DATE
+> Task :app:processDebugJavaRes UP-TO-DATE
+> Task :app:mergeDebugJavaResource UP-TO-DATE
+> Task :app:checkDebugDuplicateClasses UP-TO-DATE
+> Task :app:desugarDebugFileDependencies UP-TO-DATE
+> Task :app:mergeDebugStartupProfile UP-TO-DATE
+> Task :app:mergeExtDexDebug UP-TO-DATE
+> Task :app:mergeLibDexDebug UP-TO-DATE
+> Task :app:mergeProjectDexAudit
+> Task :app:dexBuilderDebug
+> Task :app:mergeProjectDexDebug
+> Task :app:mergeDebugJniLibFolders UP-TO-DATE
+> Task :app:mergeDebugNativeLibs NO-SOURCE
+> Task :app:stripDebugDebugSymbols NO-SOURCE
+> Task :app:validateSigningDebug UP-TO-DATE
+> Task :app:writeDebugAppMetadata UP-TO-DATE
+> Task :app:writeDebugSigningConfigVersions UP-TO-DATE
+> Task :app:packageAudit
+> Task :app:packageDebug
+> Task :app:createAuditApkListingFileRedirect UP-TO-DATE
+> Task :app:assembleAudit
+> Task :app:createDebugApkListingFileRedirect UP-TO-DATE
+> Task :app:assembleDebug
+> Task :app:bundleDebugClassesToRuntimeJar
+> Task :app:preDebugUnitTestBuild UP-TO-DATE
+> Task :app:bundleDebugClassesToCompileJar
+> Task :app:javaPreCompileDebugUnitTest UP-TO-DATE
+> Task :app:preDebugAndroidTestBuild SKIPPED
+> Task :app:generateDebugAndroidTestResValues UP-TO-DATE
+> Task :app:generateDebugAndroidTestLintModel
+> Task :app:extractProguardFiles UP-TO-DATE
+> Task :app:compileDebugUnitTestKotlin
+> Task :app:generateDebugLintReportModel
+> Task :app:compileDebugUnitTestJavaWithJavac NO-SOURCE
+> Task :app:processDebugUnitTestJavaRes UP-TO-DATE
+> Task :app:testDebugUnitTest
+> Task :app:generateDebugUnitTestLintModel
+> Task :app:lintAnalyzeDebug
+> Task :app:lintAnalyzeDebugAndroidTest
+> Task :app:lintAnalyzeDebugUnitTest
+
+> Task :app:lintReportDebug
+Wrote HTML report to file:///home/r1/Projects/spen-bridge/android/app/build/reports/lint-results-debug.html
+
+> Task :app:lintDebug
+
+[Incubating] Problems report is available at: file:///home/r1/Projects/spen-bridge/android/build/reports/problems/problems-report.html
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/8.14.6/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD SUCCESSFUL in 1m 21s
+88 actionable tasks: 20 executed, 68 up-to-date

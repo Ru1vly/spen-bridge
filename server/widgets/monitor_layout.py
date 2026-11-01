@@ -3,10 +3,19 @@ Interactive Monitor Layout visualization widget using PySide6.
 Draws detected monitors in their desktop coordinate arrangement and allows click selection.
 """
 
+from server.gui.theme import PALETTE
+
+
 from typing import List, Dict, Any, Optional
 from PySide6.QtCore import Qt, Signal, QRectF
 from PySide6.QtGui import QPainter, QColor, QPen, QFont
 from PySide6.QtWidgets import QWidget
+
+
+def _tint(role, alpha):
+    color = QColor(PALETTE[role])
+    color.setAlpha(alpha)
+    return color
 
 
 class MonitorLayoutWidget(QWidget):
@@ -79,7 +88,7 @@ class MonitorLayoutWidget(QWidget):
         h = self.height()
 
         # Canvas background
-        painter.fillRect(self.rect(), QColor("#181825"))
+        painter.fillRect(self.rect(), QColor(PALETTE["panel"]))
 
         pad = 20
         avail_w = w - pad * 2
@@ -98,7 +107,7 @@ class MonitorLayoutWidget(QWidget):
         self._screen_rects.clear()
 
         # Draw full desktop boundary outline
-        desk_pen = QPen(QColor("#313244"), 1, Qt.DashLine)
+        desk_pen = QPen(QColor(PALETTE["border"]), 1, Qt.DashLine)
         painter.setPen(desk_pen)
         painter.drawRect(QRectF(offset_x, offset_y, draw_w, draw_h))
 
@@ -122,12 +131,12 @@ class MonitorLayoutWidget(QWidget):
             )
 
             if is_selected:
-                fill_color = QColor(137, 180, 250, 45)
-                border_color = QColor("#89b4fa")
+                fill_color = _tint("accent_blue", 45)
+                border_color = QColor(PALETTE["accent_blue"])
                 border_width = 2.5
             else:
-                fill_color = QColor(69, 71, 90, 40)
-                border_color = QColor("#585b70")
+                fill_color = _tint("surface4", 40)
+                border_color = QColor(PALETTE["surface4"])
                 border_width = 1.0
 
             painter.fillRect(mrect, fill_color)
@@ -135,11 +144,11 @@ class MonitorLayoutWidget(QWidget):
             painter.drawRoundedRect(mrect, 4, 4)
 
             # Monitor text label
-            painter.setPen(QColor("#cdd6f4") if is_selected else QColor("#a6adc8"))
+            painter.setPen(QColor(PALETTE["text"]) if is_selected else QColor(PALETTE["text_muted"]))
             info_text = f"{mon['name']}\n{mon['width']}x{mon['height']}"
             painter.drawText(mrect, Qt.AlignCenter, info_text)
             if self.hasFocus() and mon is self.monitors[self._keyboard_index % len(self.monitors)]:
-                painter.setPen(QPen(QColor("#f9e2af"), 2, Qt.DashLine))
+                painter.setPen(QPen(QColor(PALETTE["orange"]), 2, Qt.DashLine))
                 painter.drawRect(mrect.adjusted(3, 3, -3, -3))
 
         # If custom bounds mode, draw custom highlighted rectangle
@@ -151,8 +160,8 @@ class MonitorLayoutWidget(QWidget):
             rch = ch * scale
             crect = QRectF(rcx, rcy, rcw, rch)
 
-            painter.fillRect(crect, QColor(166, 227, 161, 50))
-            painter.setPen(QPen(QColor("#a6e3a1"), 2, Qt.DashLine))
+            painter.fillRect(crect, _tint("green", 50))
+            painter.setPen(QPen(QColor(PALETTE["green"]), 2, Qt.DashLine))
             painter.drawRoundedRect(crect, 4, 4)
-            painter.setPen(QColor("#a6e3a1"))
+            painter.setPen(QColor(PALETTE["green"]))
             painter.drawText(crect, Qt.AlignTop | Qt.AlignLeft, " Custom Region")

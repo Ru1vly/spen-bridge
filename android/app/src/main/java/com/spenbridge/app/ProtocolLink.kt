@@ -16,6 +16,11 @@ import javax.net.ssl.SSLSocket
 
 interface ProtocolLink : AutoCloseable {
     fun send(packet: ByteArray)
+    /** Consume synchronously; callers may reuse storage when this returns. */
+    fun send(packet: ByteArray, size: Int) {
+        require(size in 0..packet.size)
+        send(packet.copyOf(size))
+    }
     fun receive(timeoutMillis: Int): Protocol.Packet
 }
 
@@ -34,7 +39,11 @@ private object EndpointResolver {
 }
 
 class SocketProtocolLink private constructor(private val socket: SSLSocket) : ProtocolLink {
-    override fun send(packet: ByteArray) { socket.outputStream.write(packet) }
+    override fun send(packet: ByteArray) { send(packet, packet.size) }
+    override fun send(packet: ByteArray, size: Int) {
+        require(size in 0..packet.size)
+        socket.outputStream.write(packet, 0, size)
+    }
     override fun close() { socket.close() }
 
     override fun receive(timeoutMillis: Int): Protocol.Packet {
@@ -66,21 +75,60 @@ class SocketProtocolLink private constructor(private val socket: SSLSocket) : Pr
     }
 
     companion object {
-        fun open(endpoint: ConnectionEndpoint, publish: (Socket) -> Boolean): ProtocolLink {
-            require(ConnectionEndpoint.validHost(endpoint.host) && endpoint.port in 1..65535 && endpoint.isPaired())
-            val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5)
-            fun remaining(): Int = TimeUnit.NANOSECONDS.toMillis(deadline - System.nanoTime()).toInt().also {
+        fun open(endpoint: ConnectionEndpoint, publish: (Socket) -> Boolean): ProtocolLink =
+            connect(endpoint, publish, false, 5000)
+
+        fun probe(endpoint: ConnectionEndpoint, publish: (Socket) -> Boolean): Boolean {
+            connect(endpoint, publish, true, 1000).use { return true }
+        }
+
+        /** Authenticate an already connected, cancellable stream (e.g. direct USB).
+         * The caller supplies the transport, not trust: pin and mutual proof checks
+         * are exactly the same as the TCP path. This does not switch USB modes.
+         */
+        fun openStream(endpoint: ConnectionEndpoint, raw: Socket,
+                       publish: (Socket) -> Boolean, timeoutMillis: Long = 5000): ProtocolLink {
+            val deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(timeoutMillis)
+            fun remaining(): Int = remainingMillis(deadline)
+            try {
+                require(endpoint.isPaired() && endpoint.port in 1..65535 && timeoutMillis in 1..30000)
+                if (!publish(raw)) throw InterruptedException("Connection attempt was cancelled")
+                check(raw.isConnected && !raw.isClosed) { "Byte transport must be connected" }
+                return authenticate(raw, endpoint, false, ::remaining)
+            } catch (failure: Throwable) {
+                try { raw.close() } catch (_: IOException) { }
+                throw failure
+            }
+        }
+
+        private fun remainingMillis(deadline: Long): Int =
+            TimeUnit.NANOSECONDS.toMillis(deadline - System.nanoTime()).coerceAtMost(Int.MAX_VALUE.toLong()).toInt().also {
                 if (it <= 0) throw SocketTimeoutException("Desktop connection deadline expired")
             }
+
+        private fun connect(endpoint: ConnectionEndpoint, publish: (Socket) -> Boolean,
+                            probe: Boolean, timeoutMillis: Long): ProtocolLink {
+            require(ConnectionEndpoint.validHost(endpoint.host) && endpoint.port in 1..65535 && endpoint.isPaired())
+            val deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(timeoutMillis)
+            fun remaining(): Int = remainingMillis(deadline)
             val raw = Socket()
-            var tls: SSLSocket? = null
             try {
-                // Published before DNS/connect; cancellation always owns a closable
-                // raw socket, including while TLS holds a write lock.
+                // Publish before DNS/connect so cancellation owns the raw socket.
                 if (!publish(raw)) throw InterruptedException("Connection attempt was cancelled")
                 val address = EndpointResolver.resolve(endpoint.host, remaining().coerceAtMost(3000).toLong())
                 raw.tcpNoDelay = true
                 raw.connect(InetSocketAddress(address, endpoint.port), remaining())
+                return authenticate(raw, endpoint, probe, ::remaining)
+            } catch (failure: Throwable) {
+                try { raw.close() } catch (_: IOException) { }
+                throw failure
+            }
+        }
+
+        private fun authenticate(raw: Socket, endpoint: ConnectionEndpoint, probe: Boolean,
+                                 remaining: () -> Int): ProtocolLink {
+            var tls: SSLSocket? = null
+            try {
                 tls = PairingProtocol.socketFactory(endpoint.fingerprint)
                     .createSocket(raw, endpoint.host, endpoint.port, true) as SSLSocket
                 tls.enabledProtocols = tls.supportedProtocols.filter { it in listOf("TLSv1.2", "TLSv1.3") }.toTypedArray()
@@ -93,18 +141,21 @@ class SocketProtocolLink private constructor(private val socket: SSLSocket) : Pr
                     throw IOException("Desktop pairing version mismatch")
                 }
                 val nonce = challenge.payload.copyOfRange(4, 36)
-                link.send(Protocol.packHandshake(proof = PairingProtocol.proof(endpoint.code, nonce, "client")))
+                val sequence: Short = if (probe) 1 else 0
+                link.send(Protocol.packHandshake(seq = sequence, proof = PairingProtocol.proof(endpoint.code, nonce, "client")))
                 val reply = link.receive(remaining())
-                if (reply.kind != Protocol.PKT_HANDSHAKE || reply.sequence.toInt() != 0 ||
+                if (reply.kind != Protocol.PKT_HANDSHAKE || reply.sequence != sequence ||
                     !PairingProtocol.verifyProof(endpoint.code, nonce, "server", reply.payload)) {
                     throw IOException("Desktop pairing proof mismatch")
                 }
                 return link
             } catch (failure: Throwable) {
+                // Raw close first: never wait for TLS locks to cancel transport I/O.
                 try { raw.close() } catch (_: IOException) { }
                 try { tls?.close() } catch (_: IOException) { }
                 throw failure
             }
         }
+
     }
 }

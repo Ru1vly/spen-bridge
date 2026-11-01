@@ -1,9 +1,12 @@
 """
-Screen Mapping profile section: which screen region the tablet surface maps
+Screen mapping profile section: which screen region the tablet surface maps
 to (whole desktop / single monitor / custom rect), plus the always-visible,
 globally-scoped aspect ratio lock (applies to all profiles: see the GUI
 redesign spec section 4 for why aspect ratio stays global for this pass).
 """
+
+from server.gui.theme import PALETTE
+
 
 from typing import Optional
 
@@ -34,7 +37,7 @@ class MappingSection(QGroupBox):
     monitors_refreshed = Signal(tuple)
 
     def __init__(self, config: TabletConfig, parent=None):
-        super().__init__("Screen Mapping", parent)
+        super().__init__("Screen mapping", parent)
         self._config = config
         self._profile: Optional[AppProfile] = None
         self._updating = False
@@ -103,11 +106,11 @@ class MappingSection(QGroupBox):
         layout.addWidget(self.advanced_box)
 
         self.lbl_map_info = QLabel()
-        self.lbl_map_info.setStyleSheet("color: #a6adc8; font-size: 11px;")
+        self.lbl_map_info.setStyleSheet(f"color: {PALETTE['text_muted']}; font-size: 11px;")
         layout.addWidget(self.lbl_map_info)
 
         ar_row = QHBoxLayout()
-        self.chk_aspect_lock = QCheckBox("Lock Aspect Ratio")
+        self.chk_aspect_lock = QCheckBox("Lock aspect ratio")
         self.chk_aspect_lock.toggled.connect(self._on_aspect_lock_changed)
         ar_row.addWidget(self.chk_aspect_lock)
         self.combo_aspect_ratio = QComboBox()
@@ -116,7 +119,7 @@ class MappingSection(QGroupBox):
         self.combo_aspect_ratio.currentTextChanged.connect(self._on_aspect_ratio_changed)
         ar_row.addWidget(self.combo_aspect_ratio)
         lbl_global_note = QLabel("(applies to all profiles)")
-        lbl_global_note.setStyleSheet("color: #6c7086; font-size: 11px;")
+        lbl_global_note.setStyleSheet(f"color: {PALETTE['disabled']}; font-size: 11px;")
         ar_row.addWidget(lbl_global_note)
         ar_row.addStretch()
         layout.addLayout(ar_row)

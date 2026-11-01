@@ -5,13 +5,14 @@ from types import SimpleNamespace
 import unittest
 from unittest.mock import Mock, patch
 
+from profile_examples import add_example_profiles
 from server.config import TabletConfig
 from server.main import run_cli
 
 
 class CliTests(unittest.IsolatedAsyncioTestCase):
     async def exercise(self, *, failure=False):
-        config = TabletConfig(auto_switch_profiles=True)
+        config = add_example_profiles(TabletConfig(auto_switch_profiles=True))
         config.profiles['Default'].click_on_touch = False
         config.profiles['Krita'].device_mode = 'tablet'
         config.profiles['Krita'].mapping_mode = 'monitor'

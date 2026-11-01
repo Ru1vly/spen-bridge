@@ -3,6 +3,9 @@ Hardware Buttons & Stroke Smoothing profile section: barrel button actions
 and stroke jitter-reduction smoothing.
 """
 
+from server.gui.theme import PALETTE
+
+
 import sys
 from typing import Optional
 
@@ -17,7 +20,7 @@ class ButtonsSection(QGroupBox):
     changed = Signal()
 
     def __init__(self, parent=None):
-        super().__init__("Hardware Buttons && Stroke Smoothing", parent)
+        super().__init__("Buttons and smoothing", parent)
         self._profile: Optional[AppProfile] = None
         self._updating = False
 
@@ -39,7 +42,7 @@ class ButtonsSection(QGroupBox):
         self.combo_btn_prim.currentIndexChanged.connect(self._on_primary_changed)
         grid.addWidget(self.combo_btn_prim, 0, 1)
 
-        grid.addWidget(QLabel("Secondary Button:"), 1, 0)
+        grid.addWidget(QLabel("Secondary barrel button:"), 1, 0)
         self.combo_btn_sec = QComboBox()
         self.combo_btn_sec.setAccessibleName("Secondary barrel action")
         self.combo_btn_sec.addItem("Middle Click (Default)", "middle_click")
@@ -54,9 +57,9 @@ class ButtonsSection(QGroupBox):
         layout.addLayout(grid)
 
         sm_header = QGridLayout()
-        sm_header.addWidget(QLabel("Smoothing Filter Strength:"), 0, 0)
+        sm_header.addWidget(QLabel("Smoothing strength:"), 0, 0)
         self.lbl_smooth_val = QLabel("0%")
-        self.lbl_smooth_val.setStyleSheet("font-weight: bold; color: #a6e3a1;")
+        self.lbl_smooth_val.setStyleSheet(f"font-weight: bold; color: {PALETTE['green']};")
         sm_header.addWidget(self.lbl_smooth_val, 0, 1)
         layout.addLayout(sm_header)
 
@@ -67,7 +70,7 @@ class ButtonsSection(QGroupBox):
         layout.addWidget(self.slider_smooth)
 
         desc = QLabel("Filters coordinate noise and stabilizes lines for drawing or handwriting.")
-        desc.setStyleSheet("color: #a6adc8; font-size: 11px;")
+        desc.setStyleSheet(f"color: {PALETTE['text_muted']}; font-size: 11px;")
         layout.addWidget(desc)
 
     def set_profile(self, profile: AppProfile):

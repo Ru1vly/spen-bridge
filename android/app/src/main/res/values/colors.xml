@@ -1,9 +1,16 @@
 <resources>
-    <color name="canvas_bg">#121214</color>
-    <color name="status_connected">#4CAF50</color>
-    <color name="status_disconnected">#F44336</color>
-    <color name="status_connecting">#FF9800</color>
-    <color name="text_light">#FFFFFF</color>
-    <color name="text_muted">#AAAAAA</color>
-    <color name="primary">#2979FF</color>
+    <color name="canvas_bg">#F7F7F9</color>
+    <color name="page_bg">#F2F2F2</color>
+    <color name="surface">#FFFFFF</color>
+    <color name="surface_variant">#E8E9ED</color>
+    <color name="outline">#D7D9DE</color>
+    <color name="status_connected">#187447</color>
+    <color name="status_disconnected">#B3261E</color>
+    <color name="status_connecting">#8B5100</color>
+    <color name="text_light">#17171B</color>
+    <color name="text_muted">#565B65</color>
+    <color name="primary">#165DCE</color>
+    <color name="on_primary">#FFFFFF</color>
+    <color name="selection">#E5EDFC</color>
+    <color name="launcher_blue">#165DCE</color>
 </resources>

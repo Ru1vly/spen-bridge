@@ -15,6 +15,7 @@ from unittest.mock import Mock, patch
 
 from server import config as configuration
 from server.backends.base import TabletBackendBase
+from profile_examples import add_example_profiles
 from server.config import TabletConfig
 from server.protocol import (
     ACTION_CANCEL, ACTION_DOWN, ACTION_HOVER_EXIT, ACTION_MOVE,
@@ -350,6 +351,41 @@ class SecureSessionTests(unittest.IsolatedAsyncioTestCase):
         await writer.drain()
         self.assertEqual(await asyncio.wait_for(reader.read(), 1), b"")
 
+    async def test_authenticated_readiness_probe_never_claims_or_resets_input_owner(self):
+        self.server.idle_timeout = 1
+        owner = await self.connect()
+        await self.authenticate(owner)
+        owner[1].write(pack_events([EVENT]))
+        await owner[1].drain()
+        await self.until(lambda: len(self.tablet.events) == 1)
+        reader, writer = await self.connect()
+        _, _, challenge = await self.packet(reader)
+        nonce = challenge[4:]
+        writer.write(pack_packet(PKT_HANDSHAKE, 1, auth_proof(self.identity.pairing_code, nonce, "client")) +
+                     pack_events([EVENT]))
+        await writer.drain()
+        self.assertEqual(await self.packet(reader),
+                         (PKT_HANDSHAKE, 1, auth_proof(self.identity.pairing_code, nonce, "server")))
+        self.assertEqual(await asyncio.wait_for(reader.read(), 1), b"")
+        self.assertEqual(len(self.tablet.events), 1)
+        self.assertEqual(self.tablet.resets, 0)
+        self.assertEqual(len(self.server.active_clients), 1)
+        owner[1].write(pack_packet(PKT_PING, 7, b""))
+        await owner[1].drain()
+        self.assertEqual(await self.packet(owner[0]), (PKT_PONG, 7, b""))
+
+    async def test_readiness_probe_without_owner_does_not_start_an_input_session(self):
+        reader, writer = await self.connect()
+        _, _, challenge = await self.packet(reader)
+        nonce = challenge[4:]
+        writer.write(pack_packet(PKT_HANDSHAKE, 1, auth_proof(self.identity.pairing_code, nonce, "client")))
+        await writer.drain()
+        self.assertEqual((await self.packet(reader))[:2], (PKT_HANDSHAKE, 1))
+        self.assertEqual(await asyncio.wait_for(reader.read(), 1), b"")
+        self.assertEqual(self.server.active_clients, set())
+        self.assertIsNone(self.server._owner)
+        self.assertEqual(self.tablet.resets, 0)
+
     async def test_exclusive_owner_and_eof_release_with_an_idle_peer(self):
         owner = await self.connect()
         await self.authenticate(owner)
@@ -638,7 +674,7 @@ class GuiPersistenceTests(unittest.TestCase):
 
     def setUp(self):
         from server.gui.main_window import MainWindow
-        config = TabletConfig(auto_start_server=False, minimize_to_tray=False)
+        config = add_example_profiles(TabletConfig(auto_start_server=False, minimize_to_tray=False, auto_switch_profiles=True))
         patches = (
             patch("server.gui.main_window.load_config", return_value=config),
             patch("server.gui.main_window.WindowWatcher.start"),
@@ -685,6 +721,9 @@ class GuiPersistenceTests(unittest.TestCase):
         self.assertEqual(row._lbl_name.textFormat(), Qt.PlainText)
         self.assertEqual(chip._label.textFormat(), Qt.PlainText)
         self.assertIn("rule", chip._btn_remove.accessibleName())
+        self.window.header_bar.set_active_profile("<b>profile</b>")
+        self.assertEqual(self.window.header_bar.profile_summary.textFormat(), Qt.PlainText)
+        self.assertEqual(self.window.header_bar.profile_summary.text(), "Using: <b>profile</b>")
 
     def test_editor_displays_the_full_validated_range_without_clamping_saved_values(self):
         profile = self.window.config.get_active_profile()
@@ -886,21 +925,17 @@ class GuiPersistenceTests(unittest.TestCase):
              patch("server.gui.main_window.save_config", return_value=True):
             self.window._reset_defaults()
         self.assertFalse(mapping.chk_aspect_lock.isChecked())
-        self.assertTrue(self.window.profiles_tab.list_panel.chk_auto_switch.isChecked())
-        self.assertEqual(self.window.header_bar.lbl_active_mode_prefix.text(), "Auto:")
+        self.assertFalse(self.window.profiles_tab.list_panel.chk_auto_switch.isChecked())
+        self.assertEqual(self.window.header_bar.lbl_active_mode_prefix.text(), "Active profile")
         self.assertFalse(self.window._dirty)
 
-    def test_preview_preserves_stroke_boundaries_and_never_replays_a_cached_sample(self):
-        self.window.tabs.setCurrentIndex(1)
-        scratch = self.window.system_tab.scratchpad_panel.scratchpad
-        actions = [ACTION_DOWN, ACTION_MOVE, ACTION_UP, ACTION_DOWN, ACTION_UP]
-        with patch.object(scratch, "add_tablet_points") as draw:
-            for action in actions:
-                self.window.on_pen_event(replace(EVENT, action=action), 2000, 100, 100)
-            self.window.update_live_diagnostics()
-            self.assertEqual([p[3] for p in draw.call_args.args[0]], actions)
-            self.window.update_live_diagnostics()
-            draw.assert_called_once()
+    def test_connection_has_no_drawing_surface_and_diagnostics_still_receive_input(self):
+        from server.widgets.scratchpad import ScratchpadWidget
+        self.assertFalse(self.window.findChildren(ScratchpadWidget))
+        self.assertFalse(self.window.system_tab.details.is_expanded)
+        self.window.on_pen_event(EVENT, 2000, 100, 100)
+        self.window.update_live_diagnostics()
+        self.assertGreater(self.window.system_tab.diagnostics_panel.bar_pressure.value(), 0)
 
     def test_disconnect_clears_pressure_and_eraser_diagnostics(self):
         diagnostics = self.window.system_tab.diagnostics_panel
@@ -910,7 +945,6 @@ class GuiPersistenceTests(unittest.TestCase):
         self.window.on_client_disconnected("test")
         self.assertEqual(diagnostics.bar_pressure.value(), 0)
         self.assertEqual(diagnostics.badge_eraser.property("pillState"), "idle")
-        self.assertFalse(self.window._preview_events)
 
     def test_plain_text_logs_are_bounded(self):
         logs = self.window.system_tab.log_panel

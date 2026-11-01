@@ -79,65 +79,9 @@ class AppProfile:
 
 
 def get_builtin_default_profiles() -> Dict[str, AppProfile]:
-    """Pre-configured profile presets."""
-    return {
-        "Default": AppProfile(
-            name="Default",
-            app_matches=[],
-            click_on_touch=True,
-            device_mode="pointer",
-            mapping_mode="all",
-            pressure_curve_type="linear",
-            pressure_gamma=1.0,
-            pressure_min=0.0,
-            pressure_max=1.0,
-            stroke_smoothing=0.0,
-            button_primary="right_click",
-            button_secondary="middle_click",
-        ),
-        "osu!": AppProfile(
-            name="osu!",
-            app_matches=["osu!", "osu", "osu-lazer", "osu!.exe"],
-            click_on_touch=False,           # Disable click on touch for rhythm tapping with keyboard
-            device_mode="pointer",
-            mapping_mode="all",
-            pressure_curve_type="linear",
-            pressure_gamma=1.0,
-            pressure_min=0.0,
-            pressure_max=1.0,
-            stroke_smoothing=0.0,           # Zero latency raw aiming
-            button_primary="none",          # Disable barrel button to prevent accidental clicks
-            button_secondary="none",
-        ),
-        "Krita": AppProfile(
-            name="Krita",
-            app_matches=["krita"],
-            click_on_touch=True,
-            device_mode="pointer",
-            mapping_mode="all",
-            pressure_curve_type="soft",     # Soft pressure for natural drawing
-            pressure_gamma=0.65,
-            pressure_min=0.0,
-            pressure_max=1.0,
-            stroke_smoothing=0.15,
-            button_primary="right_click",   # Krita pop-up palette
-            button_secondary="middle_click",
-        ),
-        "Blender": AppProfile(
-            name="Blender",
-            app_matches=["blender"],
-            click_on_touch=True,
-            device_mode="pointer",
-            mapping_mode="all",
-            pressure_curve_type="linear",
-            pressure_gamma=1.0,
-            pressure_min=0.0,
-            pressure_max=1.0,
-            stroke_smoothing=0.0,
-            button_primary="middle_click",  # Viewport orbit in Blender
-            button_secondary="right_click",
-        ),
-    }
+    """Neutral fallback only; application profiles are created by the user."""
+    return {"Default": AppProfile(name="Default")}
+
 
 
 @dataclass
@@ -157,7 +101,7 @@ class TabletConfig:
     tablet_aspect_ratio: str = "16:10"
 
     # Per-App Profiles & Auto-switching
-    auto_switch_profiles: bool = True
+    auto_switch_profiles: bool = False
     active_profile_name: str = "Default"
     profiles: Dict[str, AppProfile] = field(default_factory=get_builtin_default_profiles)
     recovery_notice: str = field(default="", init=False, repr=False)

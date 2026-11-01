@@ -68,9 +68,16 @@ With no display available, the server starts in headless mode automatically; wit
 
 Running `./start.sh` or `server/.venv/bin/python server/main.py --gui` launches the desktop control panel:
 
+Use **Connection** for pairing, USB, diagnostics and the pen test area. Use
+**Pen settings** to tune pressure, mapping, buttons and device behavior for the
+selected editing profile. **App profiles** manages matching rules and automatic
+switching; **Preferences** contains startup options and the activity log.
+Expanded windows use a left navigation rail; compact windows use tabs.
+The interface follows the system light/dark preference when opened.
+
 ### Connection & Status Panel
 - **Status Indicator**: Shows whether the server is actively listening, connected to an Android client, or encountered an error.
-- **Network Details**: Displays local LAN IP addresses and port number, along with a quick-connect QR code.
+- **Network Details**: Shows the configured or running address and port, with actions to copy the address and pair the tablet.
 - **ADB Reverse Button**: One-click setup for USB tethered drawing (`adb reverse tcp:40118 tcp:40118`).
 
 ### Profile Management
@@ -116,9 +123,9 @@ Running `./start.sh` or `server/.venv/bin/python server/main.py --gui` launches 
 
 ## 4. Connection Modes
 
-First [pair the tablet](PAIRING.md): open desktop **Pair Tablet**, copy its certificate fingerprint and pairing code into Android Settings, and tap **Save & Apply**. Both USB and Wi-Fi require these credentials.
+First [pair the tablet](PAIRING.md): open desktop **Pair tablet**, copy its certificate fingerprint and pairing code into Android Settings, under **Connection → Manual pairing details**, and tap **Apply connection**. Both USB and Wi-Fi require these credentials.
 
-You can connect either over **USB cable** (recommended for a wired connection) or over **Wi-Fi**.
+The app automatically tries **USB first**, then **Wi-Fi** if USB fails. If both fail, it waits **five seconds** and repeats. Save the desktop Wi-Fi address once; USB loopback is selected automatically. Plugging in a cable during Wi-Fi use switches back to USB once the pen is idle and forwarding is ready.
 
 ### Mode A: USB Cable (Wired Connection via ADB, Recommended)
 
@@ -135,7 +142,7 @@ USB avoids Wi-Fi radio jitter; end-to-end latency depends on the devices and dra
    ```
    *(Or simply click **Run ADB Reverse** in the desktop GUI control panel).*
 4. Open the **S Pen Bridge** app on your tablet.
-5. Tap **Settings**, set **Server IP** to `127.0.0.1`, then tap **Save & Apply**.
+5. In **Settings → Connect**, save the desktop **Desktop Wi-Fi address** and port. The app uses `127.0.0.1` automatically for USB, preserving your Wi-Fi fallback address. Enable paired Wi-Fi on the desktop and restart the server to make both routes available.
 
 ### Mode B: Local Wi-Fi
 
@@ -148,7 +155,7 @@ Enable **Allow paired Wi-Fi connections** on desktop and stop/start the server (
    # Look for 192.168.x.x or 10.x.x.x under your Wi-Fi or Ethernet interface
    ```
 3. Open the **S Pen Bridge** app on your tablet.
-4. Tap **Settings**, enter your PC's IP address and port (default `40118`), then tap **Save & Apply**.
+4. Tap **Settings → Connection**, enter your PC's IP address and the port under **Manual pairing details** (default `40118`), then tap **Apply connection**.
 5. The status dot turns green once connected.
 
 ## 5. Configuring Your Drawing Apps

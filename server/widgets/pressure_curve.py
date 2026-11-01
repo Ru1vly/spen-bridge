@@ -3,10 +3,19 @@ Interactive Pressure Curve visualizer widget using PySide6.
 Displays input vs output pressure transfer function with live indicator ball.
 """
 
+from server.gui.theme import PALETTE
+
+
 from PySide6.QtCore import Qt, QPointF
 from PySide6.QtGui import QPainter, QColor, QPen, QFont, QPainterPath
 from PySide6.QtWidgets import QWidget
 from server.pressure import pressure_output
+
+
+def _tint(role, alpha):
+    color = QColor(PALETTE[role])
+    color.setAlpha(alpha)
+    return color
 
 
 class PressureCurveWidget(QWidget):
@@ -53,13 +62,13 @@ class PressureCurveWidget(QWidget):
         plot_h = h - pad_top - pad_bottom
 
         # Background
-        painter.fillRect(self.rect(), QColor("#181825"))
+        painter.fillRect(self.rect(), QColor(PALETTE["panel"]))
 
         # Plot area background
-        painter.fillRect(pad_left, pad_top, plot_w, plot_h, QColor("#1e1e2e"))
+        painter.fillRect(pad_left, pad_top, plot_w, plot_h, QColor(PALETTE["bg"]))
 
         # Grid lines
-        grid_pen = QPen(QColor("#313244"), 1, Qt.DashLine)
+        grid_pen = QPen(QColor(PALETTE["border"]), 1, Qt.DashLine)
         painter.setPen(grid_pen)
 
         for step in (0.25, 0.5, 0.75):
@@ -72,22 +81,22 @@ class PressureCurveWidget(QWidget):
             painter.drawLine(QPointF(x, pad_top), QPointF(x, pad_top + plot_h))
 
         # Diagonal baseline (ideal linear reference)
-        ref_pen = QPen(QColor("#45475a"), 1, Qt.DotLine)
+        ref_pen = QPen(QColor(PALETTE["surface3"]), 1, Qt.DotLine)
         painter.setPen(ref_pen)
         painter.drawLine(QPointF(pad_left, pad_top + plot_h), QPointF(pad_left + plot_w, pad_top))
 
         # Deadzone visual shading
         if self.p_min > 0.0:
             dz_w = plot_w * self.p_min
-            painter.fillRect(pad_left, pad_top, dz_w, plot_h, QColor(243, 139, 168, 30))
-            dz_pen = QPen(QColor("#f38ba8"), 1, Qt.DashLine)
+            painter.fillRect(pad_left, pad_top, dz_w, plot_h, _tint("red", 30))
+            dz_pen = QPen(QColor(PALETTE["red"]), 1, Qt.DashLine)
             painter.setPen(dz_pen)
             painter.drawLine(QPointF(pad_left + dz_w, pad_top), QPointF(pad_left + dz_w, pad_top + plot_h))
 
         # Ceiling visual line
         if self.p_max < 1.0:
             ceil_x = pad_left + plot_w * self.p_max
-            ceil_pen = QPen(QColor("#fab387"), 1, Qt.DashLine)
+            ceil_pen = QPen(QColor(PALETTE["orange"]), 1, Qt.DashLine)
             painter.setPen(ceil_pen)
             painter.drawLine(QPointF(ceil_x, pad_top), QPointF(ceil_x, pad_top + plot_h))
 
@@ -109,10 +118,10 @@ class PressureCurveWidget(QWidget):
         fill_path.lineTo(pad_left + plot_w, pad_top + plot_h)
         fill_path.lineTo(pad_left, pad_top + plot_h)
         fill_path.closeSubpath()
-        painter.fillPath(fill_path, QColor(137, 180, 250, 40))
+        painter.fillPath(fill_path, _tint("accent_blue", 40))
 
         # Draw curve stroke
-        curve_pen = QPen(QColor("#89b4fa"), 2.5)
+        curve_pen = QPen(QColor(PALETTE["accent_blue"]), 2.5)
         painter.setPen(curve_pen)
         painter.drawPath(path)
 
@@ -124,15 +133,15 @@ class PressureCurveWidget(QWidget):
 
             # Outer glow
             painter.setPen(Qt.NoPen)
-            painter.setBrush(QColor(166, 227, 161, 100))
+            painter.setBrush(_tint("green", 100))
             painter.drawEllipse(QPointF(ball_x, ball_y), 9, 9)
 
             # Core
-            painter.setBrush(QColor("#a6e3a1"))
+            painter.setBrush(QColor(PALETTE["green"]))
             painter.drawEllipse(QPointF(ball_x, ball_y), 5, 5)
 
         # Plot border
-        border_pen = QPen(QColor("#585b70"), 1.5)
+        border_pen = QPen(QColor(PALETTE["surface4"]), 1.5)
         painter.setPen(border_pen)
         painter.drawRect(pad_left, pad_top, plot_w, plot_h)
 
@@ -140,7 +149,7 @@ class PressureCurveWidget(QWidget):
         font = QFont()
         font.setPointSize(8)
         painter.setFont(font)
-        painter.setPen(QColor("#a6adc8"))
+        painter.setPen(QColor(PALETTE["text_muted"]))
 
         painter.drawText(pad_left, h - 6, "0%")
         painter.drawText(pad_left + plot_w // 2 - 12, h - 6, "Input")

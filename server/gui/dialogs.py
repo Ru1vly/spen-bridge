@@ -20,10 +20,13 @@ class NewProfileDialog(QDialog):
         self.source_profile_name = "Default"
 
         layout = QVBoxLayout(self)
+        layout.setContentsMargins(24, 24, 24, 24)
+        layout.setSpacing(20)
+        self.setMinimumWidth(420)
         form = QFormLayout()
 
         self._edit_name = QLineEdit()
-        self._edit_name.setPlaceholderText("e.g. Krita, Blender, Cyberpunk 2077")
+        self._edit_name.setPlaceholderText("Drawing")
         form.addRow("Profile name:", self._edit_name)
 
         self._combo_source = QComboBox()
@@ -37,6 +40,7 @@ class NewProfileDialog(QDialog):
         layout.addLayout(form)
 
         buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        buttons.button(QDialogButtonBox.Ok).setObjectName("primaryBtn")
         buttons.button(QDialogButtonBox.Ok).setText("Create")
         buttons.accepted.connect(self._on_accept)
         buttons.rejected.connect(self.reject)
@@ -59,6 +63,9 @@ class DuplicateProfileDialog(QDialog):
         self.new_name = ""
 
         layout = QVBoxLayout(self)
+        layout.setContentsMargins(24, 24, 24, 24)
+        layout.setSpacing(20)
+        self.setMinimumWidth(420)
         label = QLabel(f"Duplicate '{current_name}' as:")
         label.setTextFormat(Qt.PlainText)
         layout.addWidget(label)
@@ -68,6 +75,7 @@ class DuplicateProfileDialog(QDialog):
         layout.addWidget(self._edit_name)
 
         buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        buttons.button(QDialogButtonBox.Ok).setObjectName("primaryBtn")
         buttons.button(QDialogButtonBox.Ok).setText("Duplicate")
         buttons.accepted.connect(self._on_accept)
         buttons.rejected.connect(self.reject)

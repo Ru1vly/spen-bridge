@@ -26,6 +26,31 @@ class ProtocolTest {
         assertThrows(IllegalArgumentException::class.java) { Protocol.packEvents(events) }
     }
 
+    @Test fun reusableEncoderRetainsStorageAndBoundsTheWireLength() {
+        val encoder = Protocol.EventEncoder()
+        val storage = encoder.bytes
+        val firstSize = encoder.encode(listOf(event, event.copy(action = Protocol.ACTION_UP)), 0, 2, 42)
+        assertEquals(Protocol.HEADER_SIZE + 48, firstSize)
+        assertSame(storage, encoder.bytes)
+        val secondSize = encoder.encode(listOf(event), 0, 1, (-1).toShort())
+        assertSame(storage, encoder.bytes)
+        assertEquals(Protocol.HEADER_SIZE + 24, secondSize)
+        val header = ByteBuffer.wrap(storage).order(ByteOrder.LITTLE_ENDIAN)
+        assertEquals(65535, header.getShort(5).toInt() and 65535)
+        assertEquals(24, header.getShort(7).toInt() and 65535)
+        val link = object : ProtocolLink {
+            var received = byteArrayOf()
+            override fun send(packet: ByteArray) { received = packet }
+            override fun receive(timeoutMillis: Int) = throw UnsupportedOperationException()
+            override fun close() {}
+        }
+        link.send(storage, secondSize)
+        assertEquals(secondSize, link.received.size)
+        encoder.encode(listOf(event.copy(x = .9f)), 0, 1, 0)
+        // Generic links retain an immutable copy; a previous frame cannot change.
+        assertEquals(.25f, ByteBuffer.wrap(link.received).order(ByteOrder.LITTLE_ENDIAN).getFloat(13), 0f)
+    }
+
     @Test fun invalidValuesCannotSerialize() {
         for (invalid in listOf(event.copy(action = 99), event.copy(toolType = 99),
                                event.copy(buttons = 8), event.copy(x = Float.NaN),

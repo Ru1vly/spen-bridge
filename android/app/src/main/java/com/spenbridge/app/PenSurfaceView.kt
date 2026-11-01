@@ -1,12 +1,13 @@
 package com.spenbridge.app
 
 import android.content.Context
+import androidx.core.content.ContextCompat
 import android.graphics.Canvas
-import android.graphics.Paint
-import android.graphics.Path
 import android.graphics.RectF
-import android.graphics.Typeface
 import android.util.AttributeSet
+import android.os.Build
+import android.view.InputDevice
+import android.view.PointerIcon
 import android.view.MotionEvent
 import android.view.View
 
@@ -26,9 +27,8 @@ class PenSurfaceView @JvmOverloads constructor(
 
     var sender: PenEventSender? = null
     var rejectFingerTouches: Boolean = true
-    var showLocalPreview: Boolean = true
 
-    var areaMode: AreaMode = AreaMode.ASPECT_16_9
+    var areaMode: AreaMode = AreaMode.FULL
         set(value) {
             field = value
             invalidate()
@@ -58,18 +58,6 @@ class PenSurfaceView @JvmOverloads constructor(
             invalidate()
         }
 
-    var showAreaBorder: Boolean = true
-        set(value) {
-            field = value
-            invalidate()
-        }
-
-    var showAreaShading: Boolean = true
-        set(value) {
-            field = value
-            invalidate()
-        }
-
     // Backward compatibility for matchAspectRatio
     var matchAspectRatio: Boolean
         get() = (areaMode == AreaMode.ASPECT_16_9)
@@ -78,57 +66,26 @@ class PenSurfaceView @JvmOverloads constructor(
             invalidate()
         }
 
-    private val trailPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = 0xFF00E5FF.toInt()
-        style = Paint.Style.STROKE
-        strokeCap = Paint.Cap.ROUND
-        strokeJoin = Paint.Join.ROUND
-        strokeWidth = 4f
-    }
-
-    private val hoverPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = 0x8000E5FF.toInt()
-        style = Paint.Style.STROKE
-        strokeWidth = 2f
-    }
-
-    private val aspectFramePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = 0x4400E5FF.toInt()
-        style = Paint.Style.STROKE
-        strokeWidth = 2f
-    }
-
-    private val cornerBracketPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = 0xFF00E5FF.toInt()
-        style = Paint.Style.STROKE
-        strokeWidth = 4f
-        strokeCap = Paint.Cap.SQUARE
-    }
-
-    private val aspectShadePaint = Paint().apply {
-        color = 0x880C0D12.toInt()
-        style = Paint.Style.FILL
-    }
-
-    private val labelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = 0x80FFFFFF.toInt()
-        textSize = android.util.TypedValue.applyDimension(android.util.TypedValue.COMPLEX_UNIT_SP, 13f, resources.displayMetrics)
-        typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.NORMAL)
-    }
-
-    private val trailPath = Path()
-    private var hoverX = -1f
-    private var hoverY = -1f
     private var isHovering = false
     private val pointerTracker = ActivePointerTracker()
     private val freshness = InputFreshness().apply { reset(android.os.SystemClock.uptimeMillis()) }
     private var lastInputDevice: Int? = null
     private var lastSent = Protocol.Event(Protocol.ACTION_CANCEL, Protocol.TOOL_STYLUS, 0, 0f, 0f, 0f)
-    private var trailSamples = 0
+    private var callbackReceivedNanos = 0L
 
     init {
+        setBackgroundColor(ContextCompat.getColor(context, R.color.canvas_bg))
         isFocusable = true
         contentDescription = context.getString(R.string.drawing_surface_description)
+    }
+
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            // A persistent source-class request also covers stylus hover, which
+            // never produces ACTION_DOWN. Only this drawing view requests it.
+            requestUnbufferedDispatch(InputDevice.SOURCE_CLASS_POINTER)
+        }
     }
 
     fun getActiveRect(): RectF {
@@ -198,8 +155,12 @@ class PenSurfaceView @JvmOverloads constructor(
         val oldest = if (event.historySize == 0) event.eventTime else event.getHistoricalEventTime(0)
         return when (freshness.classify(oldest, event.eventTime, android.os.SystemClock.uptimeMillis())) {
             InputFreshness.Result.FRESH -> true
-            InputFreshness.Result.BEFORE_CAPTURE -> false
+            InputFreshness.Result.BEFORE_CAPTURE -> {
+                InputTrace.rejected(oldest, event.eventTime, callbackReceivedNanos, event.historySize + 1, 1)
+                false
+            }
             InputFreshness.Result.STALE -> {
+                InputTrace.rejected(oldest, event.eventTime, callbackReceivedNanos, event.historySize + 1, 2)
                 val ownsOutput = pointerTracker.current?.deviceId == event.deviceId ||
                     (lastInputDevice == event.deviceId && hasReportedOutput())
                 if (ownsOutput) {
@@ -222,10 +183,6 @@ class PenSurfaceView @JvmOverloads constructor(
         parent?.requestDisallowInterceptTouchEvent(false)
         pointerTracker.clear()
         isHovering = false
-        hoverX = -1f
-        hoverY = -1f
-        trailPath.reset()
-        trailSamples = 0
         invalidate()
     }
 
@@ -246,7 +203,19 @@ class PenSurfaceView @JvmOverloads constructor(
 
     override fun performClick(): Boolean = super.performClick()
 
+    override fun onResolvePointerIcon(event: MotionEvent, pointerIndex: Int): PointerIcon =
+        PointerIcon.getSystemIcon(context, PointerIcon.TYPE_NULL)
+
     private fun eventRecord(event: MotionEvent, index: Int, action: Byte, rect: RectF, history: Int? = null): Protocol.Event {
+        if (InputTrace.enabled && callbackReceivedNanos != 0L) {
+            val precise = Build.VERSION.SDK_INT >= 34
+            val sourceTime = if (precise) {
+                if (history == null) event.eventTimeNanos else event.getHistoricalEventTimeNanos(history)
+            } else {
+                (if (history == null) event.eventTime else event.getHistoricalEventTime(history)) * 1000000L
+            }
+            InputTrace.sample(sourceTime, callbackReceivedNanos, precise, action)
+        }
         val rawX = if (history == null) event.getX(index) else event.getHistoricalX(index, history)
         val rawY = if (history == null) event.getY(index) else event.getHistoricalY(index, history)
         val pressure = if (history == null) event.getPressure(index) else event.getHistoricalPressure(index, history)
@@ -259,19 +228,8 @@ class PenSurfaceView @JvmOverloads constructor(
             if (!pressure.isFinite()) Float.NaN else if (contact) pressure.coerceIn(0f, 1f) else 0f, tiltX, tiltY)
     }
 
-    private fun appendTrail(x: Float, y: Float, beginning: Boolean) {
-        if (!showLocalPreview) return
-        if (beginning || trailSamples >= 4096) {
-            trailPath.reset()
-            trailPath.moveTo(x, y)
-            trailSamples = 1
-        } else {
-            trailPath.lineTo(x, y)
-            trailSamples++
-        }
-    }
-
     override fun onTouchEvent(event: MotionEvent): Boolean {
+        callbackReceivedNanos = if (InputTrace.enabled) System.nanoTime() else 0L
         val actionIndex = event.actionIndex
         val rect = getActiveRect()
         when (event.actionMasked) {
@@ -285,12 +243,12 @@ class PenSurfaceView @JvmOverloads constructor(
                 val selected = pointerTracker.select(event.getPointerId(actionIndex), tool,
                     !rejectFingerTouches, event.deviceId, event.actionMasked == MotionEvent.ACTION_DOWN)
                 if (selected == ActivePointerTracker.Selection.IGNORE) return true
+                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) requestUnbufferedDispatch(event)
                 if (selected == ActivePointerTracker.Selection.PREEMPT) cancelPrevious()
                 // Hover-to-contact preserves held barrel switches and their rising edges.
                 isHovering = false
                 lastInputDevice = event.deviceId
                 if (!send(listOf(eventRecord(event, actionIndex, Protocol.ACTION_DOWN, rect)))) return true
-                appendTrail(event.getX(actionIndex), event.getY(actionIndex), true)
                 parent?.requestDisallowInterceptTouchEvent(true)
             }
             MotionEvent.ACTION_MOVE -> {
@@ -302,10 +260,7 @@ class PenSurfaceView @JvmOverloads constructor(
                 for (history in 0 until event.historySize) events.add(eventRecord(event, index, Protocol.ACTION_MOVE, rect, history))
                 events.add(eventRecord(event, index, Protocol.ACTION_MOVE, rect))
                 lastInputDevice = event.deviceId
-                if (send(events)) {
-                    for (history in 0 until event.historySize) appendTrail(event.getHistoricalX(index, history), event.getHistoricalY(index, history), false)
-                    appendTrail(event.getX(index), event.getY(index), false)
-                }
+                send(events)
             }
             MotionEvent.ACTION_UP, MotionEvent.ACTION_POINTER_UP -> {
                 val active = pointerTracker.current ?: return true
@@ -313,8 +268,6 @@ class PenSurfaceView @JvmOverloads constructor(
                 if (pointerTracker.finish(event.getPointerId(actionIndex), event.deviceId)) {
                     lastInputDevice = event.deviceId
                     if (send(listOf(eventRecord(event, actionIndex, Protocol.ACTION_UP, rect)))) performClick()
-                    trailPath.reset()
-                    trailSamples = 0
                     parent?.requestDisallowInterceptTouchEvent(false)
                 }
             }
@@ -324,11 +277,11 @@ class PenSurfaceView @JvmOverloads constructor(
                 cancelInput()
             }
         }
-        postInvalidateOnAnimation()
         return true
     }
 
     override fun onHoverEvent(event: MotionEvent): Boolean {
+        callbackReceivedNanos = if (InputTrace.enabled) System.nanoTime() else 0L
         if (pointerTracker.current != null) return true
         val index = (0 until event.pointerCount).firstOrNull { acceptedTool(event, it) } ?: return false
         if (!acceptTiming(event)) return true
@@ -341,19 +294,17 @@ class PenSurfaceView @JvmOverloads constructor(
         }
         lastInputDevice = event.deviceId
         isHovering = action != Protocol.ACTION_HOVER_EXIT
-        hoverX = if (isHovering) event.getX(index) else -1f
-        hoverY = if (isHovering) event.getY(index) else -1f
         val events = ArrayList<Protocol.Event>(event.historySize + 1)
         if (action == Protocol.ACTION_HOVER_MOVE) {
             for (history in 0 until event.historySize) events.add(eventRecord(event, index, action, rect, history))
         }
         events.add(eventRecord(event, index, action, rect))
         send(events)
-        postInvalidateOnAnimation()
         return true
     }
 
     override fun onGenericMotionEvent(event: MotionEvent): Boolean {
+        callbackReceivedNanos = if (InputTrace.enabled) System.nanoTime() else 0L
         if (event.actionMasked != MotionEvent.ACTION_BUTTON_PRESS && event.actionMasked != MotionEvent.ACTION_BUTTON_RELEASE) {
             return super.onGenericMotionEvent(event)
         }
@@ -372,71 +323,7 @@ class PenSurfaceView @JvmOverloads constructor(
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
 
-        val rect = getActiveRect()
-        val w = width.toFloat()
-        val h = height.toFloat()
-
-        val isRestricted = (rect.width() < w - 4f || rect.height() < h - 4f || rect.left > 2f || rect.top > 2f)
-
-        if (isRestricted) {
-            if (showAreaShading) {
-                // Shade left margin
-                if (rect.left > 0f) {
-                    canvas.drawRect(0f, 0f, rect.left, h, aspectShadePaint)
-                }
-                // Shade right margin
-                if (rect.right < w) {
-                    canvas.drawRect(rect.right, 0f, w, h, aspectShadePaint)
-                }
-                // Shade top margin
-                if (rect.top > 0f) {
-                    canvas.drawRect(rect.left, 0f, rect.right, rect.top, aspectShadePaint)
-                }
-                // Shade bottom margin
-                if (rect.bottom < h) {
-                    canvas.drawRect(rect.left, rect.bottom, rect.right, h, aspectShadePaint)
-                }
-            }
-
-            if (showAreaBorder) {
-                // Draw active frame boundary
-                canvas.drawRect(rect, aspectFramePaint)
-
-                // Draw corner brackets
-                val bLen = 28f
-                // Top-Left
-                canvas.drawLine(rect.left, rect.top, rect.left + bLen, rect.top, cornerBracketPaint)
-                canvas.drawLine(rect.left, rect.top, rect.left, rect.top + bLen, cornerBracketPaint)
-                // Top-Right
-                canvas.drawLine(rect.right, rect.top, rect.right - bLen, rect.top, cornerBracketPaint)
-                canvas.drawLine(rect.right, rect.top, rect.right, rect.top + bLen, cornerBracketPaint)
-                // Bottom-Left
-                canvas.drawLine(rect.left, rect.bottom, rect.left + bLen, rect.bottom, cornerBracketPaint)
-                canvas.drawLine(rect.left, rect.bottom, rect.left, rect.bottom - bLen, cornerBracketPaint)
-                // Bottom-Right
-                canvas.drawLine(rect.right, rect.bottom, rect.right - bLen, rect.bottom, cornerBracketPaint)
-                canvas.drawLine(rect.right, rect.bottom, rect.right, rect.bottom - bLen, cornerBracketPaint)
-
-                // Label
-                val modeLabel = when (areaMode) {
-                    AreaMode.FULL -> context.getString(R.string.hud_area_full)
-                    AreaMode.ASPECT_16_9 -> context.getString(R.string.hud_area_aspect, "16:9")
-                    AreaMode.ASPECT_16_10 -> context.getString(R.string.hud_area_aspect, "16:10")
-                    AreaMode.ASPECT_21_9 -> context.getString(R.string.hud_area_aspect, "21:9")
-                    AreaMode.CUSTOM -> context.getString(R.string.hud_area_custom, customWidthPercent, customHeightPercent)
-                }
-                val labelInset = 8f * resources.displayMetrics.density
-                canvas.drawText(modeLabel, rect.left + labelInset, rect.top + labelInset - labelPaint.ascent(), labelPaint)
-            }
-        }
-
-        if (showLocalPreview && !trailPath.isEmpty) {
-            canvas.drawPath(trailPath, trailPaint)
-        }
-
-        if (isHovering && hoverX >= 0 && hoverY >= 0) {
-            canvas.drawCircle(hoverX, hoverY, 12f, hoverPaint)
-        }
+        // Tablet mode is an input device. All visual feedback belongs in Settings.
     }
 
     private fun getProtocolToolType(androidToolType: Int): Byte {

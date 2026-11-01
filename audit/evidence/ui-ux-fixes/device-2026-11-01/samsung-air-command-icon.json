@@ -1,0 +1,6 @@
+{
+  "setting": "Show Air command icon",
+  "before": "true",
+  "after": "false",
+  "reason": "Remove Samsung-owned floating pen shortcut from the tablet surface; changed through normal Settings UI"
+}

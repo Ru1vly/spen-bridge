@@ -38,10 +38,10 @@ Your drawing applications recognize the result as a real physical graphics table
 | --- | --- |
 | Full 4096 level pressure sensitivity | Natural, dynamic brush thickness and opacity |
 | Stylus tilt support | X and Y tilt angles mapped to kernel evdev (Linux) and HID reports (Windows) |
-| Hover and proximity tracking | Hover cursor preview before the pen touches the screen |
+| Hover and proximity tracking | Sends pen proximity to the desktop; the tablet surface stays blank |
 | High sampling rate | Processes Android `MotionEvent` historical batches for the sampling rate supplied by the device |
 | Hardware palm rejection | Rejects capacitive finger touch while the stylus is in use |
-| Dual connection modes | USB cable mode (`adb reverse`) for a wired connection, or Wi-Fi mode for wireless drawing |
+| Dual connection modes | Automatically tries USB (`adb reverse`), then Wi-Fi; retries after five seconds if both fail |
 | Customizable pressure curves | Linear, Soft, Firm, and Sigmoid response curves with real-time visual preview |
 | Per-app profiles | Automatically switches profiles and mappings based on active window title/class |
 | Multi-monitor coordinate mapping | Map the tablet to a specific monitor, custom area, or the full virtual desktop (with negative offset support) |
@@ -84,7 +84,11 @@ Your drawing applications recognize the result as a real physical graphics table
 
 ## Quick Start
 
-Protocol v2 requires pairing for USB and Wi-Fi. Start on USB loopback by default. Open desktop **Pair Tablet** and copy the fingerprint and pairing code into Android Settings. See [pairing and network setup](docs/PAIRING.md), including how to opt into Wi-Fi.
+Fresh installations include a neutral Default configuration. Create application profiles yourself; no app-specific matching or pressure/button presets are installed. Existing saved profiles remain intact.
+
+Android Settings provides Connection, Tablet area, Input, and Help and support. Tablet area has a live drag/resize preview; Apply tablet settings works before pairing. During tablet use there is no visible text, and controls disappear while the pen is near the screen. Pen feedback belongs in your desktop drawing application.
+
+Protocol v2 requires pairing for USB and Wi-Fi. Start on USB loopback by default. Open desktop **Pair tablet** and copy the fingerprint and pairing code into Android Settings. See [pairing and network setup](docs/PAIRING.md), including how to opt into Wi-Fi.
 
 ### 1. Install on Linux
 
@@ -179,6 +183,8 @@ See [docs/SETUP.md](docs/SETUP.md) for detailed instructions.
 
 | Document | Covers |
 | --- | --- |
+| [UI Layout & Validation](docs/LAYOUT_REDESIGN.md) | Mobile and desktop layouts, native previews and verification scope |
+| [UI Library Provenance](docs/UI_LIBRARY_PROVENANCE.md) | Actual dependencies and the distinction from an official Samsung SDK |
 | [Setup & Configuration Guide](docs/SETUP.md) | Full install, connection modes, GUI panel walkthrough, and per-app configuration |
 | [Windows Setup & Driver Validation](docs/WINDOWS.md) | Windows Ink driver build, test-signing, installation scripts, and validation |
 | [Binary Network Wire Protocol](docs/PROTOCOL.md) | The TCP wire format shared by the Android client and desktop server |
