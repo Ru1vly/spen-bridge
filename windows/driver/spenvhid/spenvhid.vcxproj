@@ -150,6 +150,8 @@
   </ItemGroup>
   <ItemGroup>
     <Inf Include="spenvhid.inf" />
+    <!-- Inf2Cat needs the SYS beside the stamped INF in the WDK package. -->
+    <FilesToPackage Include="$(TargetPath)" />
     <ClInclude Include="ioctl.h" />
     <ClInclude Include="report_descriptor.h" />
   </ItemGroup>

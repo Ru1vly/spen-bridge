@@ -49,10 +49,11 @@ in `release/v1.1.0-rc1.md`. Do not silently substitute a generated debug key.
    source, missing credentials, an existing destination or an unexpected signer.
    It aligns, signs and verifies the APK before writing the final directory.
 4. Check `SHA256SUMS` and `signature-verification.txt` in the output directory.
-   `provenance.json` records the input/output hashes, source commit, version and
-   signer. Preserve it alongside the release APK.
+   The packager also exports the exact committed source as a tar archive.
+   `provenance.json` records the input/output and source archive hashes, source
+   commit, version and signer. Preserve it alongside the release APK.
 5. Prepare a draft prerelease targeting the tested commit, using
-   `release/v1.1.0-rc1.md` as the notes. Attach the signed APK, `SHA256SUMS`,
+   `release/v1.1.0-rc1.md` as the notes. Attach the signed APK, source archive, `SHA256SUMS`,
    `provenance.json` and signature report. Do not attach an unsigned APK or an
    unsigned Windows driver as an installable production artifact.
 6. Complete the physical acceptance described in

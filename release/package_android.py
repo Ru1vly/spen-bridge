@@ -60,11 +60,17 @@ def package(apk, source_commit, build_tools, output):
             raise ValueError("Signed APK certificate does not match the pinned release identity")
         run(build_tools / "zipalign", "-c", "-p", "4", signed)
         digest = hashlib.sha256(signed.read_bytes()).hexdigest()
-        (stage / "SHA256SUMS").write_text(f"{digest}  {signed.name}\n")
+        archive = stage / f"spen-bridge-v{version}-source.tar.gz"
+        with archive.open("wb") as stream:
+            subprocess.run(["git", "-C", str(ROOT), "archive", "--format=tar.gz",
+                            f"--prefix=spen-bridge-{version}/", commit], stdout=stream, check=True)
+        archive_digest = hashlib.sha256(archive.read_bytes()).hexdigest()
+        (stage / "SHA256SUMS").write_text(f"{digest}  {signed.name}\n{archive_digest}  {archive.name}\n")
         (stage / "provenance.json").write_text(json.dumps({
             "source_commit": commit, "version": version, "version_code": int(version_code),
             "apk": signed.name, "sha256": digest, "signer_sha256": expected_cert,
             "input_sha256": hashlib.sha256(apk.read_bytes()).hexdigest(),
+            "source_archive": archive.name, "source_archive_sha256": archive_digest,
         }, indent=2) + "\n")
         (stage / "signature-verification.txt").write_text(verification)
         aligned.unlink()

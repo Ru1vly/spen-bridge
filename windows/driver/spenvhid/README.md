@@ -167,3 +167,8 @@ the package, install it on Windows 10/11 x64, verify the root device and VHF
 child have no Device Manager errors, and exercise Windows Ink with hover,
 pressure, tilt, eraser, buttons, disconnect cleanup, sleep/resume, and multiple
 displays. Use `docs/WINDOWS.md` and `windows/package-driver.ps1` for that gate.
+
+The project explicitly includes `$(TargetPath)` in `FilesToPackage`, following
+[Microsoft's KMDF sample](https://github.com/microsoft/Windows-driver-samples/blob/main/serial/serial/wdfserial.vcxproj).
+Without this item the WDK stages only the INF; Inf2Cat then fails with 22.9.1
+because the referenced SYS is missing, even though compilation and linking pass.
