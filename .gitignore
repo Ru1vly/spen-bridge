@@ -17,6 +17,8 @@ android/app/build/
 *.aab
 *.keystore
 *.jks
+*.p12
+!android/app/src/test/resources/test-server.p12
 *.idsig
 release/signing.env
 .idea/

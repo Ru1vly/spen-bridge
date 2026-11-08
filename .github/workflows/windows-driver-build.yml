@@ -6,6 +6,7 @@ on:
       - 'windows/driver/spenvhid/**'
       - 'server/**'
       - 'tests/**'
+      - 'release/**'
       - '*.ps1'
       - 'windows/*.ps1'
       - '.github/workflows/windows-driver-build.yml'
@@ -14,6 +15,7 @@ on:
       - 'windows/driver/spenvhid/**'
       - 'server/**'
       - 'tests/**'
+      - 'release/**'
       - '*.ps1'
       - 'windows/*.ps1'
   workflow_dispatch: {}
