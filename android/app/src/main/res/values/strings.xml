@@ -38,7 +38,7 @@
     <string name="save_settings">Save and apply</string>
     <string name="desktop_fingerprint">Certificate fingerprint</string>
     <string name="pairing_code">Pairing code</string>
-    <string name="pairing_hint">On your desktop, choose Pair tablet. Copy the certificate fingerprint and pairing code here.</string>
+    <string name="pairing_hint">Manual fallback: obtain the certificate fingerprint and pairing code from the desktop command --show-pairing. Normally, use Find desktop above.</string>
     <string name="invalid_host">Enter a Wi-Fi IP or hostname without a URL or port, or leave empty for USB.</string>
     <string name="invalid_port">Enter a port from 1 to 65535.</string>
     <string name="invalid_fingerprint">Copy the full 64-character certificate fingerprint from your desktop.</string>
@@ -89,7 +89,7 @@
     <string name="connection_not_paired">No desktop paired. Choose Find desktop to connect without entering connection details.</string>
     <string name="connection_paired">Desktop paired. Your devices will reconnect automatically.</string>
     <string name="support_title">Help and support</string>
-    <string name="support_text">USB: use a data cable and enable USB debugging. On your desktop, open Connection and choose Set up USB connection. Accept the debugging prompt on your tablet.\n\nWi-Fi: connect both devices to the same network. Enable paired Wi-Fi connections in desktop Preferences, restart the server, then copy the pairing details to this tablet.\n\nNo pen input: check your connection, then test the pen in a desktop application. On Linux, check input permissions in Preferences. Windows pen input is experimental.</string>
+    <string name="support_text">USB: use a data cable and enable USB debugging. On your desktop, open Connection and choose Set up USB connection. Accept the debugging prompt on your tablet.\n\nWi-Fi: connect both devices to the same network. Choose Pair tablet on the desktop, then Find desktop in tablet Settings. Compare the number on both screens and approve on the desktop.\n\nNo pen input: check your connection, then test the pen in a desktop application. On Linux, check input permissions in Preferences. Windows pen input is experimental.</string>
     <string name="copy_report">Copy diagnostic report</string>
     <string name="diagnostic_report">S Pen Bridge %1$s\nAndroid %2$s\nTablet area: %3$s\nPairing credentials, addresses and logs are excluded.</string>
     <string name="report_copied">Diagnostic report copied.</string>

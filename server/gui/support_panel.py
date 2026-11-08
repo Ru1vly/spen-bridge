@@ -13,8 +13,8 @@ class SupportPanel(CollapsibleBox):
         help_text = QLabel(
             "USB: connect a data cable, enable USB debugging on the tablet, then choose "
             "Set up USB connection on the Connection page. Accept the tablet's debugging prompt.\n\n"
-            "Wi-Fi: connect both devices to the same network. Enable paired Wi-Fi connections "
-            "in Preferences, restart the server, then pair from the Connection page.\n\n"
+            "Wi-Fi: connect both devices to the same network. Choose Pair tablet on the "
+            "Connection page, then Find desktop in tablet Settings. Compare the number on both screens and approve here.\n\n"
             "No pen input: check the connection, then try your pen in a desktop application. "
             "On Linux, check input permissions in Preferences. Windows pen input is experimental.")
         help_text.setWordWrap(True)
