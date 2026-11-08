@@ -12,6 +12,7 @@ object Protocol {
     const val PKT_PING: Byte = 2
     const val PKT_PONG: Byte = 3
     const val PKT_HANDSHAKE: Byte = 4
+    const val PKT_PAIRING: Byte = 5
     const val ACTION_HOVER_MOVE: Byte = 0
     const val ACTION_HOVER_ENTER: Byte = 1
     const val ACTION_HOVER_EXIT: Byte = 2
@@ -40,7 +41,7 @@ object Protocol {
     data class Packet(val kind: Byte, val sequence: Short, val payload: ByteArray)
 
     fun packPacket(kind: Byte, sequence: Short, payload: ByteArray = byteArrayOf()): ByteArray {
-        require(kind in PKT_EVENT..PKT_HANDSHAKE && payload.size <= 65535) { "Invalid packet" }
+        require(kind in PKT_EVENT..PKT_PAIRING && payload.size <= 65535) { "Invalid packet" }
         return ByteBuffer.allocate(HEADER_SIZE + payload.size).order(ByteOrder.LITTLE_ENDIAN).apply {
             put(MAGIC)
             put(kind)

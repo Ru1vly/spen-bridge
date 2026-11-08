@@ -76,7 +76,7 @@
     <string name="open_connection_settings">%1$s. Open connection settings.</string>
     <string name="area_preview_hint">Drag to move; use the corner to resize. Sliders provide precise values.</string>
     <string name="reset_area">Reset area</string>
-    <string name="advanced_connection">Manual pairing details</string>
+    <string name="advanced_connection">Advanced connection settings</string>
     <string name="apply_connection">Apply connection</string>
     <string name="apply_local_settings">Apply tablet settings</string>
     <string name="help_support">Help and support</string>
@@ -86,8 +86,8 @@
     <string name="area_y_accessible">Vertical position within unused space</string>
     <string name="local_applied">Tablet settings applied.</string>
     <string name="connection_applied">Connection settings applied.</string>
-    <string name="connection_not_paired">No desktop paired. Open manual pairing details to pair with your desktop.</string>
-    <string name="connection_paired">Pairing details saved. USB connects automatically; a Wi-Fi address is optional.</string>
+    <string name="connection_not_paired">No desktop paired. Choose Find desktop to connect without entering connection details.</string>
+    <string name="connection_paired">Desktop paired. Your devices will reconnect automatically.</string>
     <string name="support_title">Help and support</string>
     <string name="support_text">USB: use a data cable and enable USB debugging. On your desktop, open Connection and choose Set up USB connection. Accept the debugging prompt on your tablet.\n\nWi-Fi: connect both devices to the same network. Enable paired Wi-Fi connections in desktop Preferences, restart the server, then copy the pairing details to this tablet.\n\nNo pen input: check your connection, then test the pen in a desktop application. On Linux, check input permissions in Preferences. Windows pen input is experimental.</string>
     <string name="copy_report">Copy diagnostic report</string>
@@ -100,4 +100,20 @@
     <string name="cancel_settings">Cancel</string>
     <string name="area_preview_summary">%1$s · %2$d%% × %3$d%%</string>
     <string name="area_full_hint">Choose a ratio or Custom area to adjust the tablet area.</string>
+    <string name="find_desktop">Find desktop</string>
+    <string name="pairing_back">Back to connection settings</string>
+    <string name="nearby_desktops">Nearby desktops</string>
+    <string name="pairing_discovery_help">On your desktop, choose Pair tablet. Keep both devices on the same Wi-Fi network.</string>
+    <string name="pairing_searching">Searching for desktops…</string>
+    <string name="pairing_choose_desktop">Choose the desktop you want to connect to.</string>
+    <string name="pairing_nothing_found">No desktops found. Open Pair tablet on your desktop, check both devices are on the same Wi-Fi network, then search again.</string>
+    <string name="pairing_discovery_failed">Could not search this network. Check your Wi-Fi connection, then try again.</string>
+    <string name="pairing_search_again">Search again</string>
+    <string name="pairing_check_number">Check that this number matches your desktop.</string>
+    <string name="pairing_approve_desktop">Allow this tablet on your desktop. Your devices will save the connection automatically.</string>
+    <string name="pairing_connecting">Connecting to %1$s…</string>
+    <string name="pairing_waiting_approval">Approve this tablet on %1$s.</string>
+    <string name="pairing_number_accessible">Verification number: %1$s</string>
+    <string name="pairing_complete">Paired with %1$s</string>
+    <string name="pairing_failed">Pairing did not finish. Close the desktop pairing window, open Pair tablet again, and search again. Only approve when both numbers match.</string>
 </resources>

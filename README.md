@@ -88,7 +88,7 @@ Fresh installations include a neutral Default configuration. Create application 
 
 Android Settings provides Connection, Tablet area, Input, and Help and support. Tablet area has a live drag/resize preview; Apply tablet settings works before pairing. During tablet use there is no visible text, and controls disappear while the pen is near the screen. Pen feedback belongs in your desktop drawing application.
 
-Protocol v2 requires pairing for USB and Wi-Fi. Start on USB loopback by default. Open desktop **Pair tablet** and copy the fingerprint and pairing code into Android Settings. See [pairing and network setup](docs/PAIRING.md), including how to opt into Wi-Fi.
+Protocol v2 requires pairing for USB and Wi-Fi. Open desktop **Pair tablet**, then Android **Settings → Find desktop**. Compare the number shown on both devices and approve on desktop; connection details are saved automatically. See [pairing and network setup](docs/PAIRING.md).
 
 ### 1. Install on Linux
 

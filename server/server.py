@@ -8,11 +8,12 @@ import sys
 import time
 
 from server.protocol import (
-    HEADER_SIZE, EVENT_RECORD_SIZE, PKT_EVENT, PKT_PING, PKT_PONG, PKT_HANDSHAKE,
+    HEADER_SIZE, EVENT_RECORD_SIZE, PKT_EVENT, PKT_PING, PKT_PONG, PKT_HANDSHAKE, PKT_PAIRING,
     unpack_header, unpack_events, pack_packet,
 )
 from server.security import AUTH_VERSION, NONCE_SIZE, auth_proof
 from server.input_trace import get_controller
+from server.pairing import DISCOVERY_PORT, PAIRING_MAX_BYTES, DiscoveryResponder
 
 logger = logging.getLogger("SPenServer")
 
@@ -39,8 +40,11 @@ class SPenServer:
                  *, tls_context=None, pairing_code=None, max_connections=4,
                  handshake_timeout=5.0, idle_timeout=10.0, shutdown_timeout=2.0,
                  event_rate=10000, byte_rate=1024 * 1024, packet_rate=4000,
+                 pairing_manager=None, discovery_port=DISCOVERY_PORT,
                  ):
         self.tablet, self.host, self.port = tablet, host, port
+        self.pairing_manager, self.discovery_port = pairing_manager, discovery_port
+        self._discovery = None
         self.input_trace = get_controller()
         if self.input_trace is not None:
             self.input_trace.backend_name = type(tablet).__name__
@@ -94,6 +98,9 @@ class SPenServer:
             elif kind == PKT_PING:
                 if size:
                     raise ValueError("Ping must be empty")
+            elif kind == PKT_PAIRING:
+                if not 1 <= size <= PAIRING_MAX_BYTES:
+                    raise ValueError("Pairing message exceeds bounds")
             else:
                 raise ValueError("Unexpected packet type")
             budget.consume(HEADER_SIZE + size)
@@ -128,6 +135,15 @@ class SPenServer:
             nonce = secrets.token_bytes(NONCE_SIZE)
             await self._write_packet(writer, PKT_HANDSHAKE, 0, AUTH_VERSION + nonce)
             kind, seq, proof = await self._read_packet(reader, self.handshake_timeout, bytes_budget)
+            if kind == PKT_PAIRING:
+                if self.pairing_manager is None:
+                    raise ValueError("Enrollment is not enabled")
+                await self.pairing_manager.enroll(
+                    proof, seq, address,
+                    lambda timeout: self._read_packet(reader, timeout, bytes_budget),
+                    lambda sequence, payload: self._write_packet(writer, PKT_PAIRING, sequence, payload),
+                )
+                return  # Enrollment never owns or injects pen input.
             if (kind != PKT_HANDSHAKE or seq not in (0, 1)
                     or not hmac.compare_digest(proof, auth_proof(self.pairing_code, nonce, "client"))):
                 raise ValueError("Pairing authentication failed")
@@ -306,12 +322,26 @@ class SPenServer:
         self._device_failed = False
         self._running = True
         self._accept_task = asyncio.create_task(self._accept())
+        if self.pairing_manager is not None:
+            self.pairing_manager.port = self.bound_endpoint[1]
+            try:
+                self._discovery, _ = await loop.create_datagram_endpoint(
+                    lambda: DiscoveryResponder(self.pairing_manager),
+                    local_addr=(self.host, self.discovery_port), allow_broadcast=True,
+                )
+            except OSError as error:
+                logger.warning("Nearby discovery unavailable: %s", error)
         logger.info("TLS pen server listening on %s:%s", *self.bound_endpoint)
 
     async def stop(self):
         """Close raw handshakes and authenticated sessions on every supported Python."""
         async with self._stop_lock:
             self._running = False
+            if self.pairing_manager is not None:
+                self.pairing_manager.cancel()
+            if self._discovery is not None:
+                self._discovery.close()
+                self._discovery = None
             listener, self.server = self.server, None
             try:
                 if self._accept_task:

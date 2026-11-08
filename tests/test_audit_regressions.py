@@ -759,23 +759,25 @@ class GuiPersistenceTests(unittest.TestCase):
 
     def test_connection_details_remain_on_running_port_until_restart(self):
         panel = self.window.system_tab.connection_panel
+        panel._set_network_address("192.168.1.15")
         self.addCleanup(panel.stop_usb_monitor)
         panel.set_listener(("127.0.0.1", 40118))
         self.window.system_tab.startup_panel.spin_port.setValue(41234)
-        self.assertEqual(panel.address(), "127.0.0.1:40118")
+        self.assertEqual(panel.address(), "192.168.1.15:40118")
         self.assertIn("pending", panel.lbl_hint.text())
         panel._copy_connection_info()
-        self.assertEqual(self.app.clipboard().text(), "127.0.0.1:40118")
+        self.assertEqual(self.app.clipboard().text(), "192.168.1.15:40118")
         with patch("server.gui.connection_panel.subprocess.run", return_value=Mock(returncode=0)) as run:
             panel.run_adb_reverse(silent=True)
             panel._adb_thread.join(2)
             self.app.processEvents()
             self.assertEqual(run.call_args.args[0], ["adb", "-d", "reverse", "tcp:40118", "tcp:40118"])
         panel.set_listener(None)
-        self.assertEqual(panel.address(), "127.0.0.1:41234")
+        self.assertEqual(panel.address(), "192.168.1.15:41234")
 
     def test_adb_waits_for_the_startup_snapshot_endpoint(self):
         panel = self.window.system_tab.connection_panel
+        panel._set_network_address("192.168.1.15")
         self.addCleanup(panel.stop_usb_monitor)
         panel.set_transitioning()
         self.window.config.port = 41234  # Edited after the worker took its snapshot.

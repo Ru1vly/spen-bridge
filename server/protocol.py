@@ -38,6 +38,7 @@ PKT_EVENT = 1
 PKT_PING = 2
 PKT_PONG = 3
 PKT_HANDSHAKE = 4
+PKT_PAIRING = 5
 
 # Action Types (matching Android MotionEvent semantics)
 ACTION_HOVER_MOVE = 0
@@ -73,7 +74,7 @@ class PenEvent:
 
 def pack_packet(pkt_type: int, seq: int, payload: bytes) -> bytes:
     """Pack a full packet with header and payload."""
-    if pkt_type not in (PKT_EVENT, PKT_PING, PKT_PONG, PKT_HANDSHAKE):
+    if pkt_type not in (PKT_EVENT, PKT_PING, PKT_PONG, PKT_HANDSHAKE, PKT_PAIRING):
         raise ValueError("Unknown packet type")
     if type(seq) is not int or not 0 <= seq <= 65535 or len(payload) > MAX_PAYLOAD_SIZE:
         raise ValueError("Sequence or payload exceeds protocol bounds")

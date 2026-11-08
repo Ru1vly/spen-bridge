@@ -6,16 +6,21 @@ import ipaddress
 from PySide6.QtCore import Qt, Signal, QTimer
 from PySide6.QtWidgets import (
     QGroupBox, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
-    QMessageBox, QApplication, QDialog, QFormLayout, QLineEdit, QDialogButtonBox,
+    QMessageBox, QApplication,
 )
 from server.settings import listener_address
-from server.security import load_identity
+from server.gui.network_info import get_local_ip
+from server.gui.pairing_dialog import PairingDialog
 
 
 class ConnectionPanel(QGroupBox):
     log_message = Signal(str)
     adb_finished = Signal(bool, str, bool)
     connection_type_changed = Signal()
+    pairing_requested = Signal()
+    pairing_cancelled = Signal()
+    pairing_decision = Signal(str, bool)
+    network_address_ready = Signal(str)
 
     def __init__(self, local_ip, config, parent=None):
         super().__init__("Connect your tablet", parent)
@@ -28,6 +33,13 @@ class ConnectionPanel(QGroupBox):
         self._usb_ready = False
         self._peer = None
         self._last_adb_message = None
+        self._pair_dialog = None
+        self._network_thread = None
+        self.network_address_ready.connect(self._set_network_address)
+        self._network_timer = QTimer(self)
+        self._network_timer.setInterval(5000)
+        self._network_timer.timeout.connect(self._refresh_network_address)
+        self._network_timer.start()
         self._usb_timer = QTimer(self)
         self._usb_timer.setInterval(2000)
         self._usb_timer.timeout.connect(lambda: self.run_adb_reverse(silent=True, automatic=True))
@@ -76,60 +88,74 @@ class ConnectionPanel(QGroupBox):
         return self._endpoint or (listener_address(self._config), self._config.port)
 
     def address(self):
-        host, port = self.endpoint()
-        host = self._local_ip if host in ("0.0.0.0", "::") else host
+        _, port = self.endpoint()
+        host = self._local_ip
+        try:
+            if not host or ipaddress.ip_address(host).is_loopback:
+                return ""
+        except ValueError:
+            return ""
         return f"[{host}]:{port}" if ":" in host else f"{host}:{port}"
 
+    def _refresh_network_address(self):
+        if self._network_thread is not None and self._network_thread.is_alive():
+            return
+        def detect():
+            address = get_local_ip()
+            try:
+                self.network_address_ready.emit(address)
+            except RuntimeError:
+                pass  # The window may have closed during the bounded query.
+        self._network_thread = threading.Thread(target=detect, name="SPenNetworkAddress", daemon=True)
+        self._network_thread.start()
+
+    def _set_network_address(self, address):
+        self._local_ip = address
+        self.refresh_ip_label()
+
     def refresh_ip_label(self):
-        state = "Listener change in progress" if self._transitioning else (
-            "Listening" if self._endpoint else "Not running")
-        self.lbl_ip_info.setText(f"{state}: {self.address()}")
-        self.btn_copy.setEnabled(not self._transitioning)
+        address = self.address()
+        self.lbl_ip_info.setText(f"Wireless address: {address}" if address else "Wireless address unavailable")
+        self.btn_copy.setEnabled(bool(address) and not self._transitioning)
         self.btn_adb.setEnabled(not self._transitioning and not self._adb_busy)
         pending = self._endpoint and self._endpoint != (listener_address(self._config), self._config.port)
         self.lbl_hint.setText(
             "Network changes pending. Stop and start the server to apply them."
-            if pending else "Connect your tablet by USB, or enable Wi-Fi in Preferences. Pair it to allow pen input."
+            if pending else "Choose Pair tablet, then find this desktop on your tablet. USB connects without entering an address."
         )
 
     def on_port_changed(self, port):
         self.refresh_ip_label()
 
     def _copy_connection_info(self):
-        if not self._transitioning:
+        if not self._transitioning and self.address():
             QApplication.clipboard().setText(self.address())
 
     def show_pairing(self):
-        try:
-            identity = load_identity()
-        except Exception as error:
-            QMessageBox.warning(self, "Pairing unavailable", str(error))
+        if self._pair_dialog is not None and self._pair_dialog.isVisible():
+            self._pair_dialog.raise_()
             return
-        dialog = QDialog(self)
-        dialog.setWindowTitle("Pair tablet")
-        form = QFormLayout(dialog)
-        form.setContentsMargins(24, 24, 24, 24)
-        form.setSpacing(16)
-        form.setRowWrapPolicy(QFormLayout.WrapLongRows)
-        hint = QLabel("Copy these into tablet Settings on your own device. The pairing code grants control of this desktop.")
-        hint.setWordWrap(True)
-        form.addRow(hint)
-        for label, value in (("Certificate fingerprint", identity.fingerprint), ("Pairing code", identity.pairing_code)):
-            row = QHBoxLayout()
-            field = QLineEdit(value)
-            field.setReadOnly(True)
-            field.setAccessibleName(label)
-            button = QPushButton("Copy")
-            button.setAccessibleName(f"Copy {label.lower()}")
-            button.clicked.connect(lambda checked=False, value=value: QApplication.clipboard().setText(value))
-            row.addWidget(field, 1)
-            row.addWidget(button)
-            form.addRow(label, row)
-        close = QDialogButtonBox(QDialogButtonBox.Close)
-        close.rejected.connect(dialog.reject)
-        form.addRow(close)
-        dialog.resize(600, dialog.sizeHint().height())
-        dialog.exec()
+        dialog = PairingDialog(self)
+        self._pair_dialog = dialog
+        dialog.decision.connect(self.pairing_decision.emit)
+        dialog.rejected.connect(self.pairing_cancelled.emit)
+        dialog.retry.connect(self.pairing_requested.emit)
+        dialog.show()
+        self.pairing_requested.emit()
+
+    def show_pairing_request(self, request):
+        if self._pair_dialog is not None and self._pair_dialog.isVisible():
+            self._pair_dialog.show_request(request)
+        else:
+            self.pairing_decision.emit(request.token, False)
+
+    def pairing_ready(self):
+        if self._pair_dialog is not None and self._pair_dialog.isVisible():
+            self._pair_dialog.ready()
+
+    def pairing_finished(self, approved, message):
+        if self._pair_dialog is not None and self._pair_dialog.isVisible():
+            self._pair_dialog.finished_state(approved, message)
 
     def connection_type(self):
         if not self._peer:

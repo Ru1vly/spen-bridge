@@ -24,11 +24,13 @@
           <LinearLayout android:id="@+id/connectionSection" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:paddingTop="12dp">
             <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:background="@drawable/group_background" android:padding="20dp">
               <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:textSize="16sp" android:textColor="@color/text_light" android:layout_marginBottom="12dp" android:id="@+id/connectionSummary" />
+
+              <com.google.android.material.button.MaterialButton android:id="@+id/btnFindDesktop" style="@style/Widget.SPenBridge.Button" android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="48dp" android:layout_marginBottom="12dp" android:text="@string/find_desktop" />
+              <com.google.android.material.button.MaterialButton android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="48dp" android:text="@string/advanced_connection" style="@style/Widget.SPenBridge.OutlinedButton" android:id="@+id/btnAdvancedConnection" />
+              <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:visibility="gone" android:id="@+id/advancedConnection">
               <com.google.android.material.textfield.TextInputLayout style="@style/Widget.SPenBridge.TextInput" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginBottom="12dp" android:hint="@string/server_ip" android:textColorHint="@color/text_muted" app:boxStrokeColor="@color/primary">
                 <com.google.android.material.textfield.TextInputEditText android:id="@+id/editServerIp" android:maxLength="253" android:layout_width="match_parent" android:layout_height="wrap_content" android:inputType="textUri" android:textColor="@color/text_light" android:textSize="16sp" />
               </com.google.android.material.textfield.TextInputLayout>
-              <com.google.android.material.button.MaterialButton android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="48dp" android:text="@string/advanced_connection" style="@style/Widget.SPenBridge.OutlinedButton" android:id="@+id/btnAdvancedConnection" />
-              <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:visibility="gone" android:id="@+id/advancedConnection">
                 <com.google.android.material.textfield.TextInputLayout style="@style/Widget.SPenBridge.TextInput" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginBottom="16dp" android:hint="@string/server_port" android:textColorHint="@color/text_muted" app:boxStrokeColor="@color/primary">
                   <com.google.android.material.textfield.TextInputEditText android:id="@+id/editServerPort" android:layout_width="match_parent" android:layout_height="wrap_content" android:inputType="number" android:textColor="@color/text_light" android:textSize="16sp" />
                 </com.google.android.material.textfield.TextInputLayout>
@@ -40,8 +42,8 @@
                 </com.google.android.material.textfield.TextInputLayout>
                 <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginBottom="16dp" android:text="@string/pairing_hint" android:textColor="@color/text_light" android:textSize="14sp" />
                 <TextView android:id="@+id/usbModeHint" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginBottom="24dp" android:background="@drawable/inset_background" android:padding="12dp" android:text="@string/usb_mode_hint" android:textColor="@color/text_muted" android:textSize="12sp" />
-              </LinearLayout>
               <com.google.android.material.button.MaterialButton android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="48dp" android:text="@string/apply_connection" style="@style/Widget.SPenBridge.OutlinedButton" android:id="@+id/btnApplyConnection" />
+              </LinearLayout>
               <TextView android:id="@+id/connectionFeedback" android:layout_width="match_parent" android:layout_height="wrap_content" android:textSize="14sp" android:textColor="@color/text_muted" android:accessibilityLiveRegion="polite" />
             </LinearLayout>
           </LinearLayout>

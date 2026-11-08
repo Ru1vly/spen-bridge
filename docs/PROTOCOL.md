@@ -9,8 +9,9 @@ All integers and floating-point values are encoded in **little-endian** (`<` in 
 Every connection uses TLS 1.2 or newer. The desktop's per-user identity is stored
 in `identity.json` next to its configuration, with an owner-only private key and
 256-bit pairing code. The client must pin the SHA-256 fingerprint of the desktop
-certificate's DER bytes, provisioned out of band together with the pairing code.
-Never learn a pin or code from an unauthenticated network peer. The desktop binds
+certificate's DER bytes. Credentials are provisioned by the approved enrollment
+flow below, or transferred out of band using advanced manual pairing. Never
+accept credentials from an unverified discovery response. The desktop binds
 loopback for USB by default; Wi-Fi requires explicit opt-in.
 
 Protocol v1 plaintext connections are rejected. Pairing uses the existing packet
@@ -59,6 +60,49 @@ tablet/eraser actions are offered only in device modes that can implement them.
 
 The server preserves all validated samples, including pressure and tilt extrema;
 it does not discard already received positions to conceal queue backlog.
+
+## First-time enrollment and discovery
+
+Enrollment uses packet type **5**, with a JSON object payload of at most 2048
+UTF-8 bytes. It never claims pen ownership. Existing type-4 session authentication
+and the pen event format are unchanged.
+
+Enrollment is available only after **Pair tablet** opens a 120-second window.
+At most five attempts and one pending request are accepted per window. After the
+normal TLS connection and `SPB2` challenge, the client sends sequence 0
+`{stage:"request",name,commitment}`. Both sides create ephemeral P-256 ECDH keys
+and 32-byte random nonces. Commitments are SHA-256 of
+`"SPEN-PAIR-1\0" || role || "\0" || publicDER || nonce`, with role `client` or
+`server`. Byte fields use hexadecimal JSON strings.
+
+The desktop responds with sequence 0 `{stage:"server_commit",name,commitment}`.
+The client reveals sequence 1 `{stage:"client_reveal",public_key,nonce}`; the
+desktop validates its commitment, then reveals sequence 1
+`{stage:"server_reveal",public_key,nonce}`. Both sides validate P-256 keys and reject
+reflected keys. Each computes HMAC-SHA256 using the ECDH shared secret over
+`"SPEN-PAIR-1\0" || actualTLSCertificateFingerprintBytes || clientPublicDER ||
+clientNonce || serverPublicDER || serverNonce`. The first four digest bytes as a
+big-endian integer modulo 1,000,000 form the zero-padded six-digit number.
+Commitments prevent choosing a new key after seeing the other side's reveal.
+
+The user must compare both numbers and approve on the desktop within 60 seconds
+(or the remaining pairing window). Only then does sequence 2
+`{stage:"result",approved:true,name,fingerprint,pairing_code,host,port}` transfer
+credentials over that TLS connection. Android verifies the returned fingerprint
+against the actual TLS certificate before saving. A mismatch, decline, timeout,
+backgrounded phone, disconnect or desktop cancellation aborts enrollment. A
+successful enrollment closes the window. Subsequent sessions require the stored
+certificate pin and normal mutual HMAC proofs. This is an application-specific
+numeric-comparison flow, not a Bluetooth implementation or formal security certification.
+
+Discovery is IPv4 UDP broadcast to port **40119**. Queries are JSON
+`{service:"spen-bridge",version:1,probe:<16 random bytes in hex>}` (maximum 256
+bytes). Only during the explicit pairing window does the desktop reply with the
+same service, version and probe plus `name` and TCP `port`. Replies are throttled
+per source address and contain no credentials. Android uses the reply source IP,
+checks the probe, searches for ten seconds and lists at most 16 desktops.
+Discovery identifies candidates; only the number comparison and approval establish
+trust. UDP carries discovery only, not pen input.
 
 ## Table of Contents
 

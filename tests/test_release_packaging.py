@@ -35,7 +35,7 @@ class ReleasePackagingTests(unittest.TestCase):
                 self.invoke()
 
     def test_debug_apk_is_rejected_even_with_matching_version(self):
-        metadata = "package: name='com.spenbridge.app' versionCode='2' versionName='1.1.0-rc1'\napplication-debuggable\n"
+        metadata = "package: name='com.spenbridge.app' versionCode='3' versionName='1.1.0-rc2'\napplication-debuggable\n"
         with patch("release.package_android.run", side_effect=["a" * 40, "", metadata]):
             with self.assertRaisesRegex(ValueError, "non-debuggable"):
                 self.invoke()
@@ -43,7 +43,7 @@ class ReleasePackagingTests(unittest.TestCase):
     def test_wrong_version_or_application_is_rejected(self):
         for metadata in [
             "package: name='com.spenbridge.app' versionCode='1' versionName='1.0.0'",
-            "package: name='com.spenbridge.app.uiaudit' versionCode='2' versionName='1.1.0-rc1'",
+            "package: name='com.spenbridge.app.uiaudit' versionCode='3' versionName='1.1.0-rc2'",
         ]:
             with self.subTest(metadata=metadata):
                 with patch("release.package_android.run", side_effect=["a" * 40, "", metadata]):
@@ -54,7 +54,7 @@ class ReleasePackagingTests(unittest.TestCase):
         self.output.mkdir()
         marker = self.output / "keep.txt"
         marker.write_text("existing release")
-        metadata = "package: name='com.spenbridge.app' versionCode='2' versionName='1.1.0-rc1'"
+        metadata = "package: name='com.spenbridge.app' versionCode='3' versionName='1.1.0-rc2'"
         environment = {key: "fixture" for key in ["SPEN_KEYSTORE", "SPEN_KEY_ALIAS", "SPEN_STORE_PASSWORD", "SPEN_KEY_PASSWORD"]}
         with patch("release.package_android.run", side_effect=["a" * 40, "", metadata]), patch.dict("os.environ", environment):
             with self.assertRaisesRegex(ValueError, "already exists"):
@@ -62,7 +62,7 @@ class ReleasePackagingTests(unittest.TestCase):
         self.assertEqual(marker.read_text(), "existing release")
 
     def test_wrong_signer_leaves_no_release_outputs(self):
-        metadata = "package: name='com.spenbridge.app' versionCode='2' versionName='1.1.0-rc1'"
+        metadata = "package: name='com.spenbridge.app' versionCode='3' versionName='1.1.0-rc2'"
         environment = {key: "fixture" for key in ["SPEN_KEYSTORE", "SPEN_KEY_ALIAS", "SPEN_STORE_PASSWORD", "SPEN_KEY_PASSWORD"]}
         responses = ["a" * 40, "", metadata, "", "", "Signer #1 certificate SHA-256 digest: " + "0" * 64]
         with patch("release.package_android.run", side_effect=responses), patch.dict("os.environ", environment):

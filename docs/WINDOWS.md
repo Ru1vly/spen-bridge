@@ -111,16 +111,16 @@ and put `adb.exe` on PATH. With the server listening:
 adb reverse tcp:40118 tcp:40118
 ```
 
-In Android Settings, enter **127.0.0.1** and the running server port for USB
-(default 40118). Copy the certificate fingerprint and pairing code from desktop
-**Pair Tablet** (or `--show-pairing`) and tap **Save & Apply**. There is no separate
-USB mode toggle. Use the same selected port on both sides of `adb reverse`.
+Pair first using desktop **Pair tablet** and Android **Settings → Find desktop**
+on the same local network. Compare the verification number on both devices and
+approve on desktop. Android saves the desktop's wireless address and credentials,
+then tries USB automatically whenever a cable is available. No USB IP entry is
+needed. Use the same selected port on both sides of `adb reverse`.
 
-For Wi-Fi, explicitly enable **Allow paired Wi-Fi connections** on desktop and
-restart the server after changing the listener. Enter the desktop LAN IP on the
-tablet and keep the same pairing details. Firewall rules must match the **running**
-port and the application's Python executable; the installer creates no rule.
-See [pairing and network setup](PAIRING.md) for a private-network rule and verification.
+Firewall rules must allow the **running** TCP port and UDP 40119 for discovery,
+limited to the private local subnet and application's Python executable. The
+installer creates no rule. See [pairing and network setup](PAIRING.md) for rules,
+verification, and the advanced manual fallback.
 
 Configure drawing applications for Windows Ink (for example Krita's Windows
 8+ Pointer Input setting). There is no WinTab emulation. Windows controls the

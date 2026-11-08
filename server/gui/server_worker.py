@@ -14,6 +14,8 @@ from server.security import load_identity
 from server.server import SPenServer
 from server.protocol import ACTION_CANCEL
 from server.settings import effective_settings, listener_address, runtime_settings
+from server.pairing import PairingManager
+from server.gui.network_info import get_local_ip
 
 logger = logging.getLogger("SPenGUI")
 
@@ -25,6 +27,9 @@ class ServerWorker(QObject):
     sig_stats = Signal(float, int, int)
     sig_pen_events_ready = Signal()
     sig_log = Signal(str)
+    sig_pairing_requested = Signal(object)
+    sig_pairing_finished = Signal(bool, str)
+    sig_pairing_ready = Signal()
 
     def __init__(self, config):
         super().__init__()
@@ -86,6 +91,9 @@ class ServerWorker(QObject):
                 if self._stop_requested.is_set():
                     return
                 identity = load_identity()
+                pairing = PairingManager(identity, config.port, lan_address=get_local_ip(),
+                                         on_request=self.sig_pairing_requested.emit,
+                                         on_result=self.sig_pairing_finished.emit)
                 self.server = SPenServer(
                     self.tablet, host=listener_address(config), port=config.port,
                     tls_context=identity.server_context(), pairing_code=identity.pairing_code,
@@ -93,6 +101,7 @@ class ServerWorker(QObject):
                     on_client_disconnected=self.sig_client_disconnected.emit,
                     on_stats=self.sig_stats.emit,
                     on_device_error=self._on_device_error,
+                    pairing_manager=pairing,
                 )
                 await self.server.start()
                 self.listener_endpoint = (listener_address(config), config.port)
@@ -196,6 +205,20 @@ class ServerWorker(QObject):
     def update_tablet_settings(self, **kwargs):
         changes = copy.deepcopy(kwargs)
         self._submit(lambda: self.tablet.update_settings(**changes))
+
+    def open_pairing(self):
+        def begin():
+            if self.server is not None:
+                self.server.pairing_manager.lan_address = get_local_ip()
+                self.server.pairing_manager.open_window()
+                self.sig_pairing_ready.emit()
+        self._submit(begin)
+
+    def answer_pairing(self, token, approved):
+        self._submit(lambda: self.server.pairing_manager.decide(token, approved) if self.server else None)
+
+    def cancel_pairing(self):
+        self._submit(lambda: self.server.pairing_manager.cancel() if self.server else None)
 
     def apply_config(self, config=None):
         snapshot = copy.deepcopy(config if config is not None else self.config)

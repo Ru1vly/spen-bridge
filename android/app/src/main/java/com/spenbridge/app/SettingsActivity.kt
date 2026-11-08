@@ -23,6 +23,7 @@ class SettingsActivity : AppCompatActivity() {
         const val KEY_SERVER_PORT = "server_port"
         const val KEY_FINGERPRINT = "desktop_fingerprint"
         const val KEY_PAIRING_CODE = "pairing_code"
+        const val KEY_DESKTOP_NAME = "desktop_name"
         const val KEY_REJECT_TOUCH = "reject_touch"
         const val KEY_SHOW_PREVIEW = "show_preview"
         const val KEY_FORCE_LANDSCAPE = "force_landscape"
@@ -308,6 +309,22 @@ class SettingsActivity : AppCompatActivity() {
         }
         switchForceLandscape.setOnCheckedChangeListener { _, _ -> feedback.text = ""; updatePreview() }
 
+        val pairingLauncher = registerForActivityResult(androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()) { result ->
+            if (result.resultCode == RESULT_OK) {
+                editIp.setText(prefs.stringOrDefault(KEY_SERVER_IP, DEFAULT_IP))
+                editPort.setText(prefs.intOrDefault(KEY_SERVER_PORT, DEFAULT_PORT).toString())
+                editFingerprint.setText(prefs.stringOrDefault(KEY_FINGERPRINT, ""))
+                editPairingCode.setText(prefs.stringOrDefault(KEY_PAIRING_CODE, ""))
+                connectionBaseline = connectionDraft()
+                connectionFeedback.setText(R.string.connection_applied)
+                intent.removeExtra("connection_status")
+                connectionSummary()
+                setResult(RESULT_OK)
+            }
+        }
+        findViewById<Button>(R.id.btnFindDesktop).setOnClickListener {
+            pairingLauncher.launch(android.content.Intent(this, PairingActivity::class.java))
+        }
         findViewById<Button>(R.id.btnApplyConnection).setOnClickListener {
             val ip = editIp.text?.toString()?.trim().orEmpty()
             val port = editPort.text?.toString()?.toIntOrNull()

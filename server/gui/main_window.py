@@ -54,6 +54,7 @@ class MainWindow(QMainWindow):
         self.setMinimumSize(760, 540)
 
         self.config = load_config()
+        self._pending_pairing = False
         self.local_ip = get_local_ip()
         self.gui_state = GuiState()
         self._dirty = False
@@ -158,6 +159,13 @@ class MainWindow(QMainWindow):
         self.profiles_tab.list_panel.btn_del_prof.clicked.connect(self._on_delete_profile)
 
         self.system_tab = SystemTab(self.local_ip, self.config)
+        connection = self.system_tab.connection_panel
+        connection.pairing_requested.connect(self._begin_pairing)
+        connection.pairing_cancelled.connect(self._cancel_pairing)
+        connection.pairing_decision.connect(self.worker.answer_pairing)
+        self.worker.sig_pairing_requested.connect(connection.show_pairing_request)
+        self.worker.sig_pairing_finished.connect(connection.pairing_finished)
+        self.worker.sig_pairing_ready.connect(connection.pairing_ready)
         self.system_tab.startup_panel.reset_requested.connect(self._reset_defaults)
         self.system_tab.startup_panel.changed.connect(self._on_system_settings_changed)
         self.system_tab.startup_panel.device_name_changed.connect(lambda: self.worker.apply_config(self.config))
@@ -447,6 +455,27 @@ class MainWindow(QMainWindow):
     # ------------------------------------------------------------------
     # Server control & tests
     # ------------------------------------------------------------------
+    def _begin_pairing(self):
+        self.config.wifi_enabled = True
+        self.config.host = "0.0.0.0"
+        self.system_tab.startup_panel._sync_from_config()
+        if not self.save_all_settings(quiet=True):
+            self.system_tab.connection_panel.pairing_finished(False, "Save the connection settings before pairing.")
+            return
+        self._pending_pairing = True
+        desired = (listener_address(self.config), self.config.port)
+        if self.worker.state == "running" and self.worker.listener_endpoint == desired:
+            self._pending_pairing = False
+            self.worker.open_pairing()
+        elif self.worker.state in ("running", "starting"):
+            self.stop_server()
+        elif self.worker.state == "stopped":
+            self.start_server()
+
+    def _cancel_pairing(self):
+        self._pending_pairing = False
+        self.worker.cancel_pairing()
+
     def toggle_server(self):
         if self.worker._is_running:
             self.stop_server()
@@ -478,10 +507,17 @@ class MainWindow(QMainWindow):
 
         if status == "running":
             self.header_bar.set_server_status("running", f"Listening (Port {self.worker.listener_endpoint[1] if self.worker.listener_endpoint else self.config.port})")
+            if self._pending_pairing:
+                self._pending_pairing = False
+                self.worker.open_pairing()
         elif status == "stopped":
             self.header_bar.set_server_status("stopped", "Server stopped")
             self._reset_diagnostics()
+            if self._pending_pairing and not self._closing:
+                QTimer.singleShot(0, self.start_server)
         elif status == "error":
+            self._pending_pairing = False
+            self.system_tab.connection_panel.pairing_finished(False, message)
             self.header_bar.set_server_status("error", message)
             QMessageBox.critical(self, "Server Error", message)
 

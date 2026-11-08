@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/pairingRoot" android:layout_width="match_parent" android:layout_height="match_parent"
+    android:orientation="vertical" android:background="@color/page_bg">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal"
+        android:gravity="center_vertical" android:paddingStart="12dp" android:paddingEnd="16dp">
+        <com.google.android.material.button.MaterialButton android:id="@+id/pairingBack" style="@style/Widget.SPenBridge.ToolbarButton"
+            android:layout_width="48dp" android:layout_height="48dp" android:contentDescription="@string/pairing_back" app:icon="@drawable/ic_back" />
+        <TextView android:id="@+id/pairingAppTitle" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+            android:text="@string/find_desktop" android:textSize="18sp" android:textColor="@color/text_light" android:paddingStart="12dp" android:paddingEnd="12dp"
+            />
+    </LinearLayout>
+    <ScrollView android:id="@+id/pairingScroll" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:fillViewport="true">
+        <FrameLayout android:layout_width="match_parent" android:layout_height="wrap_content">
+            <LinearLayout android:id="@+id/pairingContent" android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal" android:orientation="vertical" android:padding="20dp">
+                <TextView android:id="@+id/pairingTitle" android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:text="@string/nearby_desktops" android:textSize="28sp" android:textStyle="bold" android:textColor="@color/text_light" />
+                <TextView android:id="@+id/pairingHelp" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp"
+                    android:text="@string/pairing_discovery_help" android:textSize="16sp" android:textColor="@color/text_muted" />
+                <ProgressBar android:id="@+id/pairingProgress" android:layout_width="40dp" android:layout_height="40dp" android:layout_gravity="center_horizontal"
+                    android:layout_marginTop="24dp" android:layout_marginBottom="12dp" android:indeterminateTint="@color/primary" />
+                <TextView android:id="@+id/pairingStatus" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp"
+                    android:text="@string/pairing_searching" android:textSize="16sp" android:textColor="@color/text_light" android:accessibilityLiveRegion="polite" />
+                <LinearLayout android:id="@+id/nearbyDesktopList" android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp" android:orientation="vertical" />
+                <LinearLayout android:id="@+id/pairingVerification" android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_marginTop="24dp" android:padding="20dp" android:background="@drawable/group_background" android:orientation="vertical" android:visibility="gone">
+                    <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/pairing_check_number"
+                        android:textColor="@color/text_light" android:textSize="16sp" />
+                    <TextView android:id="@+id/pairingNumber" android:layout_width="match_parent" android:layout_height="wrap_content" android:paddingTop="20dp" android:paddingBottom="20dp"
+                        android:gravity="center" android:textSize="32sp" android:fontFamily="monospace" android:textStyle="bold" android:textColor="@color/text_light" />
+                    <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/pairing_approve_desktop"
+                        android:textColor="@color/text_muted" android:textSize="16sp" />
+                </LinearLayout>
+                <com.google.android.material.button.MaterialButton android:id="@+id/pairingRefresh" style="@style/Widget.SPenBridge.OutlinedButton"
+                    android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="48dp" android:layout_marginTop="24dp" android:text="@string/pairing_search_again" />
+                <com.google.android.material.button.MaterialButton android:id="@+id/pairingCancel" style="@style/Widget.SPenBridge.OutlinedButton"
+                    android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="48dp" android:layout_marginTop="8dp" android:text="@android:string/cancel" />
+            </LinearLayout>
+        </FrameLayout>
+    </ScrollView>
+</LinearLayout>

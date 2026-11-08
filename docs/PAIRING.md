@@ -3,20 +3,24 @@
 Use the matching Android app and desktop server from this checkout. Protocol v2
 requires TLS and pairing; older unauthenticated senders cannot connect.
 
-1. On desktop, open **Connection** → **Pair tablet**, or run
-   `python server/main.py --show-pairing`. This explicit action displays a public
-   certificate fingerprint and a secret pairing code. Copy them only to your tablet.
-2. In Android **Settings → Connection → Manual pairing details**, paste both fields. **Apply connection** validates the connection fields. Tablet area and input settings apply independently.
-   The fingerprint pins the desktop certificate; the code authenticates each fresh
-   session. A changed identity requires pairing again. Settings are excluded from
-   Android backup and device transfer.
-3. For Wi-Fi, in Android Settings keep the desktop's **Desktop Wi-Fi address** and selected
-   port saved. USB does not replace this address: the app automatically uses
-   `127.0.0.1` and the same port for the cable attempt. The Wi-Fi address can be empty for USB-only use.
-4. Start the desktop server. Enable **Allow paired Wi-Fi connections** and
-   restart it so both USB loopback and LAN connections can reach the same paired
-   server. Use the desktop's LAN address, not a VPN/tunnel address, on Android.
-   Allow the selected port through your private-network firewall.
+1. Connect both devices to the same local network. On desktop, open
+   **Connection → Pair tablet**. This enables paired Wi-Fi access, starts or
+   restarts the listener as needed, and opens discovery for two minutes.
+2. On Android, open **Settings → Find desktop** and select your desktop.
+   Compare the six-digit verification number on both screens, then choose
+   **Allow device** on the desktop only if they match. No fingerprint or pairing
+   code needs to be typed. Cancel if the numbers differ or the request is unexpected.
+3. Android saves the approved desktop address and credentials automatically.
+   Existing paired devices keep working. The desktop's **Wireless address** always
+   comes from a physical LAN adapter, preferring Wi-Fi over Ethernet or USB
+   tethering; it never shows USB loopback. Without a usable LAN adapter it says
+   the address is unavailable. USB needs no IP entry.
+4. Discovery uses UDP port **40119**, only while Pair tablet is open. Pairing and
+   pen traffic use TLS on the selected TCP port (default **40118**). Allow these
+   ports on your private local network. Discovery may be blocked by guest-network
+   isolation or networks that suppress broadcasts. Advanced connection settings
+   retain manual pairing for those environments; `python server/main.py
+   --show-pairing` displays the existing identity for that fallback.
 5. Connect a USB-debugging-authorized device and use **Set up USB connection**.
    While the desktop app stays open, it checks every two seconds and restores
    forwarding after a cable reconnect. Enable **Set up USB automatically on launch**
@@ -59,9 +63,17 @@ Get-NetFirewallRule -Name $name -ErrorAction Stop | Get-NetFirewallPortFilter
 Get-NetFirewallRule -Name $name -ErrorAction Stop | Get-NetFirewallApplicationFilter
 ```
 
+For automatic discovery, also allow UDP 40119 on the same private subnet:
+
+```powershell
+New-NetFirewallRule -Name 'SPenBridge-Discovery' -DisplayName 'S Pen Bridge discovery' `
+  -Direction Inbound -Action Allow -Profile Private -Protocol UDP `
+  -LocalPort 40119 -RemoteAddress LocalSubnet -Program $python -ErrorAction Stop
+```
+
 Check that the displayed port and executable match the running server. Change or
 remove this rule when changing ports or returning to USB. Linux firewall setup
-varies by distribution; allow the chosen TCP port from your tablet's local network.
+varies by distribution; allow the chosen TCP port and UDP 40119 from your tablet's local network.
 
 Pairing identity lives in `identity.json` next to the desktop config. It is created
 owner-only and must stay private. Back it up securely if retaining an existing

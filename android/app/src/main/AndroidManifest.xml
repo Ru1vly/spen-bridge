@@ -37,6 +37,9 @@
             android:label="@string/settings_title" />
 
         <activity android:name=".SupportActivity" android:exported="false" android:label="@string/support_title" />
+        <activity android:name=".PairingActivity" android:exported="false"
+            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden"
+            android:label="@string/find_desktop" />
 
     </application>
 
