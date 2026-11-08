@@ -10,9 +10,10 @@ CatalogFile = spenvhid.cat
 PnpLockdown = 1
 
 [Manufacturer]
-%ManufacturerName% = SpenVhid, NT$ARCH$
+; DIRID 13 requires Windows 10 1709 (build 16299) or later.
+%ManufacturerName% = SpenVhid, NT$ARCH$.10.0...16299
 
-[SpenVhid.NT$ARCH$]
+[SpenVhid.NT$ARCH$.10.0...16299]
 %SpenVhid.DeviceDesc% = SpenVhid_Device, root\spenvhid   ; root-enumerated
 
 [SpenVhid_Device.NT]

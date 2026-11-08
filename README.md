@@ -53,7 +53,7 @@ Your drawing applications recognize the result as a real physical graphics table
 | Platform | Subsystem | Status |
 | --- | --- | --- |
 | **Linux** (X11 & Wayland) | `/dev/uinput` via `evdev`/`libinput` | Implemented; compositor and device behavior vary |
-| **Windows 10/11 x64** | Windows Ink via Virtual HID Framework (`spenvhid.sys`) | Experimental; signed driver and Windows hardware validation required |
+| **Windows 10 1709+ / 11 x64** | Windows Ink via Virtual HID Framework (`spenvhid.sys`) | Experimental; signed driver and Windows hardware validation required |
 
 ## Architecture
 
@@ -127,7 +127,7 @@ server/.venv/bin/python server/main.py --cli
 
 ### 2. Install on Windows
 
-Requirements: Windows 10/11 x64, Python 3.10–3.14 (with the `py` launcher).
+Requirements: Windows 10 version 1709 or later / Windows 11 x64, Python 3.10–3.14 (with the `py` launcher).
 
 In an administrator PowerShell prompt at the repository root:
 

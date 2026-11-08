@@ -1,9 +1,11 @@
 # Windows setup and validation
 
-Windows 10/11 x64 has an implemented Windows Ink backend and KMDF/VHF driver.
-This is experimental source support: the current driver changes still need a
-Windows MSBuild and hardware validation. The C sources compile and link with
-Clang/LLD against the pinned WDK on Linux; this does not validate installation. A production-signed installer is not
+Windows 10 version 1709 (build 16299) or later, and Windows 11 x64, have an
+implemented Windows Ink backend and KMDF/VHF driver. The INF minimum matches
+the [Driver Store directory support](https://learn.microsoft.com/en-us/windows-hardware/drivers/install/inf-manufacturer-section)
+used by this package. This is experimental source support. The Windows Driver
+Build workflow checks MSBuild, packaging and INF validation; these checks do
+not validate hardware installation or Windows Ink behavior. A production-signed installer is not
 provided. ARM64 and WinTab are not supported.
 
 ## Application
