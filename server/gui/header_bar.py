@@ -3,7 +3,6 @@ Top header bar: app title, server status badge, active-profile selector,
 server start/stop toggle, and save-config button.
 """
 
-from server.gui.theme import PALETTE
 
 
 from PySide6.QtCore import Signal, Qt

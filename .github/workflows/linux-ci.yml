@@ -5,6 +5,7 @@ on:
     paths:
       - 'server/**'
       - 'tests/**'
+      - 'release/**'
       - '*.sh'
       - 'server/*.sh'
       - '*.desktop'
@@ -13,6 +14,7 @@ on:
     paths:
       - 'server/**'
       - 'tests/**'
+      - 'release/**'
       - '*.sh'
       - 'server/*.sh'
       - '*.desktop'
@@ -62,7 +64,7 @@ jobs:
           python -m pip install --require-hashes -r tests/requirements.txt
 
       - name: Lint Python
-        run: ruff check --isolated --select E9,F server tests audit/reproduce.py
+        run: ruff check --isolated --select E9,F server tests release audit/reproduce.py
 
       - name: Run test suite (headless Qt)
         run: |

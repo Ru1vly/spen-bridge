@@ -133,7 +133,8 @@
     <ClCompile>
       <WarningLevel>Level4</WarningLevel>
       <TreatWarningAsError>true</TreatWarningAsError>
-      <PreprocessorDefinitions>_KERNEL_MODE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <!-- /kernel, supplied by the WDK toolset, defines _KERNEL_MODE.
+           Redefining that reserved compiler macro causes C4117 on MSVC. -->
     </ClCompile>
     <Link>
       <!-- VHF is the input-report transport used by device.c. -->

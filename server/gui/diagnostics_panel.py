@@ -8,7 +8,7 @@ from server.gui.theme import PALETTE
 
 import sys
 
-from PySide6.QtWidgets import QGroupBox, QVBoxLayout, QHBoxLayout, QGridLayout, QLabel, QProgressBar
+from PySide6.QtWidgets import QGroupBox, QVBoxLayout, QGridLayout, QLabel, QProgressBar
 
 from server.gui.widgets.pill_badge import PillBadge
 

@@ -158,8 +158,11 @@ have been settled by more reading:
 
 ## Remaining validation
 
-The source contract is implemented and `_KERNEL_MODE` is explicitly supplied
-by the project. The remaining work is machine-level validation: build and sign
+The source contract is implemented and the WDK toolset's `/kernel` compiler
+option supplies `_KERNEL_MODE`. Defining it again in the project causes C4117
+with MSVC 14.51 under warnings-as-errors (observed in the November CI run).
+See [Microsoft's compiler documentation](https://learn.microsoft.com/en-us/cpp/build/reference/kernel-create-kernel-mode-binary).
+The remaining work is machine-level validation: build and sign
 the package, install it on Windows 10/11 x64, verify the root device and VHF
 child have no Device Manager errors, and exercise Windows Ink with hover,
 pressure, tilt, eraser, buttons, disconnect cleanup, sleep/resume, and multiple

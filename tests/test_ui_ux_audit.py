@@ -1,7 +1,7 @@
 """Behavioral coverage for neutral installs, migration and quiet UI state."""
 import os
 os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 from PySide6.QtWidgets import QApplication
 from server.config import AppProfile, TabletConfig
 from server.gui.header_bar import HeaderBar

@@ -1,6 +1,6 @@
 """Native workspace navigation: a labelled rail, or tabs on compact windows."""
 from PySide6.QtCore import Qt, Signal, QSignalBlocker, QSize
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QListWidget, QListWidgetItem, QStackedWidget, QTabBar, QLabel
+from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QListWidget, QListWidgetItem, QStackedWidget, QTabBar
 
 
 class WorkspaceNavigation(QWidget):

@@ -163,6 +163,11 @@ server\.venv\Scripts\python.exe server\test_synthetic.py
 
 Fastest path: connect your tablet over USB, download the latest APK from [Releases](https://github.com/Ru1vly/spen-bridge/releases/latest), and install it directly:
 
+Use the Android APK and desktop source from the same release. The published
+v1.0.0 APK uses the older protocol and cannot pair with the current `main`
+desktop. When running `main`, build Android from the same checkout until a
+matching release is available. See [release preparation and signing](docs/RELEASING.md).
+
 ```bash
 adb install spen-bridge-android-*.apk
 ```

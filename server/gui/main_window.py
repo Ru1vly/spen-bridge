@@ -14,9 +14,9 @@ from typing import Optional, Tuple
 
 from PySide6.QtCore import QTimer, Signal, QSignalBlocker, Qt
 from PySide6.QtGui import QIcon, QKeySequence, QAction
-from PySide6.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QTabWidget, QMessageBox, QDialog, QLabel, QScrollArea
+from PySide6.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QMessageBox, QDialog, QLabel, QScrollArea
 
-from server.config import AppProfile, TabletConfig, load_config, save_config, CONFIG_FILE_PATH
+from server.config import AppProfile, TabletConfig, load_config, save_config
 from server.protocol import PenEvent, ACTION_CANCEL, valid_event
 from server.settings import listener_address
 from server.window_watcher import WindowWatcher
