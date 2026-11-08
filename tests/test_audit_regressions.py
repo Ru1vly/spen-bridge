@@ -326,6 +326,15 @@ class SecureSessionTests(unittest.IsolatedAsyncioTestCase):
             await asyncio.sleep(.005)
         self.fail("Server state did not converge")
 
+    async def assert_stream_closed(self, reader, size=-1):
+        # Aborting an idle TLS/raw socket reports EOF on selector loops and
+        # can report WinError 64 / ConnectionResetError on Windows Proactor.
+        try:
+            data = await asyncio.wait_for(reader.read(size), 1)
+        except ConnectionResetError:
+            return
+        self.assertEqual(data, b"")
+
     async def test_no_event_before_authentication(self):
         reader, writer = await self.connect()
         await self.packet(reader)
@@ -426,7 +435,7 @@ class SecureSessionTests(unittest.IsolatedAsyncioTestCase):
         await self.authenticate(pair)
         await self.connect()
         await asyncio.wait_for(self.server.stop(), 1)
-        self.assertEqual(await asyncio.wait_for(pair[0].read(), 1), b"")
+        await self.assert_stream_closed(pair[0])
         self.assertFalse(self.server.active_clients)
         self.assertFalse(self.server._handlers)
         self.assertEqual(self.tablet.resets, 1)
@@ -489,7 +498,7 @@ class SecureSessionTests(unittest.IsolatedAsyncioTestCase):
             await self.until(lambda: len(self.server._connections) == self.server.max_connections)
             reader, writer = await asyncio.open_connection("127.0.0.1", self.port)
             raw.append((reader, writer))
-            self.assertEqual(await asyncio.wait_for(reader.read(1), 1), b"")
+            await self.assert_stream_closed(reader, 1)
             self.assertEqual(len(self.server._handlers), self.server.max_connections)
             await asyncio.wait_for(self.server.stop(), 1)
             self.assertFalse(self.server._handlers)
@@ -497,7 +506,10 @@ class SecureSessionTests(unittest.IsolatedAsyncioTestCase):
         finally:
             for _, writer in raw:
                 writer.close()
-                await writer.wait_closed()
+                try:
+                    await asyncio.wait_for(writer.wait_closed(), 1)
+                except ConnectionResetError:
+                    pass
 
     async def test_invalid_complete_packet_releases_held_owner(self):
         pair = await self.connect()

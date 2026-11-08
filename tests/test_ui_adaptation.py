@@ -50,11 +50,17 @@ class ResponsiveProfileSelectionTests(unittest.TestCase):
         self.assertEqual(window.profiles_tab.editor_panel.current_profile_name, "Krita")
         self.assertEqual(panel.selected_profile_name(), "Krita")
         self.assertEqual(window.config.active_profile_name, "Default")
-        window.resize(1200, 900)
+        # Native Windows fonts can keep 1200px below the em-based breakpoint.
+        # Force a wide offscreen window even on a small hosted-runner screen.
+        minimum_width = window.minimumWidth()
+        wide_width = max(1600, window.profile_manager.fontMetrics().horizontalAdvance("M") * 90 + 400)
+        window.setMinimumWidth(wide_width)
+        window.resize(wide_width, 900)
         app.processEvents()
         self.assertTrue(panel.list_widget.isVisible())
         self.assertFalse(panel.combo_compact.isVisible())
         window.profiles_tab.select_profile("Blender")
+        window.setMinimumWidth(minimum_width)
         window.resize(760, 640)
         app.processEvents()
         self.assertEqual(panel.combo_compact.currentData(), "Blender")

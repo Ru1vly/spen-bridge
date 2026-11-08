@@ -24,6 +24,7 @@ class CliTests(unittest.IsolatedAsyncioTestCase):
         class Device:
             def __init__(self, **options):
                 self.__dict__.update(options)
+                calls.append(('create', dict(options)))
                 self.closed = False
                 devices.append(self)
             def update_settings(self, **values):
@@ -68,9 +69,13 @@ class CliTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_cli_applies_network_click_mapping_and_automatic_profile_settings(self):
         config, devices, calls = await self.exercise()
-        self.assertFalse(devices[0].click_on_touch)
+        # Windows updates its one installed device in place on profile switch;
+        # inspect the initial options before that update, not the mutated object.
+        initial = next(call[1] for call in calls if call[0] == 'create')
+        self.assertFalse(initial['click_on_touch'])
         self.assertEqual(config.active_profile_name, 'Krita')
         active = devices[-1]
+        self.assertEqual(active.click_on_touch, config.profiles['Krita'].click_on_touch)
         self.assertEqual(active.screen_bounds, (-1280, 0, 1280, 1024))
         server = next(call[1] for call in calls if call[0] == 'server')
         self.assertEqual((server['host'], server['port']), ('127.0.0.1', 41234))
