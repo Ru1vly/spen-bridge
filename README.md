@@ -4,6 +4,7 @@
 ![Platform: Linux](https://img.shields.io/badge/platform-Linux-informational.svg)
 ![Windows: experimental](https://img.shields.io/badge/Windows-experimental-orange.svg)
 [![Linux CI](https://github.com/Ru1vly/spen-bridge/actions/workflows/linux-ci.yml/badge.svg)](https://github.com/Ru1vly/spen-bridge/actions/workflows/linux-ci.yml)
+[![How it works](https://www.gitskins.com/api/badge/diagram?repo=Ru1vly/spen-bridge)](https://www.gitskins.com/Ru1vly/spen-bridge)
 
 Turn your Samsung Galaxy Tab and S Pen into a low latency, pressure sensitive graphics tablet for Linux (Krita, GIMP, Blender, Inkscape, Xournal++, and more) and Windows (Windows Ink).
 
